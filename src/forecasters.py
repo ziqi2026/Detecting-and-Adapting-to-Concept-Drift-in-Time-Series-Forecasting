@@ -6,13 +6,20 @@ Sprint 2 deliverable: one of the three frozen baselines feeding F1.
 
 PROPOSED FORECASTER CONTRACT  -- not yet frozen in interfaces.py
 ---------------------------------------------------------------
-    fit(train_df)          -> self
-    predict(df)            -> np.ndarray of point forecasts
-    feature_names_         -> list[str]
+    fit(train_df)                    -> self
+    predict(df, history_df=None)     -> np.ndarray of point forecasts
+    feature_names_                   -> list[str], OPTIONAL
+
+    history_df : rows immediately preceding df, used only to fill
+    lag features at the start of a stream. Ignored by models with
+    no lags (e.g. seasonal-naive) -- optional for those.
+
+    feature_names_ is optional because it has no meaning for a
+    model with no features, e.g. seasonal-naive.
 
 All three Sprint 2 baselines should expose this surface so that
 adapter(changepoints, model, data) can treat them interchangeably.
-Raised for the 20/08 team meeting.
+Raised for the 20/08 team meeting -- per Sahar's review comments.
 
 Input frames are the output of data_loader.load_and_split_aemo:
 columns SETTLEMENTDATE (period-ending, 30-min) and TOTALDEMAND.
@@ -98,21 +105,40 @@ class GradientBoostedForecaster:
         self.model.fit(X.loc[keep], y.loc[keep])    # strip out NaN rows before passing them to scikit-learn's .fit() method.
         return self
 
-    def predict(self, data):
-        X = make_features(data, self.lags)
+    def predict(self, data, history_df=None):
+        """
+        history_df : DataFrame, optional
+            Rows immediately preceding `data`, used only to fill the lag
+            features of the first max(lags) rows. Without it those rows
+            get NaN lags and visibly inflated error -- an artifact at the
+            head of the error stream, which is where the detector starts
+            reading. Ignored when feature_mode is "calendar".
+
+            Only past rows are used; no future information enters.
+        """
+        if history_df is not None and self.lags:
+            n = max(self.lags)
+            tail = history_df.iloc[-n:]
+            combined = pd.concat([tail, data], ignore_index=True)
+            X = make_features(combined, self.lags).iloc[len(tail):]
+        else:
+            X = make_features(data, self.lags)
         return self.model.predict(X[self.feature_names_])
 
 
-def frozen_error_stream(model, test):
+def frozen_error_stream(model, test, history_df=None):
     """
     Roll a frozen model forward through the test stream.
 
     Returns SETTLEMENTDATE, y_true, y_pred, error.
     `error` is the stream consumed by interfaces.detector().
 
+    Pass `history_df` (typically the calibration frame) whenever the
+    model uses lags, so the head of the stream is not corrupted.
+
     The model is never refitted here -- that is the adapter's job.
     """
-    pred = model.predict(test)
+    pred = model.predict(test, history_df=history_df)
     return pd.DataFrame({
         "SETTLEMENTDATE": test["SETTLEMENTDATE"].values,
         "y_true": test["TOTALDEMAND"].values,
