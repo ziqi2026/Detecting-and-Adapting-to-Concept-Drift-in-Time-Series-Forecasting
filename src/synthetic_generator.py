@@ -1,5 +1,82 @@
-import numpy as np
-import pandas as pd
+"""
+Synthetic electricity-demand generator for concept-drift benchmarking.
+
+This module creates controlled 30-minute synthetic demand streams with
+known changepoints so drift detectors can be evaluated against ground truth
+before being applied to AEMO data.
+
+SUPPORTED DRIFT TYPES
+---------------------
+The generator supports four stream types:
+
+    - none
+        Stable concept with no drift.
+
+    - sudden
+        Abrupt switch from Concept 1 to Concept 2 at one changepoint.
+
+    - gradual
+        Smooth transition from Concept 1 to Concept 2 over a defined
+        drift window.
+
+    - recurring
+        Switch from Concept 1 to Concept 2 and later return to Concept 1.
+
+SYNTHETIC CONCEPTS
+------------------
+Each demand concept is defined by:
+
+    - base demand level
+    - daily seasonal amplitude
+    - weekend effect
+
+Random Gaussian noise is added using a configurable seed so experiments
+can be reproduced.
+
+TIME STRUCTURE
+--------------
+Synthetic observations are generated at 30-minute intervals and include:
+
+    SETTLEMENTDATE
+    hour
+    day_of_week
+    month
+    is_weekend
+    TOTALDEMAND
+
+GROUND-TRUTH CHANGEPOINTS
+-------------------------
+Unlike AEMO data, the synthetic benchmark returns the true changepoint
+locations alongside the generated series.
+
+These known changepoints are used later to calculate detection metrics
+such as:
+
+    - detection delay
+    - false alarms per 10,000 observations
+    - missed detections
+
+FUNCTIONS
+---------
+make_time_features()
+    Creates the common 30-minute timestamp and calendar features.
+
+add_synthetic_demand()
+    Generates a stable no-drift demand stream.
+
+make_sudden_drift()
+    Generates an abrupt Concept 1 -> Concept 2 transition.
+
+make_gradual_drift()
+    Generates a gradual transition between the two concepts.
+
+make_recurring_drift()
+    Generates a Concept 1 -> Concept 2 -> Concept 1 pattern.
+
+make_feature_series()
+    Shared entry point for generating none, sudden, gradual, or
+    recurring synthetic streams and returning their true changepoints.
+"""
 
 import numpy as np
 import pandas as pd
