@@ -11,8 +11,7 @@ PROPOSED FORECASTER CONTRACT  -- not yet frozen in interfaces.py
     feature_names_                   -> list[str], OPTIONAL
 
     history_df : rows immediately preceding df, used only to fill
-    lag features at the start of a stream. Ignored by models with
-    no lags (e.g. seasonal-naive) -- optional for those.
+    lag features at the start of a stream.
 
     feature_names_ is optional because it has no meaning for a
     model with no features, e.g. seasonal-naive.
