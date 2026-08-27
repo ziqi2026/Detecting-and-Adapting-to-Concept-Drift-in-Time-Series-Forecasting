@@ -1,3 +1,72 @@
+"""
+Shared AEMO data loader and preprocessing utilities for the
+concept-drift forecasting pipeline.
+
+This module provides the common data-loading and chronological splitting
+logic used by all downstream project components.
+
+DATA
+----
+The project uses AEMO regional TOTALDEMAND data for:
+
+    - SA1  : South Australia
+    - NSW1 : New South Wales
+
+Monthly CSV files for each region are loaded, combined, sorted
+chronologically, and checked for the required columns:
+
+    SETTLEMENTDATE
+    TOTALDEMAND
+
+FREQUENCY STANDARDISATION
+-------------------------
+The AEMO data changes from 30-minute to 5-minute observations from
+2021-10-01.
+
+To maintain a consistent forecasting frequency:
+
+    - Existing 30-minute observations before the transition are retained.
+    - From 2021-10-01 00:05 onward, six consecutive 5-minute
+      TOTALDEMAND observations are averaged into one 30-minute value.
+    - Each resulting timestamp represents the end of its 30-minute
+      interval.
+    - Incomplete 30-minute groups in the 5-minute portion raise an error.
+
+FIXED PROJECT SPLIT
+-------------------
+The standardised data are divided chronologically using the fixed
+project split:
+
+    Training:
+        2018-01-01 to 2019-12-31
+
+    Calibration:
+        2020-01-01 to 2020-02-29
+
+    Test stream:
+        2020-03-01 onward
+
+The test data are retained in chronological order for sequential
+forecasting, drift detection, adaptation and uncertainty evaluation.
+
+FUNCTIONS
+---------
+load_aemo_region()
+    Loads and combines the monthly CSV files for one AEMO region.
+
+standardize_to_30min()
+    Converts the mixed-frequency AEMO series to a consistent
+    30-minute demand series.
+
+split_aemo_data()
+    Applies the fixed chronological train/calibration/test split.
+
+load_and_split_aemo()
+    Runs the complete loading, standardisation and splitting pipeline
+    and returns the full data, training data, calibration data and
+    chronological test stream.
+"""
+
 from pathlib import Path
 import pandas as pd
 
