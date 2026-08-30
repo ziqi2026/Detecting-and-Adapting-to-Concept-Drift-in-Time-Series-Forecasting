@@ -151,12 +151,13 @@ def run_kswin(
         detector,
     )
 
+
 # Detector registry
 DETECTOR_REGISTRY = {
     "adwin": {
         "func": run_adwin,
         "config": {
-            "delta": 0.002,
+            "delta": 0.0001,
         },
     },
 
@@ -165,17 +166,17 @@ DETECTOR_REGISTRY = {
         "config": {
             "min_instances": 30,
             "delta": 0.005,
-            "threshold": 400.0,
-            "alpha": 0.9999,
+            "threshold": 209,
+            "alpha": 0.999,
         },
     },
 
     "kswin": {
         "func": run_kswin,
         "config": {
-            "alpha": 0.001,
-            "window_size": 170,
-            "stat_size": 40,
+            "alpha": 0.00005,
+            "window_size": 140,
+            "stat_size": 70,
             "seed": 12,
         },
     },

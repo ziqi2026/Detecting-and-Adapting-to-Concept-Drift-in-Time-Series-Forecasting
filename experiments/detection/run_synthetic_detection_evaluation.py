@@ -17,14 +17,14 @@ import hashlib
 import numpy as np
 import pandas as pd
 
-
-SRC_DIR = Path(__file__).resolve().parents[1]
+# Project imports
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_DIR = PROJECT_ROOT / "src"
 
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-
-from synthetic_generator import make_feature_series
+from drift_lab.synthetic_generator import make_feature_series
 from drift_lab.detectors import DETECTOR_REGISTRY
 from drift_lab.evaluation import evaluate_detections
 from drift_lab.forecasters import (
@@ -32,6 +32,7 @@ from drift_lab.forecasters import (
     frozen_error_stream,
 )
 from drift_lab.run_logger import log_run
+
 
 
 N_OBSERVATIONS = 20000
