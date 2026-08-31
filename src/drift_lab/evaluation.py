@@ -29,12 +29,6 @@ The implemented forecast metrics verify that:
 
 PLANNED METRICS
 ---------------
-Detection metrics will be added in Step 4, including:
-
-    - detection delay
-    - false alarms per 10,000 observations
-    - missed detections
-    - precision for matching AEMO detections to documented events
 
 Uncertainty metrics will be added in Step 6, including:
 

@@ -3,9 +3,9 @@ from pathlib import Path
 import pandas as pd
 
 RUNS_PATH = Path("results/runs.csv")
-OUTPUT_PATH = Path("results/T1_detection_on_synthetic.csv")
+OUTPUT_PATH = Path("results/T1_V3_detection_on_synthetic.csv")
 GROUP = "detection"
-SPLIT_ID = "synthetic_4000_1000_15000_tol336_v1"
+SPLIT_ID = "synthetic_20000_daily_abs_residual_concept1_v3"
 
 DRIFT_ORDER = {"none": 0, "sudden": 1, "gradual": 2, "recurring": 3}
 DETECTOR_ORDER = {"adwin": 0, "kswin": 1, "page_hinkley": 2}
