@@ -172,18 +172,18 @@ def load_rolling_mae():
 
     return data
 
-
 def add_event_markers(
     ax,
     region,
 ):
     """
-    Add documented AEMO events to one F1 figure.
+    Add documented AEMO event markers to one F1 figure.
 
     Single-day events are shown with dashed vertical lines.
-
     Multi-day events are shown as shaded windows with a dashed
     line marking the documented start.
+
+    Event labels are not drawn inside the plot.
     """
 
     for event in EVENTS[region]:
@@ -205,8 +205,6 @@ def add_event_markers(
                 alpha=0.7,
             )
 
-            label_time = event_start
-
         else:
 
             event_end_exclusive = (
@@ -227,25 +225,61 @@ def add_event_markers(
                 alpha=0.7,
             )
 
-            label_time = (
-                event_start
-                + (
-                    event_end_exclusive
-                    - event_start
-                )
-                / 2
+def add_event_list(
+    ax,
+    region,
+):
+    """
+    Add documented-event list beside the plot,
+    below the baseline-model legend.
+    """
+
+    event_lines = []
+
+    for event in EVENTS[region]:
+
+        start = pd.Timestamp(
+            event["start"]
+        )
+
+        end = pd.Timestamp(
+            event["end"]
+        )
+
+        if start == end:
+            date_text = start.strftime(
+                "%d %b %Y"
+            )
+        else:
+            date_text = (
+                f"{start.strftime('%d %b %Y')}–"
+                f"{end.strftime('%d %b %Y')}"
             )
 
-        ax.text(
-            label_time,
-            0.98,
-            event["label"],
-            transform=ax.get_xaxis_transform(),
-            rotation=90,
-            verticalalignment="top",
-            horizontalalignment="right",
-            fontsize=8,
+        event_lines.append(
+            f"• {date_text}: {event['label']}"
         )
+
+    event_text = "\n".join(
+        event_lines
+    )
+
+    ax.text(
+        1.01,
+        0.72,
+        event_text,
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        fontsize=9.5,
+        linespacing=1.5,
+        bbox={
+            "boxstyle": "round,pad=0.5",
+            "facecolor": "white",
+            "edgecolor": "0.8",
+            "alpha": 0.95,
+        },
+    )
 
 def make_region_figure(
     data,
@@ -296,6 +330,10 @@ def make_region_figure(
     add_event_markers(
         ax,
         region,
+    )
+    add_event_list(
+    ax,
+    region,
     )
 
     ax.set_title(
@@ -352,10 +390,10 @@ def make_region_figure(
     )
 
     fig.subplots_adjust(
-        left=0.07,
-        right=0.82,
-        top=0.90,
-        bottom=0.18,
+    left=0.07,
+    right=0.76,
+    top=0.90,
+    bottom=0.18,
     )
 
     OUTPUT_DIR.mkdir(
