@@ -1,29 +1,150 @@
 """
-Baseline degradation experiment for F1.
+F1 forecasting degradation experiment on real AEMO demand data.
 
-This experiment reproduces the forecasting and rolling-MAE logic from
-03_F1_Baseline_Degradation.ipynb.
+This experiment reproduces the forecasting and 7-day rolling-MAE
+evaluation used for F1.
 
-Outputs
+The experiment evaluates all forecasting models currently registered
+in MODEL_REGISTRY for both SA1 and NSW1.
+
+The three required project baselines are:
+
+    - Seasonal Naive
+    - SARIMAX
+    - Gradient Boosting
+
+PatchTST is supported as an additional Transformer-based forecasting
+model and does not replace the required baselines. Because PatchTST
+depends on the optional PyTorch package, it is included automatically
+when PyTorch is available and omitted when PyTorch is unavailable.
+
+The experiment therefore remains runnable without PyTorch using the
+three required baseline models. Optional-dependency handling and model
+registration are defined centrally in drift_lab.forecasters rather
+than in this experiment.
+
+
+FORECASTING PROTOCOL
+--------------------
+For each region, every currently registered forecasting model is:
+
+    1. fitted using the fixed training split only
+    2. kept frozen during test evaluation
+    3. evaluated chronologically over the test stream
+
+The calibration split is supplied as historical context when generating
+the frozen test-period error stream.
+
+"Frozen" means that fitted model parameters are not re-estimated during
+test evaluation. Individual models may still use causally available
+historical observations according to the forecasting behaviour defined
+in drift_lab.forecasters.
+
+
+EVALUATION METRICS
+------------------
+Forecasting performance is evaluated using the shared functions from
+drift_lab.evaluation:
+
+    calculate_mae()
+        Calculates MAE for the complete forecast stream and for
+        documented event windows.
+
+    calculate_rolling_mae()
+        Calculates the 7-day rolling MAE used for the F1 degradation
+        analysis.
+
+The rolling window is:
+
+    48 half-hourly observations/day × 7 days = 336 observations.
+
+
+DOCUMENTED EVENT WINDOWS
+------------------------
+Documented AEMO events are used as contextual reference periods for
+examining forecasting degradation on real data.
+
+For each documented event, MAE is calculated over:
+
+    - pre-drift: 7 days immediately before the event
+    - drift: the documented event period
+    - post-drift: 7 days immediately after the event
+
+The labels "pre-drift", "drift", and "post-drift" are experiment regime
+labels used for comparison around documented events.
+
+Documented AEMO events are contextual reference points and are not
+treated as ground-truth concept-drift changepoints.
+
+
+MODELS
+------
+Models are constructed through make_forecasters(), which uses the
+shared MODEL_REGISTRY in drift_lab.forecasters.
+
+The three required baselines are always available. Optional models are
+included only when their dependencies are available. In particular,
+PatchTST is registered when PyTorch is installed and is otherwise
+excluded without affecting the baseline experiment.
+
+Adding another model to MODEL_REGISTRY will cause it to be included in
+this experiment unless model selection is explicitly restricted here.
+
+
+OUTPUTS
 -------
-1. results/F1_rolling_mae.csv
-   One row per timestamp, region, and baseline model.
-   This file stores the complete 7-day rolling-MAE series required
-   to reproduce F1.
+1. results/tables/degradation/F1_rolling_mae.csv
 
-2. results/runs.csv
-   Long-format experiment results.
-   Logs event-specific MAE for:
-       pre-drift
-       drift
-       post-drift
+   Stores the complete timestamp-level forecasting results required to
+   reproduce F1.
 
-The baseline models are fitted on the fixed training split only and
-remain frozen while forecasting chronologically through the test stream.
+   Each row contains:
 
-This script does not generate F1.
-Figure generation is handled separately by:
+       - SETTLEMENTDATE
+       - region
+       - method
+       - y_true
+       - y_pred
+       - error
+       - rolling_mae
+
+   Results are stored for every region and forecasting model evaluated
+   in the current run. Therefore, PatchTST rows are present only when
+   PatchTST was registered for that run.
+
+
+2. results/tables/runs.csv
+
+   Stores long-format event-specific MAE results through the shared
+   experiment logger.
+
+   MAE is logged separately for:
+
+       - pre-drift
+       - drift
+       - post-drift
+
+   The experiment also records model configuration, training-sample
+   count, split identifier, seed, and wall-clock time.
+
+   Models remain frozen during test evaluation, so n_retrains is
+   recorded as zero.
+
+
+FIGURE GENERATION
+-----------------
+This script does not generate the F1 figure.
+
+The figure is generated separately from the saved rolling-MAE results
+by:
+
     experiments/degradation/generate_f1_degradation_figure.py
+
+Separating experiment execution from figure generation allows F1 to be
+reproduced from the saved results without rerunning the forecasting
+models. The figure reflects the models actually stored in the saved
+rolling-MAE source rather than requiring those models to be fitted
+again.
 """
 
 from pathlib import Path
@@ -36,6 +157,7 @@ import numpy as np
 import pandas as pd
 
 
+
 # Project paths
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -45,8 +167,8 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 DATA_PATH = PROJECT_ROOT / "data" / "raw"
-RUNS_PATH = PROJECT_ROOT / "results" / "runs.csv"
-ROLLING_OUTPUT_PATH = PROJECT_ROOT / "results" / "F1_rolling_mae.csv"
+RUNS_PATH = PROJECT_ROOT / "results" / "tables"/ "runs.csv"
+ROLLING_OUTPUT_PATH = PROJECT_ROOT / "results" / "tables" /"degradation"/"F1_rolling_mae.csv"
 
 
 # Project imports
@@ -54,9 +176,8 @@ ROLLING_OUTPUT_PATH = PROJECT_ROOT / "results" / "F1_rolling_mae.csv"
 from drift_lab.data_loader import load_and_split_aemo
 
 from drift_lab.forecasters import (
-    SeasonalNaiveForecaster,
-    SARIMAXForecaster,
-    GradientBoostedForecaster,
+    MODEL_REGISTRY,
+    make_forecasters,
     frozen_error_stream,
 )
 
@@ -83,7 +204,7 @@ GROUP = "degradation"
 DATASET = "AEMO_TOTALDEMAND"
 
 SPLIT_ID = (
-    "aemo_sa1_nsw1_fixed_split_2018_2023_frozen_baselines_v1"
+    "aemo_sa1_nsw1_fixed_split_2018_2023_frozen_baselines_v2"
 )
 
 SEED = 0
@@ -91,32 +212,6 @@ SEED = 0
 ROLLING_WINDOW_DAYS = 7
 OBSERVATIONS_PER_DAY = 48
 ROLLING_WINDOW = OBSERVATIONS_PER_DAY * ROLLING_WINDOW_DAYS
-
-
-# Baseline model configurations
-
-MODEL_CONFIGS = {
-    "seasonal_naive": {
-        "display_name": "Seasonal Naive",
-        "config": {
-            "season": 48,
-        },
-    },
-
-    "sarimax": {
-        "display_name": "SARIMAX",
-        "config": {},
-    },
-
-    "gradient_boosted": {
-        "display_name": "Gradient Boosted",
-        "config": {
-            "feature_mode": "calendar+lags",
-            "lags": [48, 336],
-            "seed": 0,
-        },
-    },
-}
 
 
 # Documented AEMO events
@@ -239,27 +334,6 @@ def config_id(config):
     )
 
     return f"{readable}|sha256:{digest}"
-
-
-def make_models():
-    """
-    Construct fresh baseline model instances using the frozen
-    notebook configurations.
-    """
-
-    return {
-        "seasonal_naive": SeasonalNaiveForecaster(
-            season=48
-        ),
-
-        "sarimax": SARIMAXForecaster(),
-
-        "gradient_boosted": GradientBoostedForecaster(
-            feature_mode="calendar+lags",
-            lags=(48, 336),
-            seed=0,
-        ),
-    }
 
 
 def build_event_windows(event):
@@ -388,7 +462,7 @@ def log_metric(
 
 def run_region_baselines(region):
     """
-    Fit the three baseline models on the fixed training split,
+    Fit all registered forecasting models on the fixed training split,
     freeze them, and forecast through the test stream.
 
     Returns one frozen error stream for each baseline model.
@@ -399,7 +473,7 @@ def run_region_baselines(region):
         data_path=DATA_PATH,
     )
 
-    models = make_models()
+    models = make_forecasters()
 
     streams = {}
 
@@ -453,9 +527,7 @@ def run_region_baselines(region):
             f"time={elapsed:.2f}s"
         )
 
-        model_config = MODEL_CONFIGS[
-            method
-        ]["config"]
+        model_config = MODEL_REGISTRY[method]["config"]
 
         model_config_hash = config_id(
             model_config
@@ -706,8 +778,8 @@ def main():
     )
 
     print(
-        "Models: seasonal_naive, "
-        "sarimax, gradient_boosted"
+        "Models:",
+        ", ".join(MODEL_REGISTRY.keys())
     )
 
     print(
