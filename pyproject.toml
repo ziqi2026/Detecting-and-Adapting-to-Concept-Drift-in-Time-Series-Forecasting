@@ -6,6 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "drift-lab"
 version = "0.1.0"
 requires-python = ">=3.10"
+
+# Core dependencies required by the shared forecasting pipeline.
 dependencies = [
     "numpy",
     "pandas",
@@ -15,5 +17,33 @@ dependencies = [
     "matplotlib",
 ]
 
+[project.optional-dependencies]
+
+# Development and testing dependencies.
+dev = [
+    "pytest",
+]
+
+# PatchTST is optional; the required baseline forecasters do not require PyTorch.
+patchtst = [
+    "torch>=2.14.0,<3.0.0",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+
+# Use the CPU-only PyTorch distribution when the PatchTST extra is installed.
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
+
+
+# PyTorch remains optional and is required only for PatchTST.
+[tool.poetry.dependencies]
+torch = { source = "pytorch-cpu", optional = true }
+
+
+# poetry install
+# poetry install -E patchtst

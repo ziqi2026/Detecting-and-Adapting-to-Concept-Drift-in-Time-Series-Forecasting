@@ -1,11 +1,14 @@
 """
 Shared evaluation metrics for the concept-drift forecasting pipeline.
 
-This module provides the common evaluation functions used across the
-project so that all models and components are assessed consistently.
+This module provides common evaluation functions used across the
+project so that forecasting, drift detection, adaptation, and
+uncertainty components are assessed consistently.
+
 
 CURRENT METRICS
 ---------------
+
 Forecast evaluation:
 
     calculate_mae()
@@ -13,34 +16,240 @@ Forecast evaluation:
         predicted demand.
 
     calculate_rolling_mae()
-        Calculates rolling MAE over the forecast stream. The default
-        window is 336 observations, corresponding to 7 days of
-        half-hourly AEMO data.
+        Calculates rolling MAE over the forecast stream.
 
-The rolling MAE is used to evaluate degradation of the frozen baseline
-forecasters over the test stream for F1.
+        The default window is 336 observations:
+
+            48 half-hourly observations/day × 7 days = 336 observations.
+
+            Rolling MAE is used to track forecasting performance over time,
+            including degradation of frozen baseline models and comparison
+            of forecasting performance across the adaptation arms.
+
+
+Synthetic drift-detection evaluation:
+
+    calculate_detection_delay()
+        Calculates mean delay between known synthetic drift events and
+        successfully matched detector outputs.
+
+    calculate_false_alarms_per_10000()
+        Calculates unmatched detector outputs normalised per 10,000
+        observations.
+
+    calculate_missed_detections()
+        Counts known synthetic drift events for which no detector output
+        is successfully matched.
+
+    evaluate_detections()
+        Applies the shared synthetic event-matching protocol and returns
+        the required detection metrics together with diagnostic matching
+        information.
+
+
+SYNTHETIC DETECTION EVALUATION
+------------------------------
+Synthetic data provide known ground-truth changepoints and therefore
+support objective calculation of:
+
+    - detection delay
+    - false alarms per 10,000 observations
+    - missed detections
+
+The evaluation supports:
+
+    - no drift
+    - sudden drift
+    - gradual drift
+    - recurring drift
+
+These metrics are used to validate detector behaviour on controlled
+data before detectors are applied to real AEMO streams.
+
+
+EVENT-MATCHING PROTOCOL
+-----------------------
+Detector outputs must be associated with known synthetic drift events
+before delay, false alarms, and missed detections can be calculated.
+
+For sudden and recurring drift, detections are matched using a
+configurable post-changepoint tolerance.
+
+The default tolerance is 336 observations:
+
+    48 half-hourly observations/day × 7 days = 336 observations.
+
+A detection is considered matched when it occurs at or after the true
+changepoint and within the configured tolerance.
+
+The first unused detection inside the matching window is assigned to
+that drift event.
+
+The 336-observation tolerance is an evaluation design choice used to
+provide a fixed and reproducible event-association rule across
+detectors and experiments.
+
+It is not a detector threshold.
+
+The tolerance determines whether a detection can be associated with an
+event; it does not replace or redefine the measured detection delay.
+
+For a successfully matched point event:
+
+    detection_delay = detected_index - true_changepoint_index
+
+If no detection occurs within the matching window, the true event is
+counted as a missed detection.
+
+
+GRADUAL DRIFT
+-------------
+Gradual drift is represented as one transition interval:
+
+    [drift_start, drift_end]
+
+rather than as two independent drift events.
+
+A detection occurring from drift_start through drift_end can therefore
+be associated with the same gradual-drift event.
+
+A configurable grace period is also allowed after drift_end. If no
+separate grace period is supplied, it defaults to the same value as the
+matching tolerance.
+
+Detection delay for a matched gradual event is measured from
+drift_start.
+
+
+RECURRING DRIFT
+---------------
+Recurring drift contains two true transition points, for example:
+
+    A -> B -> A
+
+Each transition is evaluated as a separate drift event.
+
+A detector output can be matched to at most one true event.
+
+
+NO-DRIFT CONTROL
+----------------
+The no-drift synthetic stream contains no true drift events.
+
+Therefore:
+
+    - every detector output is treated as a false alarm
+    - detection delay is undefined
+    - missed detections are zero
+
+The no-drift control is used to verify that detectors do not raise
+unnecessary alarms on a stable stream.
+
+
+FALSE ALARMS
+------------
+Any synthetic detector output that is not matched to a known true drift
+event is treated as a false alarm.
+
+False alarms are normalised by stream length as:
+
+    false_alarms_per_10000 =
+        number_of_false_alarms
+        / number_of_observations
+        * 10000
+
+
+REAL-DATA DETECTION EVALUATION
+------------------------------
+Real-data detection evaluation for AEMO SA1 and NSW1 is planned.
+
+Unlike the synthetic benchmark, AEMO data do not provide ground-truth
+changepoints.
+
+Detected changepoints will therefore be compared with historically
+documented events as contextual reference points rather than treated as
+known true drift events.
+
+Planned real-data detection outputs include:
+
+    - delay from a documented event to a matched detection
+    - documented events with no matched detection
+    - detections unmatched to documented events
+
+Unmatched AEMO detections will not automatically be classified as false
+alarms because documented events are not exhaustive ground truth.
+
+A separate documented-event matching rule will be defined for AEMO
+evaluation rather than assuming that the synthetic 336-observation
+matching tolerance is appropriate for real events.
+
 
 INPUT VALIDATION
 ----------------
-The implemented forecast metrics verify that:
+The implemented evaluation functions verify that:
 
-    - y_true and y_pred have equal lengths.
-    - y_true and y_pred contain no missing values.
+    - y_true and y_pred have equal lengths
+    - y_true and y_pred contain no missing values
+    - changepoint indices are valid integer indices
+    - changepoint indices fall within the evaluated stream
+    - detected and true changepoints use the same coordinate system
+    - synthetic drift types contain the expected number of true events
+
+
+PIPELINE INTEGRATION
+--------------------
+This module provides shared metric implementations for the full
+experimental pipeline.
+
+Different stages use different subsets of these metrics:
+
+    - Baseline degradation evaluation uses calculate_mae() and
+      calculate_rolling_mae().
+
+    - Synthetic drift-detection evaluation uses
+      calculate_detection_delay(),
+      calculate_false_alarms_per_10000(), and
+      calculate_missed_detections() through the shared
+      evaluate_detections() workflow.
+
+    - Real AEMO detection evaluation will extend this module with
+      documented-event matching because real data do not provide
+      ground-truth changepoints.
+
+    - Adaptation evaluation will reuse calculate_mae() and
+      calculate_rolling_mae() from this module to compare forecasting
+      performance across the four adaptation arms. Retraining count,
+      training samples, and wall-clock cost are recorded by the
+      experiment workflow rather than calculated as forecast-error
+      metrics here.
+
+    - Uncertainty evaluation will use the planned coverage and
+      interval-width metrics implemented in this module.
+
+Per-run evaluation metrics are calculated here. Aggregation across
+seeds, including mean ± standard deviation where required, is performed
+by the experiment workflow.
+
+Experiment results are recorded separately through the shared
+runs.csv logging component.
 
 PLANNED METRICS
 ---------------
+Real-data detection evaluation:
 
-Uncertainty metrics will be added in Step 6, including:
+    - documented-event matching
+    - delay from documented event to matched detection
+    - unmatched detections
+    - documented events with no matched detection
+
+
+Uncertainty evaluation:
 
     - empirical coverage
     - mean interval width
     - normalised interval width
     - worst 24-hour coverage
-
-This module calculates evaluation metrics only. Experiment results are
-recorded separately through the shared runs.csv logging component.
 """
-
 
 import pandas as pd
 
@@ -131,6 +340,8 @@ def calculate_rolling_mae(
     return absolute_error.rolling(
         window=window
     ).mean()
+
+
 
 # Detection evaluation metrics
 
@@ -514,19 +725,16 @@ def evaluate_detections(
     }
 
 
-# Uncertainty evaluation metrics
-# To be implemented in Step 6 (Uncertainty)
-# Empirical coverage:
-# Fraction of observed values that fall inside the
-# prediction interval.
-
-# Mean interval width:
-# Average width of the prediction intervals.
-
-# Normalised interval width:
-# Interval width scaled to make uncertainty widths
-# comparable across settings.
-
-# Worst 24-hour coverage:
-# Lowest empirical coverage observed over a rolling
-# 24-hour window.
+# Planned evaluation metrics
+#
+# Real-data detection evaluation:
+# - documented-event matching
+# - delay from documented event to matched detection
+# - unmatched detections
+# - documented events with no matched detection
+#
+# Uncertainty evaluation (Step 6):
+# - empirical coverage
+# - mean interval width
+# - normalised interval width
+# - worst 24-hour coverage
