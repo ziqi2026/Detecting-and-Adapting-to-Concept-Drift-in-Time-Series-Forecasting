@@ -56,6 +56,8 @@ DATA_PATH = PROJECT_ROOT / "data" / "raw"
 OUTPUT_PATH = (
     PROJECT_ROOT
     / "results"
+    /"tables"
+    /"detection"
     / "aemo_detection_changepoints.csv"
 )
 
