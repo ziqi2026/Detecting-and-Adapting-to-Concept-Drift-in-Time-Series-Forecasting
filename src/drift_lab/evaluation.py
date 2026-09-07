@@ -161,7 +161,10 @@ False alarms are normalised by stream length as:
 
 REAL-DATA DETECTION EVALUATION
 ------------------------------
-Real-data detection evaluation for AEMO SA1 and NSW1 is planned.
+Real-data detection evaluation for AEMO SA1 and NSW1 is implemented by
+evaluate_aemo_detections(). At the user's request, T2 reuses T1's
+seven-day tolerance and first-unused detection rule. See
+docs/aemo_matching_protocol.md and the explicit protocol argument.
 
 Unlike the synthetic benchmark, AEMO data do not provide ground-truth
 changepoints.
@@ -179,9 +182,9 @@ Planned real-data detection outputs include:
 Unmatched AEMO detections will not automatically be classified as false
 alarms because documented events are not exhaustive ground truth.
 
-A separate documented-event matching rule will be defined for AEMO
-evaluation rather than assuming that the synthetic 336-observation
-matching tolerance is appropriate for real events.
+The AEMO documented-event protocol is supplied explicitly. Frozen tiers
+are preserved. The revised protocol reuses T1 matching, with Tier 1
+allocation completed before Tier 2. Versions remain separate in the log.
 
 
 INPUT VALIDATION
@@ -345,6 +348,13 @@ def calculate_rolling_mae(
 
 # Detection evaluation metrics
 
+DEFAULT_DETECTION_TOLERANCE = 48 * 7
+
+
+def _first_unused_in_window(detected, unused, start, end):
+    """Shared T1/T2 primitive: earliest unused detection in inclusive [start, end]."""
+    return next((cp for cp in detected if cp in unused and start <= cp <= end), None)
+
 def _validate_changepoints(changepoints, n_observations, name):
     """
     Validate changepoint indices and return them as sorted unique integers.
@@ -379,7 +389,7 @@ def _match_detections(
     true_changepoints,
     n_observations,
     drift_type,
-    tolerance=48 * 7,
+    tolerance=DEFAULT_DETECTION_TOLERANCE,
     gradual_grace=None,
 ):
     """
@@ -511,13 +521,9 @@ def _match_detections(
             drift_end + gradual_grace,
         )
 
-        candidates = [
-            cp for cp in detected
-            if cp in unused and drift_start <= cp <= match_end
-        ]
+        detected_cp = _first_unused_in_window(detected, unused, drift_start, match_end)
 
-        if candidates:
-            detected_cp = candidates[0]
+        if detected_cp is not None:
             unused.remove(detected_cp)
 
             matched_pairs.append(
@@ -541,13 +547,9 @@ def _match_detections(
                 true_cp + tolerance,
             )
 
-            candidates = [
-                cp for cp in detected
-                if cp in unused and true_cp <= cp <= match_end
-            ]
+            detected_cp = _first_unused_in_window(detected, unused, true_cp, match_end)
 
-            if candidates:
-                detected_cp = candidates[0]
+            if detected_cp is not None:
                 unused.remove(detected_cp)
 
                 matched_pairs.append(
@@ -581,7 +583,7 @@ def calculate_detection_delay(
     true_changepoints,
     n_observations,
     drift_type,
-    tolerance=48 * 7,
+    tolerance=DEFAULT_DETECTION_TOLERANCE,
     gradual_grace=None,
 ):
     """
@@ -616,7 +618,7 @@ def calculate_false_alarms_per_10000(
     true_changepoints,
     n_observations,
     drift_type,
-    tolerance=48 * 7,
+    tolerance=DEFAULT_DETECTION_TOLERANCE,
     gradual_grace=None,
 ):
     """
@@ -647,7 +649,7 @@ def calculate_missed_detections(
     true_changepoints,
     n_observations,
     drift_type,
-    tolerance=48 * 7,
+    tolerance=DEFAULT_DETECTION_TOLERANCE,
     gradual_grace=None,
 ):
     """
@@ -672,7 +674,7 @@ def evaluate_detections(
     true_changepoints,
     n_observations,
     drift_type,
-    tolerance=48 * 7,
+    tolerance=DEFAULT_DETECTION_TOLERANCE,
     gradual_grace=None,
 ):
     """
@@ -725,14 +727,212 @@ def evaluate_detections(
     }
 
 
-# Planned evaluation metrics
-#
-# Real-data detection evaluation:
-# - documented-event matching
-# - delay from documented event to matched detection
-# - unmatched detections
-# - documented events with no matched detection
-#
+# AEMO contextual event evaluation. Kept separate from synthetic ground truth.
+
+AEMO_TIER1_COLUMNS = {
+    "EVT-2020-02": "COVID delay",
+    "EVT-2020-07": "solar/mild-weather delay",
+    "EVT-2021-10": "5-minute settlement delay",
+    "EVT-2022-03": "2022 suspension delay",
+    "EVT-2023-14": "security-directions delay",
+}
+AEMO_REGIMES = ("pre-drift", "drift", "post-drift")
+AEMO_TIMEZONE = "Etc/GMT-10"  # fixed UTC+10, not UTC and not local DST
+
+
+def aemo_timestamp(value):
+    """Convert a naive market-time or timezone-aware value to fixed AEST."""
+    value = pd.Timestamp(value)
+    if pd.isna(value):
+        raise ValueError("AEMO timestamps must not be missing.")
+    if value.tzinfo is None:
+        return value.tz_localize(AEMO_TIMEZONE)
+    return value.tz_convert(AEMO_TIMEZONE)
+
+
+def validate_aemo_protocol(protocol):
+    """Require the user-requested reuse of T1's seven-day matching rule."""
+    for key in ("point_window_days", "interval_grace_days", "regime_days"):
+        value = protocol.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{key} must be an explicit non-negative integer.")
+    if protocol["point_window_days"] == 0 or protocol["regime_days"] == 0:
+        raise ValueError("Point and regime windows must be positive.")
+    for key in ("point_window_days", "interval_grace_days"):
+        if protocol[key] * 48 != DEFAULT_DETECTION_TOLERANCE:
+            raise ValueError(f"{key} must reuse T1's 336-observation tolerance.")
+    expected = {
+        "timezone": AEMO_TIMEZONE,
+        "assignment": "tier_then_start_then_event_id_first_unused",
+        "multiple_detections_per_event": False,
+        "boundary": "both_closed",
+    }
+    if not protocol.get("protocol_id"):
+        raise ValueError("An explicit protocol_id is required.")
+    for key, value in expected.items():
+        if protocol.get(key) != value:
+            raise ValueError(f"Unsupported AEMO protocol setting: {key}.")
+
+
+def load_aemo_events(source):
+    """Validate the frozen catalogue; return a copy with AEST date columns."""
+    events = source.copy() if isinstance(source, pd.DataFrame) else pd.read_csv(source)
+    required = {"event_id", "event_name", "start_date", "end_date",
+                "date_precision", "region", "tier"}
+    if not required.issubset(events.columns):
+        raise ValueError(f"Missing event fields: {sorted(required - set(events.columns))}")
+    if events[list(required)].isna().any().any():
+        raise ValueError("Required event fields must not be missing.")
+    if events.event_id.duplicated().any():
+        raise ValueError("Event IDs must be unique.")
+    tiers = pd.to_numeric(events.tier, errors="raise")
+    if not tiers.isin([1, 2]).all():
+        raise ValueError("Frozen tiers must be exactly 1 or 2.")
+    events["tier"] = tiers.astype(int)
+    if set(events.loc[events.tier == 1, "event_id"]) != set(AEMO_TIER1_COLUMNS):
+        raise ValueError("The fixed five Tier 1 event IDs must be preserved exactly.")
+    if not events.date_precision.isin(["day", "month", "date_range"]).all():
+        raise ValueError("Unsupported event date_precision.")
+    if not events.region.isin(["NEM", "SA1", "NSW1"]).all():
+        raise ValueError("Unsupported event region.")
+    for name in ("start_date", "end_date"):
+        events[name] = events[name].map(aemo_timestamp)
+        if not (events[name] == events[name].dt.normalize()).all():
+            raise ValueError("The frozen catalogue uses dates, not intraday timestamps.")
+    if (events.end_date < events.start_date).any():
+        raise ValueError("Event end_date precedes start_date.")
+    return events.sort_values(["tier", "start_date", "event_id"]).reset_index(drop=True)
+
+
+def build_aemo_event_windows(event, *, regime_days):
+    """F1-compatible event-relative windows, all left-closed/right-open."""
+    start = aemo_timestamp(event["start_date"])
+    end = aemo_timestamp(event["end_date"]) + pd.Timedelta(days=1)
+    span = pd.Timedelta(days=regime_days)
+    return {"pre-drift": (start - span, start), "drift": (start, end),
+            "post-drift": (end, end + span)}
+
+
+def _aemo_match_end(event, protocol):
+    if event["date_precision"] == "day":
+        return event["start_date"] + pd.Timedelta(days=protocol["point_window_days"])
+    # As in T1 gradual matching: use the recorded end anchor + grace,
+    # with an inclusive endpoint. Do not add an extra day from F1 regimes.
+    return event["end_date"] + pd.Timedelta(days=protocol["interval_grace_days"])
+
+
+def _aemo_global_regime(timestamp, events, protocol):
+    """Disjoint full-stream accounting; never sum overlapping event windows."""
+    windows = [build_aemo_event_windows(e, regime_days=protocol["regime_days"])
+               for e in events.to_dict("records")]
+    for regime in ("drift", "pre-drift"):
+        if any(w[regime][0] <= timestamp < w[regime][1] for w in windows):
+            return regime
+    if any(timestamp >= start for start in events.start_date):
+        return "post-drift"
+    return "pre-drift"
+
+
+def _aemo_counts(rows):
+    """Detection-based numerator, including both tiers; undefined if empty."""
+    n = len(rows)
+    tier1 = int((rows.match_tier == 1).sum())
+    tier2 = int((rows.match_tier == 2).sum())
+    return {"detections": n, "tier1_matched": tier1, "tier2_matched": tier2,
+            "unmatched": n - tier1 - tier2,
+            "precision": (tier1 + tier2) / n if n else float("nan")}
+
+
+def evaluate_aemo_detections(detections, events, region, *, protocol,
+                             stream_start, stream_end_exclusive):
+    """Assign Task 120 detections to contextual events without fitting models.
+
+    Return per-detection audit rows, all Tier 1 statuses, and disjoint global
+    metrics. Match every Tier 1 event before processing Tier 2. For each
+    event select the first unused detection within the inclusive window,
+    using the same primitive as T1. Every event and detection can be used
+    at most once. No result here is synthetic ground-truth precision.
+    """
+    validate_aemo_protocol(protocol)
+    if region not in ("SA1", "NSW1"):
+        raise ValueError("T2 supports SA1 and NSW1.")
+    events = load_aemo_events(events)
+    start, end = aemo_timestamp(stream_start), aemo_timestamp(stream_end_exclusive)
+    if end <= start:
+        raise ValueError("Invalid stream coverage.")
+    applicable = events[events.region.isin(["NEM", region])]
+    rows = detections.copy()
+    if not {"detected_index", "SETTLEMENTDATE"}.issubset(rows.columns):
+        raise ValueError("Detections need detected_index and SETTLEMENTDATE.")
+    rows["SETTLEMENTDATE"] = pd.Series(
+        [aemo_timestamp(t) for t in rows.SETTLEMENTDATE], index=rows.index,
+        dtype=f"datetime64[ns, {AEMO_TIMEZONE}]")
+    indices = pd.to_numeric(rows.detected_index, errors="raise")
+    if indices.isna().any() or (indices < 0).any() or (indices % 1 != 0).any():
+        raise ValueError("Detection indices must be non-negative integers.")
+    if indices.duplicated().any() or rows.SETTLEMENTDATE.duplicated().any():
+        raise ValueError("Duplicate detections must be resolved in the input.")
+    if not rows.SETTLEMENTDATE.is_monotonic_increasing or not indices.is_monotonic_increasing:
+        raise ValueError("Task 120 detections must be chronological.")
+    if ((rows.SETTLEMENTDATE < start) | (rows.SETTLEMENTDATE >= end)).any():
+        raise ValueError("Detection outside the supplied test coverage.")
+    timestamps = rows.SETTLEMENTDATE.tolist()
+    unused = set(timestamps)
+    assignments = {}
+    # Catalogue order is tier -> start -> ID. Complete all Tier 1 allocations
+    # before Tier 2 can consume any remaining detection (T1 event-first order).
+    for event in applicable.to_dict("records"):
+        timestamp = _first_unused_in_window(
+            timestamps, unused, event["start_date"], _aemo_match_end(event, protocol))
+        if timestamp is not None:
+            unused.remove(timestamp)
+            assignments[timestamp] = event
+    audits = []
+    for row in rows.to_dict("records"):
+        timestamp = row["SETTLEMENTDATE"]
+        candidates = [e for e in applicable.to_dict("records")
+                      if e["start_date"] <= timestamp <= _aemo_match_end(e, protocol)]
+        event = assignments.get(timestamp)
+        row.update({
+            "match_status": f"tier{event['tier']}" if event else "unmatched",
+            "match_tier": event["tier"] if event else 0,
+            "matched_event_id": event["event_id"] if event else "",
+            "candidate_event_ids": "|".join(e["event_id"] for e in candidates),
+            "delay_days": (timestamp - event["start_date"]).total_seconds() / 86400
+                          if event else float("nan"),
+            "global_regime": _aemo_global_regime(timestamp, applicable, protocol),
+        })
+        audits.append(row)
+    audit = pd.DataFrame(audits, columns=list(rows.columns) + [
+        "match_status", "match_tier", "matched_event_id", "candidate_event_ids",
+        "delay_days", "global_regime"])
+    event_results = []
+    for event in events[events.tier == 1].to_dict("records"):
+        applies = event["region"] in ("NEM", region)
+        if applies and (event["start_date"] < start or _aemo_match_end(event, protocol) >= end):
+            raise ValueError(f"Incomplete Tier 1 coverage for {event['event_id']}.")
+        matches = audit[audit.matched_event_id == event["event_id"]]
+        first = matches.iloc[0] if len(matches) else None
+        windows = build_aemo_event_windows(event, regime_days=protocol["regime_days"])
+        delay_regime = "drift"
+        if first is not None and first["SETTLEMENTDATE"] >= windows["drift"][1]:
+            delay_regime = "post-drift"
+        event_results.append({
+            "event_id": event["event_id"], "event_name": event["event_name"],
+            "applicable": int(applies), "detected": int(first is not None),
+            "status": "not applicable" if not applies else
+                      ("detected" if first is not None else "not detected"),
+            "delay_days": first["delay_days"] if first is not None else float("nan"),
+            "first_detection": first["SETTLEMENTDATE"] if first is not None else pd.NaT,
+            "delay_regime": delay_regime, "assigned_detections": len(matches),
+        })
+    global_metrics = {regime: _aemo_counts(audit[audit.global_regime == regime])
+                      for regime in AEMO_REGIMES}
+    return {"audit": audit, "tier1_events": pd.DataFrame(event_results),
+            "global_metrics": global_metrics, "totals": _aemo_counts(audit)}
+
+
+# Planned evaluation metrics:
 # Uncertainty evaluation (Step 6):
 # - empirical coverage
 # - mean interval width

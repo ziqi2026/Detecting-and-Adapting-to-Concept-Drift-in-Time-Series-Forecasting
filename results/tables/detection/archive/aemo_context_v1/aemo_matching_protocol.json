@@ -1,0 +1,10 @@
+{
+  "protocol_id": "aemo_context_v1",
+  "point_window_days": 7,
+  "interval_grace_days": 7,
+  "regime_days": 7,
+  "timezone": "Etc/GMT-10",
+  "assignment": "tier_then_start_then_event_id",
+  "multiple_detections_per_event": true,
+  "boundary": "left_closed_right_open"
+}
