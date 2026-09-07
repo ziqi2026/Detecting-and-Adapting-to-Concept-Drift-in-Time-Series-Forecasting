@@ -5,3 +5,4 @@ src/*.egg-info/
 # Personal T2 notes: keep locally, exclude from Git in any directory.
 T2_delivery_checklist.md
 T2_process_zh_en.md
+/results/tables/detection/archive/aemo_context_v1/README.md
