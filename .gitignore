@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 src/*.egg-info/
+
+# Personal T2 notes: keep locally, exclude from Git in any directory.
+T2_delivery_checklist.md
+T2_process_zh_en.md

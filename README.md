@@ -11,8 +11,6 @@ references, not ground-truth changepoints.
 
 - [Current T2 table](results/tables/detection/T2_aemo_detection.md)
 - [Current T2 CSV](results/tables/detection/T2_aemo_detection.csv)
-- [Acceptance checklist and file locations](docs/T2_delivery_checklist.md)
-- [Bilingual process and results / 中英过程说明](docs/T2_process_zh_en.md)
 - [Matching protocol](docs/aemo_matching_protocol.md)
 - [Input and implementation manifest](results/tables/detection/T2_manifest.json)
 
