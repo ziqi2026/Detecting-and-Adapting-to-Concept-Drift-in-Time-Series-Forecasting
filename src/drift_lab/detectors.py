@@ -101,6 +101,7 @@ def run_page_hinkley(
     delta=0.005,
     threshold=400.0,
     alpha=0.9999,
+    mode="both",
 ):
     """
     Run Page-Hinkley over a chronological numeric stream.
@@ -114,6 +115,7 @@ def run_page_hinkley(
         delta=delta,
         threshold=threshold,
         alpha=alpha,
+        mode=mode,
     )
 
     return run_detector(
@@ -166,17 +168,18 @@ DETECTOR_REGISTRY = {
         "config": {
             "min_instances": 30,
             "delta": 0.005,
-            "threshold": 209,
-            "alpha": 0.999,
+            "threshold": 125,
+            "alpha": 0.99,
+            "mode":"up",
         },
     },
 
     "kswin": {
         "func": run_kswin,
         "config": {
-            "alpha": 0.00005,
+            "alpha": 5e-6,
             "window_size": 140,
-            "stat_size": 70,
+            "stat_size": 30,
             "seed": 12,
         },
     },

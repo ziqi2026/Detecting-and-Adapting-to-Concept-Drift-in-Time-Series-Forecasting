@@ -1,7 +1,7 @@
 """T2: evaluate stored Task 120 detections; never rerun a forecaster/detector.
 
 Run from any directory. --from-logs reconstructs the final table solely from
-results/runs.csv and the saved manifest. See docs/aemo_matching_protocol.md.
+results/tables/runs.csv and the saved manifest. See docs/aemo_matching_protocol.md.
 """
 
 import argparse
@@ -30,7 +30,7 @@ from drift_lab.run_logger import log_run
 INPUT = ROOT / "results/tables/detection/aemo_detection_changepoints.csv"
 EVENTS = ROOT / "data/events.csv"
 PROTOCOL = ROOT / "docs/aemo_matching_protocol.json"
-RUNS = ROOT / "results/runs.csv"
+RUNS = ROOT / "results/tables/runs.csv"
 OUT = ROOT / "results/tables/detection"
 MANIFEST = OUT / "T2_manifest.json"
 TABLE = OUT / "T2_aemo_detection.csv"
@@ -49,47 +49,135 @@ def _scalar(data, metric):
         raise ValueError(f"Expected exactly one logged value for {metric}; got {len(rows)}.")
     return float(rows.metric_value.iloc[0])
 
-
 def build_t2_from_runs(runs, configurations):
+
     """Reconstruct all five delays and ratio-of-counts precision from logs."""
+
     result = []
+
     for config in configurations:
+
         method, region = config["detector"], config["region"]
+
         data = runs[(runs.group == GROUP) & (runs.split_id == SPLIT)
+
                     & (runs.method == method) & (runs.region == region)
+
                     & (runs.config_hash == config["config_hash"])
+
                     & (runs.seed == config["seed"])]
+
         if data.duplicated(["metric_name", "regime"]).any():
+
             raise ValueError("Duplicate T2 log metrics.")
+
         row = {"detector": method, "region": region}
+
         for event_id, column in AEMO_TIER1_COLUMNS.items():
+
             prefix = f"t2.event.{event_id}"
-            applies, detected = _scalar(data, prefix + ".applicable"), _scalar(data, prefix + ".detected")
+
+            applies, detected = _scalar(
+                data,
+                prefix + ".applicable"
+            ), _scalar(
+                data,
+                prefix + ".detected"
+            )
+
             if applies not in (0, 1) or detected not in (0, 1):
+
                 raise ValueError("Invalid logged event status.")
+
             if not applies:
+
                 row[column] = "not applicable"
+
             elif not detected:
+
                 row[column] = "not detected"
+
             else:
+
                 delay = _scalar(data, prefix + ".delay_days")
+
                 if not np.isfinite(delay) or delay < 0:
+
                     raise ValueError("Invalid logged event delay.")
+
                 row[column] = round(delay, 3)
+
         counts = {}
-        for name in ("detections", "tier1_matched", "tier2_matched", "unmatched"):
-            values = data[data.metric_name == f"t2.global.{name}"]
-            if set(values.regime) != set(AEMO_REGIMES) or len(values) != 3:
-                raise ValueError(f"Incomplete logged regimes for {name}.")
-            if ((values.metric_value < 0) | (values.metric_value % 1 != 0)).any():
-                raise ValueError("Detection counts must be non-negative integers.")
-            counts[name] = int(values.metric_value.sum())
-        if counts["detections"] != counts["tier1_matched"] + counts["tier2_matched"] + counts["unmatched"]:
-            raise ValueError("Logged detection accounting does not balance.")
-        row["unmatched"] = counts["unmatched"]
-        row["precision"] = ((counts["tier1_matched"] + counts["tier2_matched"]) / counts["detections"]
-                            if counts["detections"] else float("nan"))
+
+        for name in (
+            "detections",
+            "tier1_matched",
+            "tier2_matched",
+            "unmatched",
+        ):
+
+            values = data[
+                data.metric_name == f"t2.global.{name}"
+            ]
+
+            if (
+                set(values.regime) != set(AEMO_REGIMES)
+                or len(values) != 3
+            ):
+
+                raise ValueError(
+                    f"Incomplete logged regimes for {name}."
+                )
+
+            if (
+                (values.metric_value < 0)
+                | (values.metric_value % 1 != 0)
+            ).any():
+
+                raise ValueError(
+                    "Detection counts must be non-negative integers."
+                )
+
+            counts[name] = int(
+                values.metric_value.sum()
+            )
+
+        if (
+            counts["detections"]
+            != counts["tier1_matched"]
+            + counts["tier2_matched"]
+            + counts["unmatched"]
+        ):
+
+            raise ValueError(
+                "Logged detection accounting does not balance."
+            )
+
+        row["tier1_unmatched"] = (
+            counts["detections"]
+            - counts["tier1_matched"]
+        )
+
+        row["tier2_contextual"] = (
+            counts["tier2_matched"]
+        )
+
+        row["unmatched"] = (
+            counts["unmatched"]
+        )
+
+        row["precision"] = (
+            (
+                counts["tier1_matched"]
+                + counts["tier2_matched"]
+            )
+            / counts["detections"]
+            if counts["detections"]
+            else float("nan")
+        )
+
         result.append(row)
+
     return pd.DataFrame(result)
 
 
@@ -197,15 +285,21 @@ def markdown_table(frame):
 def write_table(table):
     table.to_csv(TABLE, index=False, na_rep="N/A")
     shown = table.copy()
-    shown["precision"] = shown.precision.map(lambda x: f"{x:.2%}" if pd.notna(x) else "N/A")
+    shown["precision"] = shown.precision.map(
+        lambda x: f"{x:.2%}" if pd.notna(x) else "N/A"
+    )
     (OUT / "T2_aemo_detection.md").write_text(
         "# T2 — Detection on AEMO vs documented events\n\n" + markdown_table(shown) +
         "\n\nDelays are fractional days from the frozen reference date, rounded to 3 decimals. "
-        "Precision is the proportion of detections matched to either tier. Historical events "
-        "are contextual references; unmatched detections are not automatically false positives. "
-        "See docs/aemo_matching_protocol.md and T2_manifest.json.\n", encoding="utf-8")
-
-
+        "Tier 1 unmatched counts detections that did not match a primary Tier 1 event. "
+        "Tier 2 contextual reports how many of those detections were subsequently matched "
+        "to Tier 2 events. Unmatched counts detections matched to neither tier. "
+        "Precision is the proportion of detections matched to either Tier 1 or Tier 2. "
+        "Historical events are contextual references; unmatched detections are not automatically false positives. "
+        "See docs/aemo_matching_protocol.md and T2_manifest.json.\n",
+        encoding="utf-8",
+    )
+    
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--from-logs", action="store_true")
@@ -263,7 +357,7 @@ def main():
     write_table(table)
     manifest = {"created_at": datetime.now(timezone.utc).isoformat(), "protocol": protocol,
                 "source_sha256": hashes, "configurations": configurations,
-                "runs_path": "results/runs.csv", "group": GROUP, "split_id": SPLIT,
+                "runs_path": "results/tables/runs.csv", "group": GROUP, "split_id": SPLIT,
                 "notes": "Stored Task 120 runs only; no model fitting, detector reruns, or inferred multi-seed uncertainty."}
     MANIFEST.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"Saved {len(table)} rows to {TABLE}")

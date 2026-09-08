@@ -1,0 +1,13 @@
+detector,drift_type,detection_delay_mean_sd,false_alarms_per_10k_mean_sd,missed_detections_mean_sd,configuration,seeds
+adwin,none,—,0.00 ± 0.00,0.00 ± 0.00,delta=0.0001,"1,2,3,4,5"
+adwin,sudden,23.00 ± 0.00,1.33 ± 0.00,0.00 ± 0.00,delta=0.0001,"1,2,3,4,5"
+adwin,gradual,600.60 ± 114.04,0.93 ± 0.76,0.00 ± 0.00,delta=0.0001,"1,2,3,4,5"
+adwin,recurring,29.40 ± 8.76,1.33 ± 0.00,0.00 ± 0.00,delta=0.0001,"1,2,3,4,5"
+kswin,none,—,0.00 ± 0.00,0.00 ± 0.00,"alpha=5e-06,seed=12,stat_size=30,window_size=140","1,2,3,4,5"
+kswin,sudden,25.00 ± 2.55,0.67 ± 0.47,0.00 ± 0.00,"alpha=5e-06,seed=12,stat_size=30,window_size=140","1,2,3,4,5"
+kswin,gradual,—,0.27 ± 0.37,1.00 ± 0.00,"alpha=5e-06,seed=12,stat_size=30,window_size=140","1,2,3,4,5"
+kswin,recurring,19.50 ± 1.87,0.53 ± 0.73,0.20 ± 0.45,"alpha=5e-06,seed=12,stat_size=30,window_size=140","1,2,3,4,5"
+page_hinkley,none,—,0.00 ± 0.00,0.00 ± 0.00,"alpha=0.99,delta=0.005,min_instances=30,mode=up,threshold=125","1,2,3,4,5"
+page_hinkley,sudden,29.40 ± 1.14,0.80 ± 0.30,0.00 ± 0.00,"alpha=0.99,delta=0.005,min_instances=30,mode=up,threshold=125","1,2,3,4,5"
+page_hinkley,gradual,1123.80 ± 145.53,0.00 ± 0.00,0.00 ± 0.00,"alpha=0.99,delta=0.005,min_instances=30,mode=up,threshold=125","1,2,3,4,5"
+page_hinkley,recurring,32.50 ± 10.65,0.80 ± 0.30,0.20 ± 0.45,"alpha=0.99,delta=0.005,min_instances=30,mode=up,threshold=125","1,2,3,4,5"

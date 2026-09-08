@@ -15,7 +15,7 @@ Log identities distinguish v2 from that superseded evaluation.
 
 ## Frozen inputs
 
-Use `results/tables/detection/aemo_detection_changepoints.csv` from Task 120,
+Use results from Task 120,`results/tables/detection/aemo_detection_changepoints.csv`
 and the existing `data/events.csv` without editing either file. Preserve all
 five Tier 1 IDs specified in `event_tiering_criteria.md` and all 29 Tier 2
 events. Record SHA-256 hashes of inputs, protocol, and implementation.
@@ -73,6 +73,17 @@ proportion, not ground-truth classification precision or
 proof of causation. AEMO events are contextual historical references;
 unmatched detections must not automatically be called false positives.
 
+For reporting, Tier 1 unmatched is the number of detections that do not
+match a Tier 1 event. Tier 2 contextual is the subset of those detections
+that are subsequently assigned to Tier 2 events. Final unmatched is the
+number assigned to neither tier. Therefore:
+
+Tier 1 unmatched = Tier 2 contextual + unmatched.
+
+This reporting preserves Tier 1 as the primary evidence layer while using
+Tier 2 as contextual support, consistent with the agreed event-tiering
+procedure.
+
 ## Regimes and reproducible logging
 
 Reuse the F1 event-relative definitions from
@@ -89,7 +100,7 @@ Tier 1/Tier 2 counts, unmatched counts and catalogue-match proportion through
 `run_logger.log_run`. Event windows may overlap; do not add them together to
 calculate overall T2 counts.
 
-For reconstructing T2 from `results/runs.csv`, also partition the full test
+For reconstructing T2 from `results/tables/runs.csv`, also partition the full test
 stream into mutually exclusive accounting regimes: drift if in any applicable
 catalogue event duration; otherwise pre-drift if in any event's preceding
 7 days; otherwise post-drift if after any applicable event's start; otherwise
@@ -106,8 +117,8 @@ forecaster seed 0 for deterministic detectors), fixed split, training count,
 and measured evaluation time. This is evaluation of the stored Task 120 run,
 not a new multi-seed experiment. Do not invent standard deviations.
 
-Append to `results/runs.csv` as explicitly required by T2. The older
-`results/tables/runs.csv` remains a separate historical source. A manifest
+Append T2 metrics to the project's existing central log at
+`results/tables/runs.csv`.  A manifest
 records the source hashes and protocol, and duplicate run identities are
 not appended again. The display table is reconstructed from logged metrics.
 The current split ID is `aemo_fixed_train2018_2019_test202003_task120_t2_t1rule_v2`.
