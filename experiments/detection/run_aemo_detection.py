@@ -39,6 +39,7 @@ if str(SRC_DIR) not in sys.path:
 
 from drift_lab.data_loader import load_and_split_aemo
 from drift_lab.detectors import run_all_detectors
+from drift_lab.detector_diagnostics import run_detector_diagnostic
 from drift_lab.forecasters import (
     GradientBoostedForecaster,
     frozen_error_stream,
@@ -59,6 +60,14 @@ OUTPUT_PATH = (
     /"tables"
     /"detection"
     / "aemo_detection_changepoints.csv"
+)
+
+DIAGNOSTIC_OUTPUT_PATH = (
+    PROJECT_ROOT
+    / "results"
+    / "tables"
+    / "detection"
+    / "aemo_detection_diagnostics.csv.gz"
 )
 
 FORECASTER_CONFIG = {
@@ -201,18 +210,76 @@ def run_region(region):
     )
 
     rows = []
+    diagnostic_rows = []
 
     for detector_name, result in detector_results.items():
 
         config = result["config"]
 
         changepoints = result["changepoints"]
+        diagnostic_result = run_detector_diagnostic(
+            stream,
+            detector_name,
+        )
+
+        if (
+            diagnostic_result["changepoints"]
+            != changepoints
+        ):
+            raise RuntimeError(
+                f"{region} / {detector_name}: "
+                "diagnostic changepoints differ from "
+                "the frozen detector-interface results."
+            )
 
         print(
             f"{region} / {detector_name}: "
             f"{len(changepoints)} detections"
         )
 
+        for trace_row in diagnostic_result["trace"]:
+            trace_index = trace_row["detected_index"]
+
+            if (
+                trace_index < 0
+                or trace_index >= len(test_errors)
+            ):
+                raise RuntimeError(
+                    f"{detector_name} diagnostic returned "
+                    f"out-of-range index {trace_index}."
+                )
+
+            error_row = test_errors.iloc[trace_index]
+
+            diagnostic_rows.append(
+                {
+                    "region": region,
+                    "detector": detector_name,
+                    "detected_index": trace_index,
+                    "SETTLEMENTDATE": (
+                        error_row["SETTLEMENTDATE"]
+                    ),
+                    "forecast_error": float(
+                        error_row["error"]
+                    ),
+                    "normalized_abs_error": (
+                        trace_row["stream_value"]
+                    ),
+                    "statistic": trace_row["statistic"],
+                    "threshold": trace_row["threshold"],
+                    "statistic_name": (
+                        trace_row["statistic_name"]
+                    ),
+                    "threshold_name": (
+                        trace_row["threshold_name"]
+                    ),
+                    "is_drift": trace_row["is_drift"],
+                    "detector_config": json.dumps(
+                        config,
+                        sort_keys=True,
+                    ),
+                }
+            )
         for index in changepoints:
 
             if index < 0 or index >= len(test_errors):
@@ -250,7 +317,7 @@ def run_region(region):
                 }
             )
 
-    return rows
+    return rows, diagnostic_rows
 
 
 # ---------------------------------------------------------------------
@@ -280,13 +347,24 @@ def main():
     print()
 
     rows = []
+    diagnostic_rows = []
 
     for region in REGIONS:
-        region_rows = run_region(region)
+        (
+            region_rows,
+            region_diagnostic_rows,
+        ) = run_region(region)
+
         rows.extend(region_rows)
+        diagnostic_rows.extend(
+            region_diagnostic_rows
+        )
         print()
 
     output = pd.DataFrame(rows)
+    diagnostic_output = pd.DataFrame(
+        diagnostic_rows
+    )
 
     if output.empty:
         output = pd.DataFrame(
@@ -312,7 +390,15 @@ def main():
         OUTPUT_PATH,
         index=False,
     )
-
+    diagnostic_output.to_csv(
+        DIAGNOSTIC_OUTPUT_PATH,
+        index=False,
+        compression={
+            "method": "gzip",
+            "compresslevel": 6,
+            "mtime": 0,
+        },
+    )
     print("=" * 72)
     print("Detection complete")
     print("=" * 72)
