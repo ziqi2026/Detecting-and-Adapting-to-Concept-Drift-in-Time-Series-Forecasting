@@ -1,0 +1,7 @@
+detector,region,detections,tier1_matched,tier2_matched,unmatched,precision
+adwin,SA1,137,4,10,123,0.10218978102189781
+page_hinkley,SA1,16,0,3,13,0.1875
+kswin,SA1,385,5,21,359,0.06753246753246753
+adwin,NSW1,133,4,9,120,0.09774436090225563
+page_hinkley,NSW1,14,1,2,11,0.21428571428571427
+kswin,NSW1,375,5,14,356,0.050666666666666665

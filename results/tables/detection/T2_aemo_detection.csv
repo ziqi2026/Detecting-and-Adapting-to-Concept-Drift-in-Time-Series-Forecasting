@@ -1,0 +1,7 @@
+detector,region,COVID delay,solar/mild-weather delay,5-minute settlement delay,2022 suspension delay,security-directions delay,tier1_unmatched,tier2_contextual,unmatched,precision
+adwin,SA1,0.312,3.646,not detected,4.646,5.646,139,14,125,0.1258741258741259
+page_hinkley,SA1,not detected,14.771,not detected,not detected,not detected,10,2,8,0.2727272727272727
+kswin,SA1,0.208,2.271,not detected,not detected,2.271,294,17,277,0.06734006734006734
+adwin,NSW1,4.312,0.312,3.646,5.979,10.312,156,7,149,0.07453416149068323
+page_hinkley,NSW1,not detected,27.896,not detected,not detected,not detected,3,0,3,0.25
+kswin,NSW1,2.396,0.25,2.875,1.458,3.292,287,15,272,0.0684931506849315

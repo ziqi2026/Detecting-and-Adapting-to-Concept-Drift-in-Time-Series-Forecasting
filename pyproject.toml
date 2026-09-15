@@ -45,5 +45,5 @@ priority = "explicit"
 torch = { source = "pytorch-cpu", optional = true }
 
 
-# poetry install
+# pip install -e .
 # poetry install -E patchtst

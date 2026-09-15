@@ -66,8 +66,9 @@ REGION = "synthetic"
 REGIME = "full_test"
 
 # New protocol ID: do not mix these rows with the earlier raw-error experiment.
-SPLIT_ID = "synthetic_4000_1000_15000_tol336_absnorm_gb_lags_v2"
-RESULTS_PATH = PROJECT_ROOT / "results" / "runs.csv"
+SPLIT_ID ="synthetic_4000_1000_15000_tol336_absnorm_gb_lags_v2_1_retuned"
+
+RESULTS_PATH = PROJECT_ROOT / "results" /"tables"/"runs.csv"
 
 # Helpers
 def config_id(config):
