@@ -1,0 +1,7 @@
+detector,config_id,config,failed_seed,none_detections
+page_hinkley,page_hinkley_60ff9e92a4,"{""alpha"":0.98,""delta"":0.005,""min_instances"":3,""mode"":""up"",""threshold"":25}",1,1
+page_hinkley,page_hinkley_b844042366,"{""alpha"":0.98,""delta"":0.005,""min_instances"":5,""mode"":""up"",""threshold"":25}",1,1
+kswin,kswin_b59b9c7310,"{""alpha"":0.005,""seed"":12,""stat_size"":8,""window_size"":16}",1,1
+kswin,kswin_938fe7a2e6,"{""alpha"":0.001,""seed"":12,""stat_size"":8,""window_size"":16}",2,1
+kswin,kswin_924b98a8ff,"{""alpha"":0.005,""seed"":12,""stat_size"":8,""window_size"":20}",1,1
+kswin,kswin_6d50cc8710,"{""alpha"":0.001,""seed"":12,""stat_size"":8,""window_size"":20}",2,1
