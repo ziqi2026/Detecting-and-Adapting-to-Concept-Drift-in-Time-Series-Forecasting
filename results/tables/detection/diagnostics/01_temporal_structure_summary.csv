@@ -1,0 +1,7 @@
+region,detector,n_observations,chronological_detections,shuffle_mean_detections,shuffle_sd_detections,shuffle_min_detections,shuffle_max_detections,reduction_after_shuffle,calibration_abs_error_mean,calibration_abs_error_std,detector_config
+SA1,adwin,2880,10,0.0,0.0,0,0,1.0,193.4757291138906,200.7537740355477,"{""delta"": 0.0001}"
+SA1,page_hinkley,2880,1,0.0,0.0,0,0,1.0,193.4757291138906,200.7537740355477,"{""alpha"": 0.99, ""delta"": 0.005, ""min_instances"": 30, ""mode"": ""up"", ""threshold"": 125}"
+SA1,kswin,2880,16,0.0,0.0,0,0,1.0,193.4757291138906,200.7537740355477,"{""alpha"": 5e-06, ""seed"": 12, ""stat_size"": 30, ""window_size"": 140}"
+NSW1,adwin,2880,12,0.0,0.0,0,0,1.0,532.8535897816294,607.9769121466153,"{""delta"": 0.0001}"
+NSW1,page_hinkley,2880,1,0.0,0.0,0,0,1.0,532.8535897816294,607.9769121466153,"{""alpha"": 0.99, ""delta"": 0.005, ""min_instances"": 30, ""mode"": ""up"", ""threshold"": 125}"
+NSW1,kswin,2880,13,0.0,0.0,0,0,1.0,532.8535897816294,607.9769121466153,"{""alpha"": 5e-06, ""seed"": 12, ""stat_size"": 30, ""window_size"": 140}"

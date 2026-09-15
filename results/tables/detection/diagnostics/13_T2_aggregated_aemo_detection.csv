@@ -1,0 +1,13 @@
+resolution,detector,region,COVID delay,solar/mild-weather delay,5-minute settlement delay,2022 suspension delay,security-directions delay,tier1_unmatched,tier2_contextual,unmatched,precision
+3h_MAE,adwin,NSW1,not detected,12.979,not detected,not detected,not detected,10,2,8,0.2727272727272727
+3h_MAE,kswin,NSW1,not detected,25.604,not detected,not detected,not detected,4,0,4,0.2
+3h_MAE,page_hinkley,NSW1,not detected,not detected,not detected,not detected,not detected,1,0,1,0.0
+3h_MAE,adwin,SA1,not detected,not detected,not detected,not detected,not detected,9,2,7,0.2222222222222222
+3h_MAE,kswin,SA1,not detected,not detected,not detected,not detected,not detected,3,0,3,0.0
+3h_MAE,page_hinkley,SA1,not detected,not detected,not detected,not detected,not detected,3,0,3,0.0
+6h_MAE,adwin,NSW1,not detected,4.979,not detected,not detected,not detected,5,1,4,0.3333333333333333
+6h_MAE,kswin,NSW1,not detected,not detected,not detected,not detected,not detected,7,2,5,0.2857142857142857
+6h_MAE,page_hinkley,NSW1,not detected,not detected,not detected,not detected,not detected,0,0,0,N/A
+6h_MAE,adwin,SA1,not detected,not detected,not detected,not detected,not detected,9,0,9,0.0
+6h_MAE,kswin,SA1,not detected,not detected,not detected,not detected,not detected,6,0,6,0.0
+6h_MAE,page_hinkley,SA1,not detected,not detected,not detected,not detected,not detected,1,1,0,1.0

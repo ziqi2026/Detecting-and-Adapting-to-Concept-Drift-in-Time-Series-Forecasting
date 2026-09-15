@@ -1,0 +1,5 @@
+region,source_detector,target_detector,source_detections,target_detections,exact_same_timestamp_count,nearest_gap_median_days,within_1d_count,within_1d_fraction,within_3d_count,within_3d_fraction,within_7d_count,within_7d_fraction
+SA1,adwin,kswin,143,297,1,0.0007708333333333332,143,1.0,143,1.0,143,1.0
+SA1,kswin,adwin,297,143,1,0.0026041666666666665,297,1.0,297,1.0,297,1.0
+NSW1,adwin,kswin,161,292,0,0.0009791666666666666,161,1.0,161,1.0,161,1.0
+NSW1,kswin,adwin,292,161,0,0.00196875,292,1.0,292,1.0,292,1.0
