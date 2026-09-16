@@ -17,7 +17,9 @@ Original file is located at
 """
 
 from copy import deepcopy
+from time import perf_counter
 
+import numpy as np
 import pandas as pd
 
 #cp stands for "changepoints"
@@ -210,3 +212,142 @@ def adapter(
         updated_model.fit(training_data)
 
     return updated_model
+
+
+def adaptive_forecast_stream(
+    changepoints: pd.DataFrame,
+    model,
+    train: pd.DataFrame,
+    calibration: pd.DataFrame,
+    test: pd.DataFrame,
+    *,
+    region: str,
+    strategy: str,
+    detector: str | None = None,
+    recent_window: str = "90D",
+):
+    """Produce a causal forecast stream for one adaptation arm.
+
+    The initial model is fitted on ``train``.  Test rows are forecast in
+    chronological chunks.  A scheduled adaptation is applied only after
+    the row at its timestamp has been forecast, so the target at that
+    timestamp cannot leak into its own prediction.  Retraining uses only
+    observations through that timestamp.
+
+    Returns a tuple ``(stream, metadata)``.  The stream has the same
+    columns as :func:`drift_lab.forecasters.frozen_error_stream`; metadata
+    records adaptation timestamps, retraining count, and training sizes.
+    """
+    required = {"SETTLEMENTDATE", "TOTALDEMAND"}
+    for name, frame in (("train", train), ("calibration", calibration), ("test", test)):
+        missing = required - set(frame.columns)
+        if missing:
+            raise ValueError(f"{name} is missing columns: {sorted(missing)}")
+
+    if strategy not in {
+        "never", "every_30_days", "drift_full_history", "drift_recent_window",
+    }:
+        raise ValueError("Unknown adaptation strategy.")
+
+    train = train.copy()
+    calibration = calibration.copy()
+    test = test.copy()
+    for frame in (train, calibration, test):
+        frame["SETTLEMENTDATE"] = pd.to_datetime(frame["SETTLEMENTDATE"], errors="raise")
+    if not test["SETTLEMENTDATE"].is_monotonic_increasing:
+        raise ValueError("test must be sorted ascending by SETTLEMENTDATE.")
+
+    # The helper intentionally receives test as its schedule domain: this
+    # prevents periodic retraining during the historical training period.
+    adaptation_times = _get_adaptation_times(
+        changepoints,
+        test,
+        region=region,
+        strategy=strategy,
+        detector=detector,
+    )
+    adaptation_times = [pd.Timestamp(t) for t in adaptation_times]
+    adaptation_times = sorted(set(t for t in adaptation_times if t <= test["SETTLEMENTDATE"].iloc[-1]))
+
+    from drift_lab.forecasters import frozen_error_stream
+
+    current_model = deepcopy(model).fit(train)
+    # Calibration is forecasting context only.  It is deliberately not
+    # included in any adaptation training window (the Sprint 4 protocol
+    # keeps the calibration split excluded from retraining).
+    observed_history = pd.concat([calibration], ignore_index=True)
+    observed_test = test.iloc[0:0].copy()
+    output_frames = []
+    retrain_rows = [len(train)]
+    previous_cutoff = None
+    retraining_events = []
+
+    for adaptation_time in adaptation_times + [None]:
+        if adaptation_time is None:
+            segment = test.loc[
+                test["SETTLEMENTDATE"] > (previous_cutoff if previous_cutoff is not None else test["SETTLEMENTDATE"].iloc[0] - pd.Timedelta(nanoseconds=1))
+            ]
+        else:
+            lower = previous_cutoff if previous_cutoff is not None else test["SETTLEMENTDATE"].iloc[0] - pd.Timedelta(nanoseconds=1)
+            segment = test.loc[
+                (test["SETTLEMENTDATE"] > lower)
+                & (test["SETTLEMENTDATE"] <= adaptation_time)
+            ]
+
+        if not segment.empty:
+            forecasted = frozen_error_stream(current_model, segment, history_df=observed_history)
+            forecasted["retrain_indicator"] = False
+            forecasted["retrain_timestamp"] = pd.NaT
+            forecasted["retrain_strategy"] = strategy
+            forecasted["retrain_trigger"] = detector or "scheduled"
+            if previous_cutoff is not None:
+                first = forecasted.index[0]
+                forecasted.loc[first, "retrain_indicator"] = True
+                forecasted.loc[first, "retrain_timestamp"] = previous_cutoff
+            output_frames.append(forecasted)
+            observed_history = pd.concat([observed_history, segment], ignore_index=True)
+            observed_test = pd.concat([observed_test, segment], ignore_index=True)
+
+        if adaptation_time is None:
+            break
+
+        # The target at adaptation_time is now observed and may be used for
+        # the next forecast.  Training data selection remains centralized in
+        # _get_training_data and enforces the no-future-row invariant.
+        available = pd.concat([train, observed_test], ignore_index=True)
+        available["SETTLEMENTDATE"] = pd.to_datetime(available["SETTLEMENTDATE"], errors="raise")
+        training_data = _get_training_data(
+            available,
+            adaptation_time,
+            strategy=strategy,
+            recent_window=recent_window,
+        )
+        retrain_started = perf_counter()
+        current_model = deepcopy(current_model).fit(training_data)
+        retrain_elapsed = perf_counter() - retrain_started
+        retrain_rows.append(len(training_data))
+        retraining_events.append({
+            "retrain_timestamp": adaptation_time,
+            "strategy": strategy,
+            "region": region,
+            "detector": detector or "scheduled",
+            "training_window_start": training_data["SETTLEMENTDATE"].min(),
+            "training_window_end": training_data["SETTLEMENTDATE"].max(),
+            "training_samples": len(training_data),
+            "wall_clock_s": retrain_elapsed,
+        })
+        previous_cutoff = adaptation_time
+
+    stream = pd.concat(output_frames, ignore_index=True) if output_frames else pd.DataFrame(
+        columns=["SETTLEMENTDATE", "y_true", "y_pred", "error"]
+    )
+    stream["SETTLEMENTDATE"] = pd.to_datetime(stream["SETTLEMENTDATE"])
+    metadata = {
+        "adaptation_times": adaptation_times,
+        "n_retrains": len(adaptation_times),
+        "train_samples_initial": len(train),
+        "train_samples_total": int(np.sum(retrain_rows)),
+        "train_samples_last": int(retrain_rows[-1]),
+        "retraining_events": retraining_events,
+    }
+    return stream, metadata

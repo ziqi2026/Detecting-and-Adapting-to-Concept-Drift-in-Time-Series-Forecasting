@@ -1,0 +1,9 @@
+arm,strategy,region,model,detector,n_observations,overall_mae,n_retrains,train_samples_initial,train_samples_total,train_samples_last,wall_clock_s
+arm_a_never,never,SA1,gradient_boosted,page_hinkley,67249,147.2930964846415,0,35039,35039,35039,1.073463040869683
+arm_b_every_30_days,every_30_days,SA1,gradient_boosted,page_hinkley,67249,136.605279402011,46,35039,3203519,101280,56.01974408281967
+arm_c_drift_full_history,drift_full_history,SA1,gradient_boosted,page_hinkley,67249,136.86920333961513,11,35039,827760,102177,15.212729124817997
+arm_d_drift_recent_window,drift_recent_window,SA1,gradient_boosted,page_hinkley,67249,183.22334649824649,11,35039,82570,4321,13.162452792283148
+arm_a_never,never,NSW1,gradient_boosted,page_hinkley,67249,372.5693647725586,0,35039,35039,35039,1.2756409170106053
+arm_b_every_30_days,every_30_days,NSW1,gradient_boosted,page_hinkley,67249,340.61147383967534,46,35039,3203519,101280,56.90079087531194
+arm_c_drift_full_history,drift_full_history,NSW1,gradient_boosted,page_hinkley,67249,345.9909774413748,4,35039,302831,101223,6.330834707710892
+arm_d_drift_recent_window,drift_recent_window,NSW1,gradient_boosted,page_hinkley,67249,547.5964916658586,4,35039,52323,4321,4.717768459115177
