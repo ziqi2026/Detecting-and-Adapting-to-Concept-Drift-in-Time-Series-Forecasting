@@ -226,8 +226,9 @@ Different stages use different subsets of these metrics:
       experiment workflow rather than calculated as forecast-error
       metrics here.
 
-    - Uncertainty evaluation will use the planned coverage and
-      interval-width metrics implemented in this module.
+    - Uncertainty evaluation uses calculate_empirical_coverage() and
+      calculate_mean_interval_width(). Normalised interval width and
+      worst 24-hour coverage remain planned for later Step 6 work.
 
 Per-run evaluation metrics are calculated here. Aggregation across
 seeds, including mean ± standard deviation where required, is performed
@@ -254,6 +255,7 @@ Uncertainty evaluation:
     - worst 24-hour coverage
 """
 
+import numpy as np
 import pandas as pd
 
 # Forecast evaluation metrics
@@ -343,6 +345,127 @@ def calculate_rolling_mae(
     return absolute_error.rolling(
         window=window
     ).mean()
+
+
+# Uncertainty evaluation metrics
+
+def _validate_interval_inputs(
+    lower_bound,
+    upper_bound,
+):
+    """
+    Validate prediction-interval bounds and return float Series.
+    """
+    lower_bound = pd.Series(lower_bound, dtype=float)
+    upper_bound = pd.Series(upper_bound, dtype=float)
+
+    if len(lower_bound) != len(upper_bound):
+        raise ValueError(
+            "lower_bound and upper_bound must have the same length."
+        )
+
+    if len(lower_bound) == 0:
+        raise ValueError(
+            "Uncertainty evaluation inputs must not be empty."
+        )
+
+    if not (
+        np.isfinite(lower_bound.to_numpy()).all()
+        and np.isfinite(upper_bound.to_numpy()).all()
+    ):
+        raise ValueError(
+            "Uncertainty evaluation inputs must contain only finite values."
+        )
+
+    if (lower_bound > upper_bound).any():
+        raise ValueError(
+            "lower_bound must not exceed upper_bound."
+        )
+
+    return lower_bound, upper_bound
+
+
+def calculate_empirical_coverage(
+    y_true,
+    lower_bound,
+    upper_bound,
+):
+    """
+    Calculate empirical prediction-interval coverage.
+
+    Coverage is the proportion of observed values lying inside the
+    supplied prediction interval, including both interval boundaries.
+
+    Parameters
+    ----------
+    y_true : array-like
+        Observed values.
+
+    lower_bound : array-like
+        Lower prediction-interval bounds.
+
+    upper_bound : array-like
+        Upper prediction-interval bounds.
+
+    Returns
+    -------
+    float
+        Fraction of observations covered by the interval.
+    """
+    y_true = pd.Series(y_true, dtype=float)
+    lower_bound, upper_bound = _validate_interval_inputs(
+        lower_bound,
+        upper_bound,
+    )
+
+    if len(y_true) != len(lower_bound):
+        raise ValueError(
+            "y_true, lower_bound, and upper_bound "
+            "must have the same length."
+        )
+
+    if not np.isfinite(y_true.to_numpy()).all():
+        raise ValueError(
+            "y_true must contain only finite values."
+        )
+
+    covered = (
+        (y_true >= lower_bound)
+        &
+        (y_true <= upper_bound)
+    )
+
+    return float(covered.mean())
+
+
+def calculate_mean_interval_width(
+    lower_bound,
+    upper_bound,
+):
+    """
+    Calculate mean prediction-interval width.
+
+    Parameters
+    ----------
+    lower_bound : array-like
+        Lower prediction-interval bounds.
+
+    upper_bound : array-like
+        Upper prediction-interval bounds.
+
+    Returns
+    -------
+    float
+        Mean interval width.
+    """
+    lower_bound, upper_bound = _validate_interval_inputs(
+        lower_bound,
+        upper_bound,
+    )
+
+    return float(
+        (upper_bound - lower_bound).mean()
+    )
 
 
 
@@ -932,9 +1055,6 @@ def evaluate_aemo_detections(detections, events, region, *, protocol,
             "global_metrics": global_metrics, "totals": _aemo_counts(audit)}
 
 
-# Planned evaluation metrics:
-# Uncertainty evaluation (Step 6):
-# - empirical coverage
-# - mean interval width
+# Planned uncertainty metrics for later Step 6 work:
 # - normalised interval width
 # - worst 24-hour coverage
