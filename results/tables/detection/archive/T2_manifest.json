@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-09-07T11:26:38.177688+00:00",
+  "created_at": "2026-09-08T11:31:51.140003+00:00",
   "protocol": {
     "protocol_id": "aemo_t1_7day_one_to_one_v2",
     "point_window_days": 7,
@@ -11,18 +11,18 @@
     "boundary": "both_closed"
   },
   "source_sha256": {
-    "results/tables/detection/aemo_detection_changepoints.csv": "c7327cf43e258fc398faea7dc58042ddc471a0757d09bbead5e1228140b4aebe",
+    "results/tables/detection/aemo_detection_changepoints.csv": "1a2834fe5014f4dcb79d312158c4ef53b1e72ab1cc1d289cec7f7d80aa6aa965",
     "data/events.csv": "abb277102ed44bf33453a09f2266deb586c38acdc332bbcda259fa36bb3419b1",
     "docs/aemo_matching_protocol.json": "378eee3827e1f703c422fb62dba5acc42549adb9fa37457c3d16da4694c19b7c",
-    "docs/aemo_matching_protocol.md": "a0cac8af1ad7adcf749c85293cf5af6ea4e7ba634ea2dee6aa46a5683e0982f3",
+    "docs/aemo_matching_protocol.md": "36c71307e9bc6b2a195fade0121b15ba82e9de3b3fca5d18698b64980c1826c6",
     "docs/event_tiering_criteria.md": "8f108ed94a7344819a41a0f25cab4606a0e1851ba2c4d9b79b5f871a6c72ad4f",
-    "experiments/detection/run_aemo_t2_evaluation.py": "e505e2f69e36742820d70ca9cd2f5ac68bf511be885abb1a8dd603b8f65f6690",
+    "experiments/detection/run_aemo_t2_evaluation.py": "e7f81777af06a45a22701ad982e347cafc23faedf3784ada6d3509a18179632d",
     "src/drift_lab/evaluation.py": "3c63f927392381fd7af51a83514e551df7575df189ae86b7c05c2569f5d9bb4d",
     "src/drift_lab/run_logger.py": "5d4b2fad100d63b0b8d59f292c9ffeef4c77f570edf03f65a6c9a39e9dfb58aa",
     "src/drift_lab/data_loader.py": "b49689292340a9db59ab3a476e72c4dc0ee98d392d7b702c13d8bd1b93eb3074",
-    "src/drift_lab/detectors.py": "8517c33802eb5af7e2399257203720911e74f72757162f4002f549936d7d10b2",
+    "src/drift_lab/detectors.py": "17f0ed73fe2f700bebb7c4c622ba5d6ea3f006674fd30abde7b143accd451be7",
     "experiments/detection/run_aemo_detection.py": "e721f52db7b7efc0c4fb1eb69d979a4294d08266ee468db6a62e79f38a8cc204",
-    "experiments/detection/run_synthetic_detection_evaluation_absnorm_v2.py": "3acddd9e2d9a88988489bb5377fa52ba61506454df5809daacc8555daa909e8b"
+    "experiments/detection/run_synthetic_detection_evaluation_absnorm_v2.py": "5808515b3fa59624c8bcde1c8277ee5ac0637c6af0871e9c47889d796afeffb3"
   },
   "configurations": [
     {
@@ -37,7 +37,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "9080e6aacaa9f685e5cc04848ee1259546943ea1fd6d982c67b3de79b05b026c"
+      "config_hash": "f9ef738af446d9a60f062bd560e6ad20c2e445327f21fddecfac644dfe827c75"
     },
     {
       "detector": "page_hinkley",
@@ -47,14 +47,15 @@
       "detector_config": {
         "min_instances": 30,
         "delta": 0.005,
-        "threshold": 209,
-        "alpha": 0.999
+        "threshold": 125,
+        "alpha": 0.99,
+        "mode": "up"
       },
       "seed": 0,
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "31318743569696e88ab925414b8af88637a39a29af5b6b46b6ba8d5da2f543e7"
+      "config_hash": "fa9ef1a849f8c5ef0a2b12238028b4250220dc613bc72cc1430d69aa679f6663"
     },
     {
       "detector": "kswin",
@@ -62,16 +63,16 @@
       "train_samples": 35039,
       "calibration_samples": 2880,
       "detector_config": {
-        "alpha": 5e-05,
+        "alpha": 5e-06,
         "window_size": 140,
-        "stat_size": 70,
+        "stat_size": 30,
         "seed": 12
       },
       "seed": 12,
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "b69acd5f0452620b6cb8effbe749bda9f65c0f2006b239be0dc974d20ff74820"
+      "config_hash": "a2fbb0c71b50f31b0b0e0bf23e4d2f5a45c3c9a03089cf5e60ef8bfbd519d9af"
     },
     {
       "detector": "adwin",
@@ -85,7 +86,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "5453645b45af041dcc5ec98280f756b31bd7540fa54c4ea486c2d2e8be84049b"
+      "config_hash": "4316b9748ae7f7708af782f6b8f2d0549c09ac201f02668cd7cd25280bc93f5f"
     },
     {
       "detector": "page_hinkley",
@@ -95,14 +96,15 @@
       "detector_config": {
         "min_instances": 30,
         "delta": 0.005,
-        "threshold": 209,
-        "alpha": 0.999
+        "threshold": 125,
+        "alpha": 0.99,
+        "mode": "up"
       },
       "seed": 0,
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "5267fe1304fbb14f910068bbc6b410119149087b5f945460768d06c473315547"
+      "config_hash": "1e036180a3ef4dfa97a85e2c15fc6bc3730018b14eaf5d9ad198625dd89cb8cc"
     },
     {
       "detector": "kswin",
@@ -110,19 +112,19 @@
       "train_samples": 35039,
       "calibration_samples": 2880,
       "detector_config": {
-        "alpha": 5e-05,
+        "alpha": 5e-06,
         "window_size": 140,
-        "stat_size": 70,
+        "stat_size": 30,
         "seed": 12
       },
       "seed": 12,
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "c33a4882e169f08b5bcec0d9bf3bbc9bedbcf8bdaab756d28eb9842642dab7f8"
+      "config_hash": "dc082c13bc4373671f5792081c045245093107853462b62683d701a0ebceeece"
     }
   ],
-  "runs_path": "results/runs.csv",
+  "runs_path": "results/tables/runs.csv",
   "group": "aemo_t2",
   "split_id": "aemo_fixed_train2018_2019_test202003_task120_t2_t1rule_v2",
   "notes": "Stored Task 120 runs only; no model fitting, detector reruns, or inferred multi-seed uncertainty."

@@ -74,16 +74,159 @@ def run_detector(stream, detector):
 
     return changepoints
 
+# Shared warm-up and refractory protocol
+def run_detector_with_protocol(
+    test_stream,
+    detector,
+    warmup_stream=None,
+    refractory_period=0,
+):
+    """
+    Run a detector using the shared operational protocol.
+
+    The detector is optionally warmed on a processed calibration
+    forecast-error stream before detections are recorded on the test
+    stream.
+
+    Forecast-error drift detection requires the warm-up stream to
+    represent the type of errors that the detector will encounter
+    during evaluation. The calibration period provides an appropriate
+    chronological, out-of-sample-like error stream because the
+    forecasting model has already been fitted on earlier training data,
+    while the calibration observations occur strictly after that
+    fitting period.
+
+    Using calibration forecast errors for warm-up therefore gives the
+    detector realistic pre-test error history without using test data.
+    The calibration period also immediately precedes the test period,
+    preserving the chronological detector state at the transition into
+    evaluation.
+
+    Any drift alarms raised during warm-up are ignored. The same
+    detector instance, including its internal state, is then continued
+    into the test stream, where detections are recorded.
+
+    An optional refractory period can suppress repeated alarms that
+    occur too soon after an accepted detection. The refractory period
+    is expressed in observations and must be applied consistently
+    across synthetic calibration and AEMO evaluation.
+
+    The same protocol is used for synthetic data: processed calibration
+    forecast errors warm the detector, while only detections from the
+    synthetic test stream are evaluated.
+
+    Parameters
+    ----------
+    test_stream : array-like
+        Processed forecast-error stream used for evaluation.
+
+    detector
+        Initialised River drift detector.
+
+    warmup_stream : array-like or None
+        Processed calibration forecast-error stream used to initialise
+        detector state before evaluation. Warm-up alarms are ignored.
+
+    refractory_period : int, default=0
+        Minimum number of observations between accepted detections.
+        A value of 0 disables refractory suppression.
+
+    Returns
+    -------
+    list[int]
+        Accepted changepoint indices relative to the test stream.
+    """
+
+    test_values = _validate_stream(
+        test_stream
+    )
+
+    if refractory_period < 0:
+        raise ValueError(
+            "refractory_period must be >= 0."
+        )
+
+    #  Warm-up:
+    #  Feed the chronological calibration error stream to the detector
+    # before evaluation begins. Signals raised here are deliberately
+    # ignored; only the detector's internal state is carried forward.
+
+    if warmup_stream is not None:
+
+        warmup_values = _validate_stream(
+            warmup_stream
+        )
+
+        for value in warmup_values:
+            detector.update(
+                float(value)
+            )
+
+    #  Test-period detection
+    changepoints = []
+    last_accepted_detection = None
+
+    for i, value in enumerate(
+        test_values
+    ):
+
+        detector.update(
+            float(value)
+        )
+
+        if not detector.drift_detected:
+            continue
+
+        # First test-period detection is always accepted.
+        if last_accepted_detection is None:
+
+            changepoints.append(
+                int(i)
+            )
+
+            last_accepted_detection = i
+
+            continue
+
+        # If refractory suppression is disabled, accept every
+        # detector alarm.
+        if refractory_period == 0:
+
+            changepoints.append(
+                int(i)
+            )
+
+            last_accepted_detection = i
+
+            continue
+
+        # Otherwise accept the alarm only when the required
+        # refractory interval has elapsed since the previous
+        # accepted detection.
+        if (
+            i - last_accepted_detection
+            >= refractory_period
+        ):
+
+            changepoints.append(
+                int(i)
+            )
+
+            last_accepted_detection = i
+
+    return changepoints
+
+
 # ADWIN
 def run_adwin(
     stream,
-    delta=0.002,
+    delta=1e-6,
 ):
     """
     Run ADWIN over a chronological numeric stream.
 
-    Default configuration was retained after synthetic
-    benchmark validation.
+    The default configuration was selected through synthetic tuning
+    under the shared no-drift and false-alarm constraints.
     """
     detector = ADWIN(
         delta=delta,
@@ -99,16 +242,17 @@ def run_page_hinkley(
     stream,
     min_instances=30,
     delta=0.005,
-    threshold=400.0,
-    alpha=0.9999,
+    threshold=450,
+    alpha=0.999,
     mode="both",
 ):
     """
     Run Page-Hinkley over a chronological numeric stream.
 
-    The default threshold was selected from synthetic benchmark
-    experiments to balance detection delay, false alarms,
-    missed detections, and no-drift stability.
+    The default configuration was selected through synthetic tuning
+    under the shared no-drift and false-alarm constraints, with
+    selection based on missed detections, false alarms, and
+    detection delay.
     """
     detector = PageHinkley(
         min_instances=min_instances,
@@ -126,21 +270,24 @@ def run_page_hinkley(
 # KSWIN
 def run_kswin(
     stream,
-    alpha=0.001,
-    window_size=170,
-    stat_size=40,
+    alpha=2e-7,
+    window_size=672,
+    stat_size=168,
     seed=12,
 ):
+
     """
     Run KSWIN over a chronological numeric stream.
 
-    The default configuration was selected from synthetic benchmark
-    experiments to prioritise zero missed detections and strong
-    false-alarm control while maintaining reasonable detection delay.
+    The default configuration was selected from synthetic tuning
+    under the shared no-drift and false-alarm constraints, with
+    selection based on missed detections, false alarms, and
+    detection delay.
 
     The KSWIN internal random seed is fixed separately from any
     synthetic-data generation seed.
     """
+
     detector = KSWIN(
         alpha=alpha,
         window_size=window_size,
@@ -159,7 +306,7 @@ DETECTOR_REGISTRY = {
     "adwin": {
         "func": run_adwin,
         "config": {
-            "delta": 0.0001,
+            "delta": 1e-6,
         },
     },
 
@@ -168,18 +315,18 @@ DETECTOR_REGISTRY = {
         "config": {
             "min_instances": 30,
             "delta": 0.005,
-            "threshold": 125,
-            "alpha": 0.99,
-            "mode":"up",
+            "threshold": 450,
+            "alpha": 0.999,
+            "mode": "both",
         },
     },
 
     "kswin": {
         "func": run_kswin,
         "config": {
-            "alpha": 5e-6,
-            "window_size": 140,
-            "stat_size": 30,
+            "alpha": 2e-7,
+            "window_size": 672,
+            "stat_size": 168,
             "seed": 12,
         },
     },

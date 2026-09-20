@@ -855,7 +855,6 @@ def evaluate_detections(
 AEMO_TIER1_COLUMNS = {
     "EVT-2020-02": "COVID delay",
     "EVT-2020-07": "solar/mild-weather delay",
-    "EVT-2021-10": "5-minute settlement delay",
     "EVT-2022-03": "2022 suspension delay",
     "EVT-2023-14": "security-directions delay",
 }
@@ -913,7 +912,7 @@ def load_aemo_events(source):
         raise ValueError("Frozen tiers must be exactly 1 or 2.")
     events["tier"] = tiers.astype(int)
     if set(events.loc[events.tier == 1, "event_id"]) != set(AEMO_TIER1_COLUMNS):
-        raise ValueError("The fixed five Tier 1 event IDs must be preserved exactly.")
+        raise ValueError("The fixed Tier 1 event IDs must be preserved exactly.")
     if not events.date_precision.isin(["day", "month", "date_range"]).all():
         raise ValueError("Unsupported event date_precision.")
     if not events.region.isin(["NEM", "SA1", "NSW1"]).all():
@@ -957,13 +956,103 @@ def _aemo_global_regime(timestamp, events, protocol):
 
 
 def _aemo_counts(rows):
-    """Detection-based numerator, including both tiers; undefined if empty."""
+    """
+    Detection-based AEMO matching counts.
+
+    Tier 1 and Tier 2 precision are reported separately because
+    Tier 2 contains many more contextual events and would otherwise
+    dominate a combined precision figure.
+    """
     n = len(rows)
-    tier1 = int((rows.match_tier == 1).sum())
-    tier2 = int((rows.match_tier == 2).sum())
-    return {"detections": n, "tier1_matched": tier1, "tier2_matched": tier2,
-            "unmatched": n - tier1 - tier2,
-            "precision": (tier1 + tier2) / n if n else float("nan")}
+
+    tier1 = int(
+        (rows.match_tier == 1).sum()
+    )
+
+    tier2 = int(
+        (rows.match_tier == 2).sum()
+    )
+
+    unmatched = (
+        n
+        - tier1
+        - tier2
+    )
+
+    return {
+        "detections": n,
+
+        "tier1_matched": tier1,
+        "tier1_precision":
+            tier1 / n
+            if n
+            else float("nan"),
+
+        "tier2_matched": tier2,
+        "tier2_precision":
+            tier2 / n
+            if n
+            else float("nan"),
+
+        "unmatched": unmatched,
+    }
+
+def calculate_aemo_chance_matches(
+    n_detections,
+    n_events,
+    matching_window_days,
+    test_duration_days,
+):
+    """
+    Calculate expected documented-event matches by chance.
+
+    Formula:
+        K * [1 - (1 - w/T)^N]
+
+    where:
+        N = number of detections
+        K = number of applicable events
+        w = matching-window duration in days
+        T = test-stream duration in days
+    """
+
+    if n_detections < 0:
+        raise ValueError(
+            "n_detections must be non-negative."
+        )
+
+    if n_events < 0:
+        raise ValueError(
+            "n_events must be non-negative."
+        )
+
+    if matching_window_days < 0:
+        raise ValueError(
+            "matching_window_days must be non-negative."
+        )
+
+    if test_duration_days <= 0:
+        raise ValueError(
+            "test_duration_days must be positive."
+        )
+
+    if matching_window_days > test_duration_days:
+        raise ValueError(
+            "matching_window_days cannot exceed test duration."
+        )
+
+    return float(
+        n_events
+        * (
+            1
+            - (
+                1
+                - matching_window_days
+                / test_duration_days
+            )
+            ** n_detections
+        )
+    )
 
 
 def evaluate_aemo_detections(detections, events, region, *, protocol,
