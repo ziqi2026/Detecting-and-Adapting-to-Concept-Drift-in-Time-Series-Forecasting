@@ -1,6 +1,8 @@
 __pycache__/
 *.pyc
 src/*.egg-info/
+.DS_Store
+.ipynb_checkpoints/
 
 # Personal T2 notes: keep locally, exclude from Git in any directory.
 T2_delivery_checklist.md

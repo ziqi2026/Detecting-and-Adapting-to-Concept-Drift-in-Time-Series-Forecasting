@@ -1,168 +1,400 @@
-"""Run the Sprint 4 four-arm adaptive forecasting experiment.
+"""PGS242-128 revision: shared initial state and a four-window D sweep.
 
-The runner uses one frozen forecasting configuration, the fixed AEMO split,
-and one Task-120 detector sequence for both drift-triggered arms.  It writes
-timestamp-level forecasts and separate retraining-event metadata so later
-performance and adaptation-cost analyses do not need to rerun the experiment.
+Supervisor scope: B remains every 30 days; D compares 30/60/120/180 days.
+Detection calibration, seasonal adjustment, warm-up and refractory filtering
+remain upstream responsibilities. This runner validates the supplied trigger
+sequence, never retunes it, and never selects triggers using event matches.
 """
 
 import argparse
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import platform
+import re
+import subprocess
 import sys
 from time import perf_counter
 
 import numpy as np
 import pandas as pd
+import sklearn
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from drift_lab.adaptation import adaptive_forecast_stream
+from drift_lab.adaptation import adaptive_forecast_stream, validate_adaptation_changepoints
 from drift_lab.data_loader import load_and_split_aemo
-from drift_lab.evaluation import AEMO_TIMEZONE, build_aemo_event_windows, load_aemo_events, calculate_mae
-from drift_lab.forecasters import MODEL_REGISTRY, make_forecasters
+from drift_lab.evaluation import calculate_mae
+from drift_lab.forecasters import MODEL_REGISTRY
 from drift_lab.run_logger import log_run
 
 REGIONS = ("SA1", "NSW1")
-ARMS = {
-    "arm_a_never": "never",
-    "arm_b_every_30_days": "every_30_days",
-    "arm_c_drift_full_history": "drift_full_history",
-    "arm_d_drift_recent_window": "drift_recent_window",
-}
-DATA_PATH = ROOT / "data" / "raw"
-DETECTIONS_PATH = ROOT / "results" / "tables" / "detection" / "aemo_detection_changepoints.csv"
-EVENTS_PATH = ROOT / "data" / "events.csv"
-OUT = ROOT / "results" / "tables" / "adaptation"
-FORECASTS_PATH = OUT / "four_arm_forecasts.csv"
-RETRAIN_PATH = OUT / "four_arm_retraining_events.csv"
-SUMMARY_PATH = OUT / "four_arm_summary.csv"
-MANIFEST_PATH = OUT / "four_arm_manifest.json"
-RUNS_PATH = ROOT / "results" / "tables" / "runs.csv"
-GROUP = "adaptive_forecasting"
-SPLIT_ID = "aemo_fixed_train2018_2019_test202003_sprint4_v1"
-RECENT_WINDOW = "90D"
+WINDOW_DAYS = (30, 60, 120, 180)
+PR29_DETECTORS = ("adwin", "page_hinkley", "kswin")
+PR29_REFRACTORY_DAYS = 14
+PR29_WARMUP_SAMPLES = 2880
+PR29_GROUP = "adaptive_forecasting_v3_pr29"
+PR29_SPLIT_ID = "aemo_train2018_2019_cal202001_202002_test202003_pr29"
+EVENT_COLUMNS = [
+    "event_id", "retrain_timestamp", "first_forecast_timestamp", "strategy",
+    "region", "window_days", "trigger_type", "detector", "training_window_start",
+    "training_window_end", "training_samples", "effective_training_samples",
+    "wall_clock_s", "model_copy_s", "arm", "configuration", "seed", "run_id",
+    "config_hash",
+]
 
 
-def _config_hash(model_name, detector, detector_config):
-    payload = json.dumps({"model": model_name, "detector": detector,
-                          "detector_config": detector_config,
-                          "recent_window": RECENT_WINDOW}, sort_keys=True)
-    return hashlib.sha256(payload.encode()).hexdigest()[:12]
+def sha256(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def _regime_mae(stream, event, regime):
-    windows = build_aemo_event_windows(event, regime_days=7)
-    start, end = windows[regime]
-    timestamps = pd.DatetimeIndex(pd.to_datetime(stream["SETTLEMENTDATE"])).tz_localize(AEMO_TIMEZONE)
-    rows = stream.loc[(timestamps >= start) & (timestamps < end)]
-    return calculate_mae(rows.y_true, rows.y_pred) if len(rows) else np.nan
+def configurations(windows=WINDOW_DAYS):
+    """Revision R2: keep B's frequency independent of D's history length."""
+    if not windows or len(set(windows)) != len(windows) or any(
+        isinstance(w, bool) or not isinstance(w, int) or w <= 0 for w in windows
+    ):
+        raise ValueError("D windows must be unique positive integer day counts")
+    return [
+        ("A", "never", None), ("B", "every_30_days", None),
+        ("C", "drift_full_history", None),
+    ] + [("D", "drift_recent_window", w) for w in windows]
 
 
-def _log_metric_once(**kwargs):
-    """Make reruns idempotent after an interrupted experiment."""
-    keys = ["group", "method", "dataset", "region", "config_hash",
-            "split_id", "seed", "metric_name", "regime"]
-    if RUNS_PATH.exists():
-        existing = pd.read_csv(RUNS_PATH)
-        mask = np.ones(len(existing), dtype=bool)
-        for key in keys:
-            mask &= existing[key].astype(str).eq(str(kwargs[key])).to_numpy()
-        if mask.any():
-            return
-    log_run(**kwargs)
+def validate_pr29_decisions(decisions_path):
+    """Validate the shared PR #29 settings used by detector sensitivity runs.
+
+    Revision R8: 128 consumes accepted upstream alarms and never reruns,
+    retunes, deseasonalises, standardises, warms, or refractory-filters a
+    detector. The decisions file is hashed in the resulting run manifest.
+    """
+    decisions_path = Path(decisions_path)
+    if not decisions_path.is_file():
+        raise FileNotFoundError(f"Missing shared decisions file: {decisions_path}")
+    text = decisions_path.read_text(encoding="utf-8")
+    required = (
+        "**COVID-19 event:** 16 Mar 2020 – 17 May 2020.",
+        "Five-Minute Settlement (1 Oct 2021):** removed from the target event catalogue",
+        "Deseasonalisation parameters will be fitted using **TRAIN only**.",
+        "Detector inputs will be **Z-score standardised using TRAIN only**.",
+        "**five seeds: 1–5**",
+        "Agreed refractory period: **14 days**.",
+        "**Arm B — Periodic Retraining:** retrain at a fixed **30-day interval**.",
+        "Evaluate training windows of **30, 60, 120, and 180 days**.",
+    )
+    missing = [item for item in required if item not in text]
+    if missing:
+        raise ValueError("Shared decisions file does not contain all PR #29 settings")
+    # The document calls the Calibration warm-up proposal pending confirmation.
+    # Preserve that qualification rather than silently promoting it to final.
+    if "exact warm-up period remains to be confirmed" not in text:
+        raise ValueError("The PR #29 warm-up qualification is missing from decisions")
+    return decisions_path.resolve()
 
 
-def run_experiment(*, model_name="gradient_boosted", detector="page_hinkley"):
-    if model_name not in MODEL_REGISTRY:
-        raise ValueError(f"Unknown model: {model_name}")
-    detections = pd.read_csv(DETECTIONS_PATH)
-    required = {"region", "detector", "detected_index", "SETTLEMENTDATE"}
-    if not required.issubset(detections.columns):
-        raise ValueError(f"Task 120 detections missing: {sorted(required - set(detections.columns))}")
-    if detector not in set(detections.detector):
-        raise ValueError(f"No Task 120 detections found for detector {detector!r}")
-    events = load_aemo_events(EVENTS_PATH)
-    model_config = MODEL_REGISTRY[model_name]["config"]
-    config_hash = _config_hash(model_name, detector, model_config)
-    all_forecasts, all_retraining, summaries = [], [], []
-    started_total = perf_counter()
+def validate_pr29_changepoints(changepoints, test, *, region, detector):
+    """Validate PR #29 detector provenance before it reaches Arms C and D.
 
-    for region in REGIONS:
-        _, train, calibration, test = load_and_split_aemo(region, DATA_PATH)
-        region_cp = detections.loc[detections.region == region].copy()
-        region_cp["SETTLEMENTDATE"] = pd.to_datetime(region_cp["SETTLEMENTDATE"])
-        region_cp = region_cp.loc[region_cp.detector == detector].sort_values("SETTLEMENTDATE")
-        for arm, strategy in ARMS.items():
-            model = make_forecasters()[model_name]
-            started = perf_counter()
-            stream, metadata = adaptive_forecast_stream(
-                region_cp, model, train, calibration, test,
-                region=region, strategy=strategy, detector=detector,
-                recent_window=RECENT_WINDOW,
-            )
-            elapsed = perf_counter() - started
-            stream["arm"] = arm
-            stream["region"] = region
-            stream["model"] = model_name
-            stream["detector"] = detector
-            all_forecasts.append(stream)
-            for event in events.loc[events.tier == 1].to_dict("records"):
-                if event["region"] not in ("NEM", region):
-                    continue
-                for regime in ("pre-drift", "drift", "post-drift"):
-                    value = _regime_mae(stream, event, regime)
-                    if np.isnan(value):
-                        continue
-                    _log_metric_once(method=arm, dataset="AEMO_TOTALDEMAND", region=region,
-                            metric_name=f"mae.{event['event_id']}", metric_value=value,
-                            regime=regime, train_samples=metadata["train_samples_last"],
-                            group=GROUP, seed=0, config_hash=config_hash,
-                            split_id=f"{SPLIT_ID}|event={event['event_id']}",
-                            n_retrains=metadata["n_retrains"], wall_clock_s=elapsed,
-                            results_path=RUNS_PATH)
-            summary = {
-                "arm": arm, "strategy": strategy, "region": region,
-                "model": model_name, "detector": detector,
-                "n_observations": len(stream), "overall_mae": calculate_mae(stream.y_true, stream.y_pred),
-                "n_retrains": metadata["n_retrains"],
-                "train_samples_initial": metadata["train_samples_initial"],
-                "train_samples_total": metadata["train_samples_total"],
-                "train_samples_last": metadata["train_samples_last"],
-                "wall_clock_s": elapsed,
-            }
-            summaries.append(summary)
-            for event in metadata["retraining_events"]:
-                all_retraining.append({"arm": arm, "model": model_name, **event})
-            print(f"{arm}/{region}: MAE={summary['overall_mae']:.3f}, retrains={summary['n_retrains']}")
-
-    OUT.mkdir(parents=True, exist_ok=True)
-    pd.concat(all_forecasts, ignore_index=True).to_csv(FORECASTS_PATH, index=False)
-    pd.DataFrame(all_retraining).to_csv(RETRAIN_PATH, index=False)
-    pd.DataFrame(summaries).to_csv(SUMMARY_PATH, index=False)
-    manifest = {
-        "group": GROUP, "split_id": SPLIT_ID, "regions": list(REGIONS),
-        "arms": ARMS, "model": model_name, "model_config": model_config,
-        "detector": detector, "recent_window": RECENT_WINDOW,
-        "calibration_used_for_training": False,
-        "same_changepoint_sequence_for_arms_c_d": True,
-        "source_files": {"detections": str(DETECTIONS_PATH.relative_to(ROOT)),
-                         "events": str(EVENTS_PATH.relative_to(ROOT))},
-        "elapsed_s": perf_counter() - started_total,
+    The checks deliberately reject old Task 120 output. They verify that the
+    stored sequence already carries the agreed preprocessing and 14-day
+    refractory metadata. This function never changes accepted detections.
+    """
+    if detector not in PR29_DETECTORS:
+        raise ValueError(f"PR #29 detector must be one of {PR29_DETECTORS}")
+    required = {
+        "region", "detector", "detected_index", "SETTLEMENTDATE", "detector_config",
+        "warmup_samples", "test_samples", "refractory_period", "refractory_days",
+        "seasonal_profile", "seasonal_reference", "error_zscore_reference",
+        "warmup_reference", "detector_input", "whitening_type",
     }
-    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    return pd.DataFrame(summaries)
+    missing = required - set(changepoints.columns)
+    if missing:
+        raise ValueError(f"Changepoints do not have PR #29 provenance fields: {sorted(missing)}")
+    selected = validate_adaptation_changepoints(
+        changepoints, test, region=region, detector=detector
+    )
+    if selected.empty:
+        raise ValueError(f"PR #29 has no stored {detector}/{region} run")
+    expected = {
+        "warmup_samples": PR29_WARMUP_SAMPLES,
+        "test_samples": len(test),
+        "refractory_period": PR29_REFRACTORY_DAYS * 48,
+        "refractory_days": PR29_REFRACTORY_DAYS,
+        "seasonal_reference": "complete_TRAIN_only",
+        "warmup_reference": "processed CALIBRATION forecast errors",
+        "detector_input": "TRAIN_zscored_absolute_forecast_error",
+    }
+    for column, value in expected.items():
+        if not selected[column].eq(value).all():
+            raise ValueError(f"Unexpected PR #29 metadata in {column} for {detector}/{region}")
+    if not selected.seasonal_profile.str.contains("smoothed_DOY", regex=False).all():
+        raise ValueError("PR #29 seasonal profile is missing its DOY component")
+    if not selected.seasonal_profile.str.contains("DOWxhalf_hour", regex=False).all():
+        raise ValueError("PR #29 seasonal profile is missing its DOW x half-hour component")
+    if not selected.error_zscore_reference.str.contains("TRAIN", regex=False).all():
+        raise ValueError("PR #29 error standardisation is not training-only")
+    if selected.detector_config.map(json.loads).map(type).ne(dict).any():
+        raise ValueError("PR #29 detector configuration is not JSON object data")
+    if selected.detector_config.nunique() != 1:
+        raise ValueError(f"Mixed detector configuration within {detector}/{region}")
+    return selected
+
+
+def run_region_pr29_sensitivity(changepoints, train, calibration, test, *, region,
+                                model_factory, detectors=PR29_DETECTORS,
+                                windows=WINDOW_DAYS, seed=0):
+    """Run A/B once and the C/D window sweep once for each PR #29 detector.
+
+    Revision R9: the accepted detector outputs are experimental scenarios, not
+    candidates for retuning inside 128.  A and B are detector-independent, so
+    they run once.  For each detector, C and every D window consume precisely
+    the same frozen sequence validated from the PR #29 artifact.
+    """
+    configurations(windows)
+    detectors = tuple(detectors)
+    if not detectors or len(set(detectors)) != len(detectors) or any(
+        detector not in PR29_DETECTORS for detector in detectors
+    ):
+        raise ValueError(f"detectors must be a unique non-empty subset of {PR29_DETECTORS}")
+
+    selected = {
+        detector: validate_pr29_changepoints(
+            changepoints, test, region=region, detector=detector
+        )
+        for detector in detectors
+    }
+    started = perf_counter()
+    initial_model = model_factory().fit(train)
+    initial_fit_s = perf_counter() - started
+    forecasts, event_rows, summaries = [], [], []
+    reference_predictions = None
+    schedules = {}
+
+    def execute(arm, strategy, *, detector=None, days=None):
+        nonlocal reference_predictions
+        configuration = (
+            arm if detector is None else
+            (f"{arm}_{detector}" if arm == "C" else f"D_{days}d_{detector}")
+        )
+        source = selected[detector] if detector else changepoints.iloc[0:0].copy()
+        started_arm = perf_counter()
+        stream, metadata = adaptive_forecast_stream(
+            source, initial_model, train, calibration, test,
+            region=region, strategy=strategy, detector=detector,
+            recent_window=f"{days}D" if days else "90D",
+            initial_model_fitted=True,
+        )
+        elapsed = perf_counter() - started_arm
+        stream = stream.assign(
+            arm=arm, configuration=configuration, window_days=days,
+            region=region, detector=detector or "", seed=seed,
+        )
+        if arm == "A":
+            reference_predictions = stream.y_pred.to_numpy()
+        else:
+            first = (metadata["adaptation_times"][0]
+                     if metadata["adaptation_times"] else test.SETTLEMENTDATE.iloc[-1])
+            before_first_update = pd.DatetimeIndex(stream.SETTLEMENTDATE) <= first
+            np.testing.assert_allclose(
+                stream.y_pred.to_numpy()[before_first_update],
+                reference_predictions[before_first_update], rtol=0, atol=1e-10,
+            )
+        if arm == "C":
+            schedules[detector] = metadata["adaptation_times"]
+        if arm == "D" and metadata["adaptation_times"] != schedules[detector]:
+            raise RuntimeError("C and D must use exactly the same PR #29 trigger sequence")
+        for event in metadata["retraining_events"]:
+            event_rows.append({
+                **event, "arm": arm, "configuration": configuration,
+                "seed": seed,
+            })
+        record = {
+            "arm": arm, "configuration": configuration, "strategy": strategy,
+            "region": region, "window_days": days, "seed": seed,
+            "detector": detector or "", "n_observations": len(stream),
+            "overall_mae": calculate_mae(stream.y_true, stream.y_pred),
+            **{key: metadata[key] for key in (
+                "n_retrains", "train_samples_initial", "train_samples_total",
+                "train_samples_last", "effective_train_samples_total",
+                "retraining_wall_clock_s")},
+            "initial_fit_s": initial_fit_s, "arm_wall_clock_s": elapsed,
+        }
+        forecasts.append(stream)
+        summaries.append(record)
+        print(f"{region}/{configuration}: MAE={record['overall_mae']:.3f}, "
+              f"retrains={record['n_retrains']}", flush=True)
+
+    # Baselines are deliberately executed just once per region.
+    execute("A", "never")
+    execute("B", "every_30_days")
+    for detector in detectors:
+        execute("C", "drift_full_history", detector=detector)
+        for days in windows:
+            execute("D", "drift_recent_window", detector=detector, days=days)
+    return (pd.concat(forecasts, ignore_index=True), pd.DataFrame(event_rows),
+            pd.DataFrame(summaries))
+
+
+def run_pr29_detector_sensitivity_experiment(
+        *, detections_path, decisions_path, run_id, detectors=PR29_DETECTORS,
+        seed=0, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
+        output_root=ROOT / "results/tables/adaptation/revised",
+        shared_runs=ROOT / "results/tables/runs.csv"):
+    """Execute the revised 128 detector-sensitivity design from PR #29 inputs.
+
+    The function intentionally has no event-catalogue parameter: Arms C/D
+    retrain from every accepted upstream detector alarm, including alarms that
+    T2 later describes as unmatched contextual changes.  Event matching is not
+    a selection mechanism for adaptation triggers.
+    """
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,79}", run_id):
+        raise ValueError("run_id must be a short filename-safe identifier")
+    configurations(windows)
+    detectors = tuple(detectors)
+    if not detectors or len(set(detectors)) != len(detectors) or any(
+        detector not in PR29_DETECTORS for detector in detectors
+    ):
+        raise ValueError(f"detectors must be a unique non-empty subset of {PR29_DETECTORS}")
+    output = Path(output_root) / run_id
+    if output.exists():
+        raise FileExistsError(f"Refusing to overwrite existing run: {output}")
+    detections_path = Path(detections_path).resolve()
+    decisions_path = validate_pr29_decisions(decisions_path)
+    rows = pd.read_csv(detections_path)
+    sources = [
+        Path(__file__), ROOT / "src/drift_lab/adaptation.py",
+        ROOT / "src/drift_lab/forecasters.py", ROOT / "src/drift_lab/data_loader.py",
+        ROOT / "src/drift_lab/evaluation.py", ROOT / "src/drift_lab/run_logger.py",
+        detections_path, decisions_path,
+    ]
+    for region in REGIONS:
+        sources.extend(sorted((Path(data_path) / region).glob("*.csv")))
+    hashes = {str(path.resolve()): sha256(path) for path in sources}
+    spec = MODEL_REGISTRY["gradient_boosted"]
+    model_config = {**spec["config"], "seed": seed}
+    identity = {
+        "source_sha256": hashes, "model_config": model_config,
+        "detectors": list(detectors), "windows": list(windows),
+        "split_id": PR29_SPLIT_ID, "upstream_detection_artifact": str(detections_path),
+        "decisions_file": str(decisions_path), "execution_design":
+            "A/B_once_per_region; C/D_per_detector; D_window_sensitivity",
+    }
+    config_hash = hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+    prepared = []
+    for region in REGIONS:
+        _, train, calibration, test = load_and_split_aemo(region, data_path)
+        # Validate every region/detector provenance before writing any result.
+        for detector in detectors:
+            validate_pr29_changepoints(rows, test, region=region, detector=detector)
+        prepared.append((region, train, calibration, test))
+    split = f"{PR29_SPLIT_ID}|run={run_id}"
+    if Path(shared_runs).exists():
+        previous = pd.read_csv(shared_runs, usecols=["group", "split_id"])
+        if (previous.group.eq(PR29_GROUP) & previous.split_id.eq(split)).any():
+            raise ValueError("This PR #29 run ID already exists in the shared log")
+    output.mkdir(parents=True, exist_ok=False)
+    manifest = {
+        **identity, "run_id": run_id, "config_hash": config_hash, "status": "running",
+        "model": "gradient_boosted", "seed": seed,
+        "python": platform.python_version(), "numpy": np.__version__,
+        "pandas": pd.__version__, "sklearn": sklearn.__version__,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "log_regime": "full-test", "calibration_training": False,
+        "window_boundary": "both_closed: [t - window, t]",
+        "same_changepoints_for_c_and_all_d_within_detector": True,
+        "upstream_processing_verified": {
+            "train_only_deseasonalisation": True,
+            "train_only_zscore": True,
+            "warmup_samples": PR29_WARMUP_SAMPLES,
+            "refractory_days": PR29_REFRACTORY_DAYS,
+        },
+        "review_note": (
+            "The shared decisions file records the Calibration warm-up proposal "
+            "as pending confirmation. This run records that qualification and "
+            "does not represent it as a newly finalised 128 decision."
+        ),
+    }
+    try:
+        manifest["git_commit"] = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        manifest["git_commit"] = None
+    manifest_path = output / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    started = perf_counter()
+    summaries, all_events = [], []
+    try:
+        for region, train, calibration, test in prepared:
+            forecasts, events, summary = run_region_pr29_sensitivity(
+                rows, train, calibration, test, region=region,
+                model_factory=lambda: spec["class"](**model_config),
+                detectors=detectors, windows=windows, seed=seed,
+            )
+            for table in (forecasts, events, summary):
+                table["run_id"] = run_id
+                table["config_hash"] = config_hash
+            forecasts.to_csv(output / f"forecasts_{region}.csv.gz", index=False,
+                             compression={"method": "gzip", "mtime": 0})
+            summaries.append(summary)
+            all_events.append(events)
+        summary = pd.concat(summaries, ignore_index=True)
+        events = pd.concat(all_events, ignore_index=True).reindex(columns=EVENT_COLUMNS)
+        events.to_csv(output / "retraining_events.csv", index=False)
+        summary.to_csv(output / "summary.csv", index=False)
+        summary.loc[summary.arm.eq("D")].to_csv(output / "window_sensitivity.csv", index=False)
+        summary.loc[summary.arm.isin(["C", "D"])].to_csv(
+            output / "detector_comparison.csv", index=False)
+        if any(sha256(path) != digest for path, digest in hashes.items()):
+            raise RuntimeError("An input or source file changed during this run")
+        for record in summary.to_dict("records"):
+            common = dict(
+                method=record["configuration"], dataset="AEMO_TOTALDEMAND",
+                region=record["region"], group=PR29_GROUP, regime="full-test",
+                seed=seed, config_hash=config_hash, split_id=split,
+                train_samples=record["train_samples_total"],
+                n_retrains=record["n_retrains"], wall_clock_s=record["arm_wall_clock_s"],
+            )
+            for metric in ("overall_mae", "n_retrains", "train_samples_total",
+                           "retraining_wall_clock_s"):
+                for log_path in (output / "runs.csv", Path(shared_runs)):
+                    log_run(**common, metric_name=metric,
+                            metric_value=record[metric], results_path=log_path)
+        manifest.update(
+            status="complete", elapsed_s=perf_counter() - started,
+            outputs_sha256={
+                path.name: sha256(path) for path in output.iterdir()
+                if path.is_file() and path != manifest_path
+            },
+        )
+    except Exception as exc:
+        manifest.update(status="failed", error=f"{type(exc).__name__}: {exc}")
+        raise
+    finally:
+        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+    return summary
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", default="gradient_boosted", choices=sorted(MODEL_REGISTRY))
-    parser.add_argument("--detector", default="page_hinkley")
+    parser.add_argument("--detections", type=Path, required=True)
+    parser.add_argument("--detectors", nargs="+", choices=PR29_DETECTORS,
+                        default=list(PR29_DETECTORS),
+                        help="Frozen PR #29 detector scenarios for C/D")
+    parser.add_argument("--run-id", required=True)
+    parser.add_argument("--decisions", type=Path, required=True,
+                        help="Shared PR #29 decisions.md")
+    parser.add_argument("--seed", type=int, default=0, help="Forecast model seed")
+    parser.add_argument("--windows", nargs="+", type=int, default=list(WINDOW_DAYS))
+    parser.add_argument("--data-path", type=Path, default=ROOT / "data/raw")
+    parser.add_argument("--output-root", type=Path, default=ROOT / "results/tables/adaptation/revised")
     args = parser.parse_args()
-    run_experiment(model_name=args.model, detector=args.detector)
-    print(f"Saved forecasts to {FORECASTS_PATH}")
+    run_pr29_detector_sensitivity_experiment(
+        detections_path=args.detections, decisions_path=args.decisions,
+        run_id=args.run_id, detectors=tuple(args.detectors), seed=args.seed,
+        windows=tuple(args.windows), data_path=args.data_path,
+        output_root=args.output_root,
+    )
 
 
 if __name__ == "__main__":
