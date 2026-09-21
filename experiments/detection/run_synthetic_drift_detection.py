@@ -14,6 +14,9 @@ Data and preprocessing:
       overall mean + smoothed DOY + (DOW × half-hour)
     • Gradient Boosting with calendar features and lags (48, 336)
     • Global error z-score fitted on chronological TRAIN Year-2 errors
+    • ADWIN/KSWIN: partial AR(1) whitening, lambda = 0.80
+    • Page-Hinkley: no whitening
+    • AR(1) fitted on TRAIN Year-2 processed errors only
 
 Detection:
     • Processed CALIBRATION errors are used for detector warm-up
@@ -240,6 +243,16 @@ FA_PER_10K_TO_PER_YEAR = (
 MAX_FALSE_ALARMS_PER_YEAR = 2.0
 
 
+# Partial AR(1) configuration
+
+PARTIAL_AR1_LAMBDA = 0.80
+
+WHITENED_DETECTORS = (
+    "adwin",
+    "kswin",
+)
+
+
 # Registered detectors
 
 REQUIRED_DETECTORS = (
@@ -263,7 +276,7 @@ SPLIT_ID = (
     "trainerror_zscore_"
     "warmup_calibration_"
     "refractory672_tol336_"
-    "registry"
+    "registry_V2"
 )
 
 
@@ -341,6 +354,190 @@ def false_alarms_per_year(
         )
         * FA_PER_10K_TO_PER_YEAR
     )
+
+
+# Partial AR(1) whitening
+
+class PartialAR1Whitener:
+    """
+    Partial AR(1) preprocessing.
+
+    Fit on TRAIN Year-2 standardised absolute forecast errors:
+
+        z_t = intercept + phi * z_(t-1) + e_t
+
+    Partial whitening:
+
+        r_t =
+            z_t
+            - lambda * (
+                intercept
+                + phi * z_(t-1)
+            )
+
+    This transformation is used only for ADWIN and KSWIN.
+    """
+
+    def __init__(self):
+
+        self.intercept_ = None
+        self.phi_ = None
+
+    def fit(
+        self,
+        series,
+    ):
+        """
+        Fit AR(1) using ordinary least squares.
+        """
+
+        series = np.asarray(
+            series,
+            dtype=float,
+        )
+
+        if len(series) < 20:
+
+            raise ValueError(
+                "TRAIN reference stream is too short "
+                "for AR(1) fitting."
+            )
+
+        if not np.isfinite(
+            series
+        ).all():
+
+            raise ValueError(
+                "TRAIN AR(1) reference contains "
+                "NaN or infinite values."
+            )
+
+        previous = (
+            series[:-1]
+        )
+
+        current = (
+            series[1:]
+        )
+
+        design = np.column_stack(
+            [
+                np.ones(
+                    len(previous)
+                ),
+                previous,
+            ]
+        )
+
+        coefficients, _, _, _ = (
+            np.linalg.lstsq(
+                design,
+                current,
+                rcond=None,
+            )
+        )
+
+        self.intercept_ = float(
+            coefficients[0]
+        )
+
+        self.phi_ = float(
+            coefficients[1]
+        )
+
+        return self
+
+    def transform(
+        self,
+        series,
+        strength,
+        history_tail,
+    ):
+        """
+        Apply causal partial AR(1) whitening.
+        """
+
+        if (
+            self.intercept_ is None
+            or self.phi_ is None
+        ):
+
+            raise RuntimeError(
+                "AR(1) whitener must be fitted first."
+            )
+
+        series = np.asarray(
+            series,
+            dtype=float,
+        )
+
+        history_tail = np.asarray(
+            history_tail,
+            dtype=float,
+        )
+
+        strength = float(
+            strength
+        )
+
+        if not (
+            0.0
+            <= strength
+            <= 1.0
+        ):
+
+            raise ValueError(
+                "Partial-whitening lambda must be "
+                "between 0 and 1."
+            )
+
+        if len(series) == 0:
+
+            raise ValueError(
+                "Cannot whiten an empty stream."
+            )
+
+        if len(history_tail) == 0:
+
+            raise ValueError(
+                "AR history_tail cannot be empty."
+            )
+
+        previous = np.concatenate(
+            [
+                history_tail[-1:],
+                series[:-1],
+            ]
+        )
+
+        predicted_component = (
+            self.intercept_
+            + self.phi_
+            * previous
+        )
+
+        transformed = (
+            series
+            - strength
+            * predicted_component
+        )
+
+        if not np.isfinite(
+            transformed
+        ).all():
+
+            raise RuntimeError(
+                "Partially whitened stream contains "
+                "NaN or infinite values."
+            )
+
+        if len(transformed) != len(series):
+
+            raise RuntimeError(
+                "Partial whitening changed stream length."
+            )
+
+        return transformed
 
 
 # Registry validation
@@ -460,6 +657,13 @@ def build_detector_streams(
     Demand deseasonalisation is fitted on complete TRAIN.
     Error standardisation is fitted on chronological TRAIN Year-2
     absolute forecast errors.
+
+    Partial AR(1) parameters are fitted on the processed
+    chronological TRAIN Year-2 error stream.
+
+    ADWIN and KSWIN use partially whitened CALIBRATION and TEST
+    streams. Page-Hinkley uses the unwhitened globally
+    standardised streams.
     """
 
     train = (
@@ -648,6 +852,36 @@ def build_detector_streams(
         reference_abs
     )
 
+    reference_processed = (
+        error_scaler
+        .transform(
+            reference_abs
+        )
+        .to_numpy(
+            dtype=float
+        )
+    )
+
+    if not np.isfinite(
+        reference_processed
+    ).all():
+
+        raise RuntimeError(
+            "Processed TRAIN Year-2 error reference "
+            "contains NaN or infinite values."
+        )
+
+
+    # TRAIN-only AR(1) fitting
+
+    whitener = (
+        PartialAR1Whitener()
+    )
+
+    whitener.fit(
+        reference_processed
+    )
+
 
     # Final Gradient Boosting model
 
@@ -738,25 +972,57 @@ def build_detector_streams(
     )
 
 
+    # Partial-whiten CALIBRATION
+
+    calibration_whitened = (
+        whitener.transform(
+            series=calibration_processed,
+            strength=PARTIAL_AR1_LAMBDA,
+            history_tail=reference_processed,
+        )
+    )
+
+
+    # Partial-whiten TEST
+
+    test_whitened = (
+        whitener.transform(
+            series=test_processed,
+            strength=PARTIAL_AR1_LAMBDA,
+            history_tail=calibration_processed,
+        )
+    )
+
+
     # Stream validation
 
-    if not np.isfinite(
-        calibration_processed
-    ).all():
+    for name, values in (
+        (
+            "processed CALIBRATION",
+            calibration_processed,
+        ),
+        (
+            "processed TEST",
+            test_processed,
+        ),
+        (
+            "whitened CALIBRATION",
+            calibration_whitened,
+        ),
+        (
+            "whitened TEST",
+            test_whitened,
+        ),
+    ):
 
-        raise RuntimeError(
-            "Processed CALIBRATION stream "
-            "contains NaN or infinite values."
-        )
+        if not np.isfinite(
+            values
+        ).all():
 
-    if not np.isfinite(
-        test_processed
-    ).all():
-
-        raise RuntimeError(
-            "Processed TEST stream "
-            "contains NaN or infinite values."
-        )
+            raise RuntimeError(
+                f"{name} stream "
+                "contains NaN or infinite values."
+            )
 
     if (
         len(calibration_processed)
@@ -776,11 +1042,49 @@ def build_detector_streams(
             "TEST detector stream is misaligned."
         )
 
-    return (
-        calibration_processed,
-        test_processed,
-        len(train),
-    )
+    if (
+        len(calibration_whitened)
+        != len(calibration_ds)
+    ):
+
+        raise RuntimeError(
+            "Whitened CALIBRATION detector stream "
+            "is misaligned."
+        )
+
+    if (
+        len(test_whitened)
+        != len(test_ds)
+    ):
+
+        raise RuntimeError(
+            "Whitened TEST detector stream "
+            "is misaligned."
+        )
+
+    return {
+
+        "calibration_processed":
+            calibration_processed,
+
+        "test_processed":
+            test_processed,
+
+        "calibration_whitened":
+            calibration_whitened,
+
+        "test_whitened":
+            test_whitened,
+
+        "ar1_intercept":
+            whitener.intercept_,
+
+        "ar1_phi":
+            whitener.phi_,
+
+        "train_samples":
+            len(train),
+    }
 
 
 # Detector construction
@@ -1106,6 +1410,22 @@ def main():
     )
 
     print(
+        "AR(1) reference: "
+        "chronological TRAIN Year-2 "
+        "processed errors"
+    )
+
+    print(
+        "ADWIN/KSWIN whitening: "
+        f"partial AR(1), lambda="
+        f"{PARTIAL_AR1_LAMBDA:.2f}"
+    )
+
+    print(
+        "Page-Hinkley whitening: none"
+    )
+
+    print(
         "Detector warm-up: "
         "processed CALIBRATION errors"
     )
@@ -1184,17 +1504,64 @@ def main():
                 )
             )
 
-            (
-                warmup_stream,
-                test_stream,
-                train_samples,
-            ) = (
+            streams = (
                 build_detector_streams(
                     data
                 )
             )
 
+            train_samples = (
+                streams[
+                    "train_samples"
+                ]
+            )
+
             for detector_name in REQUIRED_DETECTORS:
+
+                if (
+                    detector_name
+                    in WHITENED_DETECTORS
+                ):
+
+                    warmup_stream = (
+                        streams[
+                            "calibration_whitened"
+                        ]
+                    )
+
+                    test_stream = (
+                        streams[
+                            "test_whitened"
+                        ]
+                    )
+
+                    whitening_type = (
+                        "partial_AR1"
+                    )
+
+                    whitening_lambda = (
+                        PARTIAL_AR1_LAMBDA
+                    )
+
+                else:
+
+                    warmup_stream = (
+                        streams[
+                            "calibration_processed"
+                        ]
+                    )
+
+                    test_stream = (
+                        streams[
+                            "test_processed"
+                        ]
+                    )
+
+                    whitening_type = (
+                        "none"
+                    )
+
+                    whitening_lambda = 0.0
 
                 (
                     detected,
@@ -1317,6 +1684,26 @@ def main():
                             (
                                 "TRAIN_zscored_"
                                 "absolute_forecast_error"
+                            ),
+
+                        "whitening_type":
+                            whitening_type,
+
+                        "whitening_lambda":
+                            whitening_lambda,
+
+                        "ar1_intercept":
+                            float(
+                                streams[
+                                    "ar1_intercept"
+                                ]
+                            ),
+
+                        "ar1_phi":
+                            float(
+                                streams[
+                                    "ar1_phi"
+                                ]
                             ),
 
                         "split_id":

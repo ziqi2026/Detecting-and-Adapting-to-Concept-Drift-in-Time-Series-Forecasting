@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-09-20T06:26:14.684019+00:00",
+  "created_at": "2026-09-21T01:21:45.103650+00:00",
   "protocol": {
     "protocol_id": "aemo_t1_7day_one_to_one_v2",
     "point_window_days": 7,
@@ -12,7 +12,7 @@
   },
   "source_sha256": {
     "results/tables/detection/aemo_detection_changepoints.csv": "b4857a576fbadfd5b14ea4e049f5cdf0cc77587e1cde96ba9e8c3a820ec3bf49",
-    "data/events.csv": "0f13e32ee41cb9aac402710dc739303e7259c485e1bb055bc4cee341dbcd02e8",
+    "data/events.csv": "7f8981ef7495d8374a01ef2fae5e3fb58f228de6973a4dcecc948f6103f49225",
     "docs/aemo_matching_protocol.json": "378eee3827e1f703c422fb62dba5acc42549adb9fa37457c3d16da4694c19b7c",
     "docs/aemo_matching_protocol.md": "27e8059695767973585aaf514d8bbf2ce93bda5fe694cb0ca6b2f8339b3778cd",
     "docs/event_tiering_criteria.md": "8f108ed94a7344819a41a0f25cab4606a0e1851ba2c4d9b79b5f871a6c72ad4f",
@@ -22,7 +22,7 @@
     "src/drift_lab/data_loader.py": "b49689292340a9db59ab3a476e72c4dc0ee98d392d7b702c13d8bd1b93eb3074",
     "src/drift_lab/detectors.py": "edc3bb5e1f0835918662d5dc0a5ebbe9557510d7159f82d5e1e0b1d77af2464b",
     "experiments/detection/run_aemo_drift_detection.py": "efa524c2a92cc98019a70287cb7ea19f48283782a755e3468bc92b1b189141a8",
-    "experiments/detection/run_synthetic_drift_detection.py": "d52dff66ee71b441c0d21f776f8a44ce25b1412920b6877a1640c4c3862cb667"
+    "experiments/detection/run_synthetic_drift_detection.py": "34ee224007134540a3ac2b418764ac00c5b30f38c70f23b2eea321873f69122f"
   },
   "configurations": [
     {
@@ -37,7 +37,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "af394e0e20f1314b7d804bb06367176b108e4fe9eed83b61e1e5bc9a0e819f9e"
+      "config_hash": "56acfc7459b990340a64d7de8c0a5a5c24c260941cf745f1478a92de5559d2ac"
     },
     {
       "detector": "page_hinkley",
@@ -55,7 +55,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "54724049f18201623b9b28a146f54a031cba91a74017756e00d87adb8e8b57ac"
+      "config_hash": "e562bd48b205cbbc798b939b39aedc4e3f025417286591cc35860f895d664e86"
     },
     {
       "detector": "kswin",
@@ -72,7 +72,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "ab6b4435d94e6f95ee3c786f3e0c7052a5521156ab857e516748618a390960ea"
+      "config_hash": "42326c9a98f49d2b9282088d2d5bff256049c7011061f1059de1f89d52d898b5"
     },
     {
       "detector": "adwin",
@@ -86,7 +86,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "b4578a39efc33787abc54b385f40820211984721bd347fe08e7aa612ab5f1d3f"
+      "config_hash": "2a7f05f7f5806f8504678d3253c31244e1fe0c967f7dce4f7fa61fb30712d67e"
     },
     {
       "detector": "page_hinkley",
@@ -104,7 +104,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "dc26ba3903a598a6030cb240e2bcc6c06aef5e7c88dcd343830756b946a46741"
+      "config_hash": "bdbe56e5de476624b6c0f117d19027838ec7678ad81b9a38a8c980fd75f98725"
     },
     {
       "detector": "kswin",
@@ -121,7 +121,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "6526299994abdd5d9ed9ece992f7dc13db9b4412a7c31c5f96e04eb547ad1cbe"
+      "config_hash": "6b232fab5cfac5a4673c19770dcc87bbfcd2efd93b28b3f45c54a65f7a0ef551"
     }
   ],
   "runs_path": "results/tables/runs.csv",
