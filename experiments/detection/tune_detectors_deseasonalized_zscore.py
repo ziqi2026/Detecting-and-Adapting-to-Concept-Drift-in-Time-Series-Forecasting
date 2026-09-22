@@ -1,12 +1,12 @@
 """
 Synthetic detector tuning for ADWIN, KSWIN, and Page-Hinkley.
 
-The script evaluates three configurations for each detector on
+The script evaluates a broad 140-configuration grid for the detectors on
 synthetic none, sudden, gradual, and recurring drift streams
 across seeds 1-5.
 
 Synthetic demand is generated at 30-minute cadence and split into
-2 years of TRAIN, 60 days of CALIBRATION, and 4 years of TEST.
+2 years of TRAIN, 60 days of CALIBRATION, and 1 year of TEST.
 
 A seasonal profile is fitted on complete TRAIN using:
     overall mean
@@ -40,7 +40,7 @@ Among passing configurations, selection uses:
     lowest overall mean false alarms per year
     lowest mean detection delay
 
-Results are saved to:
+Safe early rejection stops candidates that cannot satisfy the hard constraints.\n\nResults are saved to:
 results/tables/detection/
 detector_tuning_results.csv
 """
@@ -148,10 +148,10 @@ CALIBRATION_LENGTH = (
 # 2,880
 
 TEST_LENGTH = (
-    4
+    1
     * OBSERVATIONS_PER_YEAR
 )
-# 70,080
+# 17,520
 
 TRAIN_END = TRAIN_LENGTH
 
@@ -167,7 +167,7 @@ N_OBSERVATIONS = (
     + CALIBRATION_LENGTH
     + TEST_LENGTH
 )
-# 108,000
+# 55,440
 
 
 # Synthetic changepoints
@@ -188,14 +188,22 @@ SYNTHETIC_CHANGEPOINTS = {
     "gradual": [
         TEST_START
         + int(
-            0.45
+            0.50
             * TEST_LENGTH
+        )
+        - (
+            15
+            * OBSERVATIONS_PER_DAY
         ),
 
         TEST_START
         + int(
-            0.55
+            0.50
             * TEST_LENGTH
+        )
+        + (
+            15
+            * OBSERVATIONS_PER_DAY
         ),
     ],
 
@@ -274,76 +282,102 @@ OUTPUT_PATH = (
 
 # Candidate configurations
 #
-# Three configurations are evaluated for each detector.
-# Total configurations = 9.
+# Expanded candidate grids are evaluated for each detector.
+# Existing selected configurations are retained in the search.
 
 
 ADWIN_CONFIGS = [
-
-    {
-        "delta": 5e-6,
-    },
-
-    {
-        "delta": 2e-6,
-    },
-
-    {
-        "delta": 1e-6,
-    },
+    # 20 delta values spanning sensitive to conservative settings.
+    # Existing selected delta=1e-6 is retained.
+    {"delta": delta}
+    for delta in (
+        1e-3,
+        7.5e-4,
+        5e-4,
+        2.5e-4,
+        1e-4,
+        7.5e-5,
+        5e-5,
+        2.5e-5,
+        1e-5,
+        7.5e-6,
+        5e-6,
+        2.5e-6,
+        2e-6,
+        1e-6,
+        7.5e-7,
+        5e-7,
+        2.5e-7,
+        2e-7,
+        1e-7,
+        5e-8,
+    )
 ]
 
 
 KSWIN_CONFIGS = [
-
+    # 60 combinations = 10 alpha values x 6 window/stat pairs.
+    # Existing selected alpha=2e-7, window=672, stat=168 is retained.
     {
-        "alpha": 2e-7,
-        "window_size": 336,
-        "stat_size": 84,
+        "alpha": alpha,
+        "window_size": window_size,
+        "stat_size": stat_size,
         "seed": 12,
-    },
-
-    {
-        "alpha": 2e-7,
-        "window_size": 672,
-        "stat_size": 168,
-        "seed": 12,
-    },
-
-    {
-        "alpha": 2e-7,
-        "window_size": 1344,
-        "stat_size": 336,
-        "seed": 12,
-    },
+    }
+    for alpha in (
+        1e-4,
+        5e-5,
+        1e-5,
+        5e-6,
+        2e-6,
+        1e-6,
+        5e-7,
+        2e-7,
+        1e-7,
+        5e-8,
+    )
+    for window_size, stat_size in (
+        (168, 42),
+        (336, 84),
+        (480, 120),
+        (672, 168),
+        (960, 240),
+        (1344, 336),
+    )
 ]
 
 
 PAGE_HINKLEY_CONFIGS = [
-
+    # 60 combinations = 5 delta values x 12 thresholds.
+    # Existing selected threshold=450, delta=0.005 is retained.
     {
         "min_instances": 30,
-        "delta": 0.005,
-        "threshold": 350,
+        "delta": delta,
+        "threshold": threshold,
         "alpha": 0.999,
         "mode": "both",
-    },
-
-    {
-        "min_instances": 30,
-        "delta": 0.005,
-        "threshold": 400,
-        "alpha": 0.999,
-        "mode": "both",
-    },
-
-    {
-        "min_instances": 30,
-        "delta": 0.005,
-        "threshold": 450,
-        "alpha": 0.999,
-        "mode": "both",
-    },
+    }
+    for delta in (
+        0.001,
+        0.0025,
+        0.005,
+        0.0075,
+        0.01,
+    )
+    for threshold in (
+        100,
+        150,
+        200,
+        250,
+        300,
+        350,
+        400,
+        450,
+        500,
+        550,
+        600,
+        700,
+    )
 ]
 
 
@@ -949,31 +983,38 @@ def run_no_drift_gate(
             **config,
         )
 
-        counts.append(
-            len(
-                detections
-            )
+        count = len(
+            detections
         )
 
-    total = int(
-        sum(
-            counts
+        counts.append(
+            count
         )
-    )
+
+        # Safe early rejection:
+        # the NONE gate requires zero detections across every seed,
+        # so one detection is enough to reject this configuration.
+        if count > 0:
+            return {
+                "none_total_detections":
+                    int(sum(counts)),
+
+                "none_max_detections_single_seed":
+                    int(max(counts)),
+
+                "passes_none_gate":
+                    False,
+            }
 
     return {
         "none_total_detections":
-            total,
+            0,
 
         "none_max_detections_single_seed":
-            int(
-                max(
-                    counts
-                )
-            ),
+            0,
 
         "passes_none_gate":
-            total == 0,
+            True,
     }
 
 
@@ -985,10 +1026,26 @@ def evaluate_positive_drifts(
     config,
     stream_cache,
 ):
+    """
+    Evaluate positive drift scenarios with safe early rejection.
+
+    A drift type fails as soon as the accumulated FA/year across
+    completed seeds is already greater than the maximum total
+    allowed across all five seeds. Even if every remaining seed
+    then had zero false alarms, the final five-seed mean could
+    no longer be <= MAX_FALSE_ALARMS_PER_YEAR.
+    """
 
     rows = []
 
+    max_total_fa_per_year = (
+        MAX_FALSE_ALARMS_PER_YEAR
+        * len(SEEDS)
+    )
+
     for drift_type in POSITIVE_DRIFT_TYPES:
+
+        cumulative_fa_per_year = 0.0
 
         for seed in SEEDS:
 
@@ -1027,6 +1084,16 @@ def evaluate_positive_drifts(
                 ]
             )
 
+            fa_year = (
+                false_alarms_per_year(
+                    fa_10k
+                )
+            )
+
+            cumulative_fa_per_year += (
+                fa_year
+            )
+
             rows.append(
                 {
                     "detector":
@@ -1052,9 +1119,7 @@ def evaluate_positive_drifts(
                         fa_10k,
 
                     "false_alarms_per_year":
-                        false_alarms_per_year(
-                            fa_10k
-                        ),
+                        fa_year,
 
                     "missed_detections":
                         int(
@@ -1072,8 +1137,25 @@ def evaluate_positive_drifts(
                 }
             )
 
-    return pd.DataFrame(
-        rows
+            # Safe early rejection of the entire candidate.
+            # The final mean for this drift is based on all 5 seeds.
+            # If the accumulated FA/year already exceeds
+            # 2 * 5 = 10, zero FA on all remaining seeds still
+            # cannot recover the configuration.
+            if (
+                cumulative_fa_per_year
+                > max_total_fa_per_year
+            ):
+                return (
+                    pd.DataFrame(rows),
+                    True,
+                    drift_type,
+                )
+
+    return (
+        pd.DataFrame(rows),
+        False,
+        None,
     )
 
 
@@ -1291,6 +1373,12 @@ def failed_none_row(
         "passes_all_hard_constraints":
             False,
 
+        "early_rejected":
+            True,
+
+        "early_rejected_drift":
+            "none",
+
         "missed_total_all_drifts":
             np.nan,
 
@@ -1324,6 +1412,142 @@ def failed_none_row(
         row[
             f"{drift_type}_missed_total"
         ] = np.nan
+
+        row[
+            f"{drift_type}_passes_budget"
+        ] = False
+
+    return row
+
+
+# Candidate rejected early by positive-drift FA budget
+
+def failed_positive_budget_row(
+    detector_name,
+    config,
+    none_gate,
+    positive_df,
+    failed_drift_type,
+):
+
+    row = {
+        "detector":
+            detector_name,
+
+        "config":
+            config_id(
+                config
+            ),
+
+        **config,
+
+        **none_gate,
+
+        "passes_fa_budget":
+            False,
+
+        "passes_all_hard_constraints":
+            False,
+
+        "early_rejected":
+            True,
+
+        "early_rejected_drift":
+            failed_drift_type,
+
+        "missed_total_all_drifts":
+            (
+                int(
+                    positive_df[
+                        "missed_detections"
+                    ].sum()
+                )
+                if not positive_df.empty
+                else np.nan
+            ),
+
+        "worst_mean_fa_per_year":
+            np.nan,
+
+        "mean_fa_per_year_all_drifts":
+            np.nan,
+
+        "worst_seed_fa_per_year":
+            (
+                float(
+                    positive_df[
+                        "false_alarms_per_year"
+                    ].max()
+                )
+                if not positive_df.empty
+                else np.nan
+            ),
+
+        "mean_detection_delay":
+            np.nan,
+    }
+
+    for drift_type in POSITIVE_DRIFT_TYPES:
+
+        subset = (
+            positive_df[
+                positive_df[
+                    "drift_type"
+                ]
+                == drift_type
+            ]
+        )
+
+        row[
+            f"{drift_type}_mean_delay"
+        ] = (
+            float(
+                subset[
+                    "detection_delay"
+                ].dropna().mean()
+            )
+            if not subset.empty
+            and not subset[
+                "detection_delay"
+            ].dropna().empty
+            else np.nan
+        )
+
+        row[
+            f"{drift_type}_fa_per_10k"
+        ] = (
+            float(
+                subset[
+                    "false_alarms_per_10k"
+                ].mean()
+            )
+            if not subset.empty
+            else np.nan
+        )
+
+        row[
+            f"{drift_type}_fa_per_year"
+        ] = (
+            float(
+                subset[
+                    "false_alarms_per_year"
+                ].mean()
+            )
+            if not subset.empty
+            else np.nan
+        )
+
+        row[
+            f"{drift_type}_missed_total"
+        ] = (
+            int(
+                subset[
+                    "missed_detections"
+                ].sum()
+            )
+            if not subset.empty
+            else np.nan
+        )
 
         row[
             f"{drift_type}_passes_budget"
@@ -1381,7 +1605,11 @@ def tune_detector(
 
             continue
 
-        positive_df = (
+        (
+            positive_df,
+            early_rejected,
+            failed_drift_type,
+        ) = (
             evaluate_positive_drifts(
                 detector_name,
                 runner,
@@ -1390,13 +1618,45 @@ def tune_detector(
             )
         )
 
-        results.append(
+        if early_rejected:
+
+            print(
+                "    early reject: "
+                f"{failed_drift_type} "
+                "cannot meet FA/year budget"
+            )
+
+            results.append(
+                failed_positive_budget_row(
+                    detector_name,
+                    config,
+                    none_gate,
+                    positive_df,
+                    failed_drift_type,
+                )
+            )
+
+            continue
+
+        summary = (
             summarize_candidate(
                 detector_name,
                 config,
                 none_gate,
                 positive_df,
             )
+        )
+
+        summary[
+            "early_rejected"
+        ] = False
+
+        summary[
+            "early_rejected_drift"
+        ] = None
+
+        results.append(
+            summary
         )
 
     return pd.DataFrame(

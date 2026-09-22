@@ -7,23 +7,34 @@ recurring drift scenarios across five seeds.
 
 Data and preprocessing:
     • 30-minute synthetic demand
-    • TRAIN: 2 years
-    • CALIBRATION: 60 days
-    • TEST: 4 years
+    • TRAIN: 2 years (35,040 observations)
+    • CALIBRATION: 60 days (2,880 observations)
+    • TEST: 1 year (17,520 observations)
     • TRAIN-fitted seasonal profile:
       overall mean + smoothed DOY + (DOW × half-hour)
     • Gradient Boosting with calendar features and lags (48, 336)
+    • Absolute forecast-error stream
     • Global error z-score fitted on chronological TRAIN Year-2 errors
+    • AR(1) fitted on TRAIN Year-2 processed errors only
     • ADWIN/KSWIN: partial AR(1) whitening, lambda = 0.80
     • Page-Hinkley: no whitening
-    • AR(1) fitted on TRAIN Year-2 processed errors only
 
-Detection:
+Detection protocol:
     • Processed CALIBRATION errors are used for detector warm-up
     • TEST errors are used for recorded detections
     • Refractory period: 14 days
     • Matching tolerance: 7 days
-    • Detector configurations: DETECTOR_REGISTRY
+    • Frozen detector configurations are loaded from DETECTOR_REGISTRY
+    • Evaluation is repeated across seeds 1–5
+    • Hard constraints:
+      zero detections on the no-drift control
+      mean false alarms <= 2 per year for each positive drift type
+
+Synthetic drift scenarios:
+    • None: no changepoint
+    • Sudden: one changepoint at 50% of TEST
+    • Gradual: 30-day transition centred at 50% of TEST
+    • Recurring: changepoints at 35% and 65% of TEST
 
 Outputs:
     results/tables/detection/synthetic_detection_raw.csv
@@ -138,10 +149,10 @@ CALIBRATION_LENGTH = (
 # 2,880
 
 TEST_LENGTH = (
-    4
+    1
     * OBSERVATIONS_PER_YEAR
 )
-# 70,080
+# 17,520
 
 TRAIN_END = TRAIN_LENGTH
 
@@ -157,7 +168,7 @@ N_OBSERVATIONS = (
     + CALIBRATION_LENGTH
     + TEST_LENGTH
 )
-# 108,000
+# 55,440
 
 
 # Synthetic changepoints
@@ -178,14 +189,22 @@ SYNTHETIC_CHANGEPOINTS = {
     "gradual": [
         TEST_START
         + int(
-            0.45
+            0.50
             * TEST_LENGTH
+        )
+        - (
+            15
+            * OBSERVATIONS_PER_DAY
         ),
 
         TEST_START
         + int(
-            0.55
+            0.50
             * TEST_LENGTH
+        )
+        + (
+            15
+            * OBSERVATIONS_PER_DAY
         ),
     ],
 
@@ -271,7 +290,7 @@ REGION = "synthetic"
 REGIME = "full_test"
 
 SPLIT_ID = (
-    "synthetic_35040_2880_70080_"
+    "synthetic_35040_2880_17520_"
     "demand_deseasonalised_"
     "trainerror_zscore_"
     "warmup_calibration_"

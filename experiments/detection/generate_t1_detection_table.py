@@ -8,7 +8,7 @@ OUTPUT_PATH = Path("results/tables/detection/T1_detection_on_synthetic.csv")
 GROUP = "detection"
 
 SPLIT_ID = (
-    "synthetic_35040_2880_70080_"
+    "synthetic_35040_2880_17520_"
     "demand_deseasonalised_"
     "trainerror_zscore_"
     "warmup_calibration_"
