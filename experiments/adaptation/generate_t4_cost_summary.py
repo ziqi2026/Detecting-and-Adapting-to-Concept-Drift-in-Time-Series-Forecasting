@@ -2,7 +2,7 @@
 PGS242-130 - Generate T4: adaptation cost summary + cost-vs-accuracy view.
 
 Reads the already-completed run outputs (no re-run needed):
-  results/tables/adaptation/revised/pr29_detector_sensitivity_20260920_retry1/summary.csv
+  results/tables/adaptation/revised/final_updated_changepoints
 
 Writes:
   results/tables/adaptation/T4_adaptation_cost_summary.csv
@@ -28,7 +28,7 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-RUN_DIR = Path("results/tables/adaptation/revised/pr29_detector_sensitivity_20260920_retry1")
+RUN_DIR = Path("results/tables/adaptation/revised/final_updated_changepoints")
 OUT_TABLE_DIR = Path("results/tables/adaptation")
 OUT_FIG_DIR = Path("results/figures/adaptation")
 OUT_TABLE_DIR.mkdir(parents=True, exist_ok=True)
