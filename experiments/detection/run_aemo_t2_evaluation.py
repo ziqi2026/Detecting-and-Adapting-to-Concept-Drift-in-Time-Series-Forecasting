@@ -1,4 +1,5 @@
-"""T2: evaluate stored Task 120 detections; never rerun a forecaster/detector.
+"""
+T2: evaluate stored Task 120 detections; never rerun a forecaster/detector.
 
 Run from any directory. --from-logs reconstructs the final table solely from
 results/tables/runs.csv and the saved manifest. See docs/aemo_matching_protocol.md.
@@ -22,7 +23,8 @@ from drift_lab.data_loader import load_and_split_aemo
 from drift_lab.detectors import DETECTOR_REGISTRY
 from drift_lab.evaluation import (
     AEMO_REGIMES, AEMO_TIER1_COLUMNS, AEMO_TIMEZONE, aemo_timestamp,
-    build_aemo_event_windows, evaluate_aemo_detections, load_aemo_events,
+    build_aemo_event_windows, calculate_aemo_chance_matches,
+    evaluate_aemo_detections, load_aemo_events,
     validate_aemo_protocol,
 )
 from drift_lab.run_logger import log_run
@@ -35,7 +37,7 @@ OUT = ROOT / "results/tables/detection"
 MANIFEST = OUT / "T2_manifest.json"
 TABLE = OUT / "T2_aemo_detection.csv"
 GROUP = "aemo_t2"
-SPLIT = "aemo_fixed_train2018_2019_test202003_task120_t2_t1rule_v2"
+SPLIT = "aemo_fixed_train2018_2019_test202003_task120_t2_t1rule"
 REGIONS = ("SA1", "NSW1")
 
 
@@ -49,9 +51,10 @@ def _scalar(data, metric):
         raise ValueError(f"Expected exactly one logged value for {metric}; got {len(rows)}.")
     return float(rows.metric_value.iloc[0])
 
+
 def build_t2_from_runs(runs, configurations):
 
-    """Reconstruct all five delays and ratio-of-counts precision from logs."""
+    """Reconstruct all five delays, tier-specific precision and chance baseline from logs."""
 
     result = []
 
@@ -153,27 +156,39 @@ def build_t2_from_runs(runs, configurations):
                 "Logged detection accounting does not balance."
             )
 
-        row["tier1_unmatched"] = (
+        row["detections"] = (
             counts["detections"]
-            - counts["tier1_matched"]
         )
 
-        row["tier2_contextual"] = (
+        row["tier1_matched"] = (
+            counts["tier1_matched"]
+        )
+
+        row["tier1_precision"] = (
+            counts["tier1_matched"]
+            / counts["detections"]
+            if counts["detections"]
+            else float("nan")
+        )
+
+        row["tier2_matched"] = (
             counts["tier2_matched"]
+        )
+
+        row["tier2_precision"] = (
+            counts["tier2_matched"]
+            / counts["detections"]
+            if counts["detections"]
+            else float("nan")
         )
 
         row["unmatched"] = (
             counts["unmatched"]
         )
 
-        row["precision"] = (
-            (
-                counts["tier1_matched"]
-                + counts["tier2_matched"]
-            )
-            / counts["detections"]
-            if counts["detections"]
-            else float("nan")
+        row["tier1_chance_matches"] = _scalar(
+            data,
+            "t2.chance.tier1_expected_matches",
         )
 
         result.append(row)
@@ -182,23 +197,49 @@ def build_t2_from_runs(runs, configurations):
 
 
 def prepare_inputs():
-    """Verify Task 120 index mapping, normalization, configurations and coverage."""
+    """Verify Task 120 index mapping, preprocessing, configurations and coverage."""
     detections = pd.read_csv(INPUT)
     required = {"region", "detector", "detected_index", "SETTLEMENTDATE", "forecast_error",
-                "normalized_abs_error", "calibration_abs_error_mean",
-                "calibration_abs_error_std", "detector_config"}
+                "normalized_abs_error", "detector_config", "refractory_period",
+                "refractory_days", "seasonal_reference", "error_zscore_reference",
+                "error_zscore_type", "warmup_reference", "detector_input",
+                "whitening_type", "whitening_lambda", "ar1_intercept", "ar1_phi"}
     if not required.issubset(detections.columns) or detections[list(required)].isna().any().any():
         raise ValueError("Incomplete Task 120 input fields.")
     if not detections.region.isin(REGIONS).all() or not detections.detector.isin(DETECTOR_REGISTRY).all():
         raise ValueError("Unexpected detector or region in Task 120.")
     if detections.duplicated(["region", "detector", "detected_index"]).any():
         raise ValueError("Duplicate Task 120 indices.")
-    values = detections[["forecast_error", "normalized_abs_error", "calibration_abs_error_mean",
-                         "calibration_abs_error_std"]].to_numpy(dtype=float)
-    if not np.isfinite(values).all() or (values[:, 3] <= 0).any():
-        raise ValueError("Invalid Task 120 normalization values.")
-    if not np.allclose(values[:, 1], (np.abs(values[:, 0]) - values[:, 2]) / values[:, 3]):
-        raise ValueError("Task 120 normalized absolute error does not reproduce.")
+    values = detections[["forecast_error", "normalized_abs_error",
+                         "whitening_lambda", "ar1_intercept", "ar1_phi"]].to_numpy(dtype=float)
+    if not np.isfinite(values).all():
+        raise ValueError("Invalid Task 120 preprocessing values.")
+
+    if not (detections.error_zscore_type == "global").all():
+        raise ValueError("Task 120 must use global error z-score.")
+    if not (detections.error_zscore_reference == "chronological_TRAIN_year2_errors").all():
+        raise ValueError("Task 120 error z-score reference differs from expected TRAIN Year-2 reference.")
+    if not (detections.seasonal_reference == "complete_TRAIN_only").all():
+        raise ValueError("Task 120 seasonal reference differs from expected TRAIN-only reference.")
+    if not (detections.warmup_reference == "processed CALIBRATION forecast errors").all():
+        raise ValueError("Task 120 warm-up reference differs from expected Calibration warm-up.")
+    if not (detections.detector_input == "TRAIN_zscored_absolute_forecast_error").all():
+        raise ValueError("Task 120 detector input metadata differs from expected input.")
+    if not (detections.refractory_period == 672).all() or not (detections.refractory_days == 14).all():
+        raise ValueError("Task 120 must use the 14-day refractory period.")
+
+    whitened = detections[detections.detector.isin(["adwin", "kswin"])]
+    if not (whitened.whitening_type == "partial_AR1").all():
+        raise ValueError("ADWIN and KSWIN must use partial AR(1) whitening.")
+    if not np.allclose(whitened.whitening_lambda.to_numpy(dtype=float), 0.80):
+        raise ValueError("ADWIN and KSWIN must use whitening lambda=0.80.")
+
+    page_hinkley = detections[detections.detector == "page_hinkley"]
+    if not (page_hinkley.whitening_type == "none").all():
+        raise ValueError("Page-Hinkley must not use whitening.")
+    if not np.allclose(page_hinkley.whitening_lambda.to_numpy(dtype=float), 0.0):
+        raise ValueError("Page-Hinkley whitening lambda must be 0.")
+
     prepared = []
     for region in REGIONS:
         # Read/standardise the original stream only to validate indices and exposure.
@@ -219,8 +260,6 @@ def prepare_inputs():
                 raise ValueError("Task 120 indices are not chronological.")
             if not all(json.loads(c) == entry["config"] for c in rows.detector_config):
                 raise ValueError(f"Task 120 configuration differs from frozen registry: {method}.")
-            if rows.calibration_abs_error_mean.nunique() != 1 or rows.calibration_abs_error_std.nunique() != 1:
-                raise ValueError("Mixed Task 120 calibration configurations.")
             prepared.append({"detector": method, "region": region, "rows": rows,
                              "times": times, "train_samples": len(train),
                              "calibration_samples": len(calibration), "detector_config": entry["config"],
@@ -241,6 +280,32 @@ def metric_records(result, events, times, region, protocol):
         add(prefix + ".applicable", event["applicable"], "drift")
         add(prefix + ".detected", event["detected"], "drift")
         add(prefix + ".delay_days", event["delay_days"], event["delay_regime"])
+
+    n_detections = int(result["totals"]["detections"])
+    applicable_tier1 = events[
+        (events["tier"] == 1)
+        & (events["region"].isin(["NEM", region]))
+    ]
+    n_events = len(applicable_tier1)
+    stream_start = times[0]
+    stream_end_exclusive = times[-1] + pd.Timedelta(minutes=30)
+    test_duration_days = (
+        (stream_end_exclusive - stream_start).total_seconds()
+        / 86400.0
+    )
+    matching_window_days = protocol["point_window_days"]
+    chance_matches = calculate_aemo_chance_matches(
+        n_detections=n_detections,
+        n_events=n_events,
+        matching_window_days=matching_window_days,
+        test_duration_days=test_duration_days,
+    )
+    add(
+        "t2.chance.tier1_expected_matches",
+        chance_matches,
+        "all",
+    )
+
     audit = result["audit"]
     timestamps = pd.DatetimeIndex(audit.SETTLEMENTDATE)
     for event in events[events.region.isin(["NEM", region])].to_dict("records"):
@@ -285,28 +350,38 @@ def markdown_table(frame):
 def write_table(table):
     table.to_csv(TABLE, index=False, na_rep="N/A")
     shown = table.copy()
-    shown["precision"] = shown.precision.map(
+    shown["tier1_precision"] = shown.tier1_precision.map(
         lambda x: f"{x:.2%}" if pd.notna(x) else "N/A"
+    )
+    shown["tier2_precision"] = shown.tier2_precision.map(
+        lambda x: f"{x:.2%}" if pd.notna(x) else "N/A"
+    )
+    shown["tier1_chance_matches"] = shown.tier1_chance_matches.map(
+        lambda x: f"{x:.3f}" if pd.notna(x) else "N/A"
     )
     (OUT / "T2_aemo_detection.md").write_text(
         "# T2 — Detection on AEMO vs documented events\n\n" + markdown_table(shown) +
         "\n\nDelays are fractional days from the frozen reference date, rounded to 3 decimals. "
-        "Tier 1 unmatched counts detections that did not match a primary Tier 1 event. "
-        "Tier 2 contextual reports how many of those detections were subsequently matched "
-        "to Tier 2 events. Unmatched counts detections matched to neither tier. "
-        "Precision is the proportion of detections matched to either Tier 1 or Tier 2. "
+        "Tier 1 precision is the proportion of detections matched to Tier 1 events. "
+        "Tier 2 precision is the proportion of detections matched to Tier 2 events. "
+        "Unmatched counts detections matched to neither tier. "
+        "Tier 1 chance matches is the expected number of Tier 1 event matches under randomly placed detections. "
         "Historical events are contextual references; unmatched detections are not automatically false positives. "
         "See docs/aemo_matching_protocol.md and T2_manifest.json.\n",
         encoding="utf-8",
     )
     
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--from-logs", action="store_true")
     args = parser.parse_args()
     if args.from_logs:
         manifest = json.loads(MANIFEST.read_text())
-        write_table(build_t2_from_runs(pd.read_csv(RUNS), manifest["configurations"]))
+        write_table(build_t2_from_runs(
+            pd.read_csv(RUNS),
+            manifest["configurations"],
+        ))
         print(f"Rebuilt from logged metrics: {TABLE}")
         return
     protocol = json.loads(PROTOCOL.read_text())
@@ -316,8 +391,8 @@ def main():
                ROOT / "docs/event_tiering_criteria.md", Path(__file__),
                ROOT / "src/drift_lab/evaluation.py", ROOT / "src/drift_lab/run_logger.py",
                ROOT / "src/drift_lab/data_loader.py", ROOT / "src/drift_lab/detectors.py",
-               ROOT / "experiments/detection/run_aemo_detection.py",
-               ROOT / "experiments/detection/run_synthetic_detection_evaluation_absnorm_v2.py"]
+               ROOT / "experiments/detection/run_aemo_drift_detection.py",
+               ROOT / "experiments/detection/run_synthetic_drift_detection.py"]
     hashes = {str(p.relative_to(ROOT)): digest(p) for p in sources}
     prepared = prepare_inputs()
     configurations, audits, event_rows, summaries = [], [], [], []
@@ -353,7 +428,10 @@ def main():
     pd.concat(audits, ignore_index=True).to_csv(OUT / "T2_detection_matches.csv", index=False)
     pd.concat(event_rows, ignore_index=True).to_csv(OUT / "T2_tier1_event_details.csv", index=False)
     pd.DataFrame(summaries).to_csv(OUT / "T2_detection_summary.csv", index=False)
-    table = build_t2_from_runs(pd.read_csv(RUNS), configurations)
+    table = build_t2_from_runs(
+        pd.read_csv(RUNS),
+        configurations,
+    )
     write_table(table)
     manifest = {"created_at": datetime.now(timezone.utc).isoformat(), "protocol": protocol,
                 "source_sha256": hashes, "configurations": configurations,

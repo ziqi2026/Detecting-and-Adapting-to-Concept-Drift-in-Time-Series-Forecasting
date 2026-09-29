@@ -1,12 +1,12 @@
 # T2 — Detection on AEMO vs documented events
 
-| detector | region | COVID delay | solar/mild-weather delay | 5-minute settlement delay | 2022 suspension delay | security-directions delay | tier1_unmatched | tier2_contextual | unmatched | precision |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| adwin | SA1 | 0.312 | 3.646 | not detected | 4.646 | 5.646 | 139 | 14 | 125 | 12.59% |
-| page_hinkley | SA1 | not detected | 14.771 | not detected | not detected | not detected | 10 | 2 | 8 | 27.27% |
-| kswin | SA1 | 0.208 | 2.271 | not detected | not detected | 2.271 | 294 | 17 | 277 | 6.73% |
-| adwin | NSW1 | 4.312 | 0.312 | 3.646 | 5.979 | 10.312 | 156 | 7 | 149 | 7.45% |
-| page_hinkley | NSW1 | not detected | 27.896 | not detected | not detected | not detected | 3 | 0 | 3 | 25.00% |
-| kswin | NSW1 | 2.396 | 0.25 | 2.875 | 1.458 | 3.292 | 287 | 15 | 272 | 6.85% |
+| detector | region | COVID delay | solar/mild-weather delay | 2022 suspension delay | security-directions delay | detections | tier1_matched | tier1_precision | tier2_matched | tier2_precision | unmatched | tier1_chance_matches |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| adwin | SA1 | 58.312 | 14.979 | not detected | not detected | 13 | 2 | 15.38% | 1 | 7.69% | 10 | 0.252 |
+| page_hinkley | SA1 | 16.146 | not detected | not detected | not detected | 5 | 1 | 20.00% | 0 | 0.00% | 4 | 0.099 |
+| kswin | SA1 | not detected | 15.917 | 14.75 | not detected | 17 | 2 | 11.76% | 2 | 11.76% | 13 | 0.327 |
+| adwin | NSW1 | not detected | not detected | not detected | not detected | 16 | 0 | 0.00% | 2 | 12.50% | 14 | 0.308 |
+| page_hinkley | NSW1 | not detected | not detected | not detected | not detected | 5 | 0 | 0.00% | 0 | 0.00% | 5 | 0.099 |
+| kswin | NSW1 | 21.438 | not detected | not detected | not detected | 25 | 1 | 4.00% | 3 | 12.00% | 21 | 0.471 |
 
-Delays are fractional days from the frozen reference date, rounded to 3 decimals. Tier 1 unmatched counts detections that did not match a primary Tier 1 event. Tier 2 contextual reports how many of those detections were subsequently matched to Tier 2 events. Unmatched counts detections matched to neither tier. Precision is the proportion of detections matched to either Tier 1 or Tier 2. Historical events are contextual references; unmatched detections are not automatically false positives. See docs/aemo_matching_protocol.md and T2_manifest.json.
+Delays are fractional days from the frozen reference date, rounded to 3 decimals. Tier 1 precision is the proportion of detections matched to Tier 1 events. Tier 2 precision is the proportion of detections matched to Tier 2 events. Unmatched counts detections matched to neither tier. Tier 1 chance matches is the expected number of Tier 1 event matches under randomly placed detections. Historical events are contextual references; unmatched detections are not automatically false positives. See docs/aemo_matching_protocol.md and T2_manifest.json.

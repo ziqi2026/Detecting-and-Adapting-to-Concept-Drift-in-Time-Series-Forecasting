@@ -90,24 +90,22 @@ def validate_inputs(
     tier1_events,
 ):
     """Ensure F2 inputs remain aligned with Task 120 and T2."""
-    key_columns = [
-        "region",
-        "detector",
-        "detected_index",
-    ]
 
     required_diagnostic_columns = {
-        *key_columns,
+        "region",
+        "detector",
+        "stream_index",
         "SETTLEMENTDATE",
-        "normalized_abs_error",
+        "detector_input_value",
         "statistic",
         "threshold",
         "statistic_name",
         "threshold_name",
-        "is_drift",
     }
     required_match_columns = {
-        *key_columns,
+        "region",
+        "detector",
+        "detected_index",
         "SETTLEMENTDATE",
         "match_status",
         "match_tier",
@@ -151,32 +149,9 @@ def validate_inputs(
             f"{sorted(observed_statuses)}"
         )
 
-    diagnostic_detections = (
-        diagnostics.loc[
-            diagnostics["is_drift"].astype(bool),
-            key_columns,
-        ]
-        .sort_values(key_columns)
-        .reset_index(drop=True)
-    )
-
-    matched_detections = (
-        matches[key_columns]
-        .sort_values(key_columns)
-        .reset_index(drop=True)
-    )
-
-    if not diagnostic_detections.equals(
-        matched_detections
-    ):
+    if len(tier1_events) != 4:
         raise RuntimeError(
-            "Task 120 diagnostic detections do not "
-            "match the T2 detection rows."
-        )
-
-    if len(tier1_events) != 5:
-        raise RuntimeError(
-            "Expected exactly five fixed Tier 1 events, "
+            "Expected exactly four fixed Tier 1 events, "
             f"found {len(tier1_events)}."
         )
 
@@ -213,7 +188,7 @@ def plot_region(
                     detector_name
                 )
             ]
-            .sort_values("detected_index")
+            .sort_values("stream_index")
             .copy()
         )
 
@@ -228,9 +203,27 @@ def plot_region(
             .copy()
         )
 
-        matched = detections.loc[
-            detections["match_status"].isin(
-                ["tier1", "tier2"]
+        detections = detections.merge(
+            trace[
+                [
+                    "stream_index",
+                    "detector_input_value",
+                ]
+            ],
+            left_on="detected_index",
+            right_on="stream_index",
+            how="left",
+            validate="one_to_one",
+            suffixes=("_t2", ""),
+        )
+        tier1_matched = detections.loc[
+            detections["match_status"].eq(
+                "tier1"
+            )
+        ]
+        tier2_matched = detections.loc[
+            detections["match_status"].eq(
+                "tier2"
             )
         ]
         unmatched = detections.loc[
@@ -240,7 +233,7 @@ def plot_region(
         ]
         ax_stream.plot(
             trace["SETTLEMENTDATE"],
-            trace["normalized_abs_error"],
+            trace["detector_input_value"],
             color="#4C78A8",
             linewidth=0.45,
             alpha=0.65,
@@ -248,9 +241,9 @@ def plot_region(
         )
 
         ax_stream.scatter(
-            matched["SETTLEMENTDATE"],
-            matched["normalized_abs_error"],
-            s=15,
+            tier1_matched["SETTLEMENTDATE"],
+            tier1_matched["detector_input_value"],
+            s=18,
             color="#2CA02C",
             edgecolor="white",
             linewidth=0.25,
@@ -258,12 +251,22 @@ def plot_region(
         )
 
         ax_stream.scatter(
+            tier2_matched["SETTLEMENTDATE"],
+            tier2_matched["detector_input_value"],
+            s=42,
+            color="#FF7F0E",
+            edgecolor="white",
+            linewidth=0.25,
+            zorder=4,
+        )
+
+        ax_stream.scatter(
             unmatched["SETTLEMENTDATE"],
-            unmatched["normalized_abs_error"],
-            s=12,
+            unmatched["detector_input_value"],
+            s=38,
             color="#D62728",
             marker="x",
-            linewidth=0.65,
+            linewidth=1.1,
             zorder=3,
         )
 
@@ -283,14 +286,14 @@ def plot_region(
                 linewidth=0.55,
                 rasterized=True,
             )
-
-        ax_statistic.plot(
-            trace["SETTLEMENTDATE"],
-            trace["threshold"],
-            color="#E45756",
-            linestyle="--",
-            linewidth=1.0,
-        )
+        if detector_name != "adwin":
+            ax_statistic.plot(
+                trace["SETTLEMENTDATE"],
+                trace["threshold"],
+                color="#E45756",
+                linestyle="--",
+                linewidth=1.0,
+            )
         for _, event in tier1_events.iterrows():
             start = event["start_date"]
             end = event["end_date"]
@@ -344,19 +347,28 @@ def plot_region(
 
         if column == 0:
             ax_stream.set_ylabel(
-                "Calibration-normalized\n"
-                "absolute forecast error"
+                 "Detector input value"
             )
+        if detector_name == "adwin":
             ax_statistic.set_ylabel(
-                "Detector diagnostic"
+                "Adaptive window width"
             )
+        elif detector_name == "page_hinkley":
+            ax_statistic.set_ylabel(
+                "Cumulative increase"
+            )
+        else:
+            ax_statistic.set_ylabel(
+                "-log10(p-value)"
+            )
+
     legend_handles = [
         Line2D(
             [0],
             [0],
             color="#4C78A8",
             linewidth=1.0,
-            label="Monitored error stream",
+            label="Detector input stream",
         ),
         Line2D(
             [0],
@@ -366,7 +378,17 @@ def plot_region(
             markerfacecolor="#2CA02C",
             markeredgecolor="#2CA02C",
             markersize=6,
-            label="Matched detection",
+            label="Tier 1 matched detection",
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="none",
+            markerfacecolor="#FF7F0E",
+            markeredgecolor="#FF7F0E",
+            markersize=6,
+            label="Tier 2 matched detection",
         ),
         Line2D(
             [0],
@@ -382,7 +404,7 @@ def plot_region(
             [0],
             color="#7A5195",
             linewidth=1.0,
-            label="Detector diagnostic",
+            label="Detector statistic",
         ),
         Line2D(
             [0],
@@ -390,7 +412,7 @@ def plot_region(
             color="#F58518",
             linewidth=1.0,
             linestyle="--",
-            label="Threshold / plotting boundary",
+            label="Detector threshold",
         ),
         Patch(
             facecolor="#F2CF5B",
@@ -402,7 +424,7 @@ def plot_region(
     fig.legend(
         handles=legend_handles,
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.955),
+        bbox_to_anchor=(0.5, 0.935),
         ncol=3,
         frameon=False,
         fontsize=9,
@@ -411,21 +433,21 @@ def plot_region(
         f"F2 Detection Panel — {region}",
         fontsize=16,
         fontweight="bold",
-        y=0.995,
+        y=0.985,
     )
     fig.text(
         0.5,
         0.012,
         (
-            "ADWIN uses a binary drift-decision trace with a 0.5 plotting "
-            "boundary because River does not expose its internal dynamic bound."
+            "ADWIN panel shows the adaptive window width maintained by River; "
+            "official detections remain the shared pipeline outputs."
         ),
         ha="center",
         fontsize=8,
         color="#555555",
     )
     fig.subplots_adjust(
-        top=0.88,
+        top=0.84,
         bottom=0.09,
         left=0.07,
         right=0.99,

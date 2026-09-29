@@ -1,195 +1,167 @@
 """
-Generate synthetic drift-detection evaluation figures matching the
-04.1_Synthetic_Drift_Detector_Tuning_and_Evaluation notebook.
+Generate representative Seed-1 synthetic drift-detection figures
+for the final T1 experiment.
 
-Each output figure contains four panels (none, sudden, gradual, recurring)
-for one detector and one representative seed.
+Each output figure contains four panels:
 
-The plotted detector input is the calibration-normalized absolute
-forecast-error stream. Ground truth, matched detections, unmatched
-detections, detection delay, false alarms / 10k, and missed detections
-are shown using the shared evaluation logic.
+    none
+    sudden
+    gradual
+    recurring
 
-No experiment metrics are written to results/runs.csv.
+for one detector and representative seed 1.
+
+The experiment configuration, preprocessing, detector registry,
+warm-up protocol, refractory period, changepoints, and evaluation
+tolerance are imported directly from run_synthetic_drift_detection.py.
+
+This ensures that the figures reproduce the same final synthetic
+pipeline used for T1.
+
+No experiment metrics are written to runs.csv.
 """
 
 from pathlib import Path
-import sys
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+import run_synthetic_drift_detection as synthetic_runner
 
-SRC_DIR = Path(__file__).resolve().parents[1]
-
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-
-from drift_lab import detectors
-from drift_lab.evaluation import evaluate_detections
-from drift_lab.synthetic_generator import make_feature_series
-from drift_lab.forecasters import (
-    GradientBoostedForecaster,
-    frozen_error_stream,
-)
-
-# Frozen synthetic evaluation settings
-N_OBSERVATIONS = 20_000
-TRAIN_END = 4_000
-CALIBRATION_END = 5_000
-TEST_START = 5_000
 
 REPRESENTATIVE_SEED = 1
-FORECASTER_SEED = 0
 
-DRIFT_TYPES = [
+DRIFT_TYPES = (
     "none",
     "sudden",
     "gradual",
     "recurring",
-]
+)
 
-# 7 days × 48 half-hour observations
-TOLERANCE = 48 * 7
-
-OUTPUT_DIR = Path("results/figures/detection")
-
-
-# Final detector configurations used in the notebook
-
-ADWIN_CONFIG = {
-    "delta": 0.0001,
-}
-
-PAGE_HINKLEY_CONFIG = {
-    "threshold": 209,
-    "delta": 0.005,
-    "alpha": 0.999,
-    "min_instances": 30,
-}
-
-KSWIN_CONFIG = {
-    "alpha": 0.00005,
-    "window_size": 140,
-    "stat_size": 70,
-    "seed": 12,
-}
+OUTPUT_DIR = Path(
+    "results/figures/detection"
+)
 
 
-def build_normalized_absolute_error_stream(drift_type, seed):
+def get_detector_streams(
+    detector_name,
+    streams,
+):
     """
-    Build the calibration-normalized absolute forecast-error stream
-    used as the common detector input.
+    Select the same detector input used by the final T1 runner.
 
-    Returns
-    -------
-    stream : np.ndarray
-        Normalized absolute forecast-error stream for the test period.
-
-    truth : list[int]
-        Ground-truth changepoints relative to the test stream.
-
-    cal_mean : float
-        Mean absolute calibration error.
-
-    cal_std : float
-        Standard deviation of absolute calibration error.
+    ADWIN and KSWIN use the partially whitened stream.
+    Page-Hinkley uses the unwhitened processed stream.
     """
 
-    data, full_truth = make_feature_series(
-        kind=drift_type,
-        n=N_OBSERVATIONS,
-        seed=seed,
-    )
-
-    train = data.iloc[:TRAIN_END].copy()
-
-    calibration = data.iloc[
-        TRAIN_END:CALIBRATION_END
-    ].copy()
-
-    test = data.iloc[
-        TEST_START:
-    ].copy()
-
-    model = GradientBoostedForecaster(
-        feature_mode="calendar+lags",
-        lags=(48, 336),
-        seed=FORECASTER_SEED,
-    )
-
-    model.fit(train)
-
-    calibration_errors = frozen_error_stream(
-        model,
-        calibration,
-        history_df=train,
-    )
-
-    calibration_abs = (
-        calibration_errors["error"]
-        .abs()
-        .to_numpy(dtype=float)
-    )
-
-    cal_mean = calibration_abs.mean()
-    cal_std = calibration_abs.std()
-
-    if not np.isfinite(cal_mean):
-        raise RuntimeError(
-            "Calibration absolute-error mean is not finite."
+    if (
+        detector_name
+        in synthetic_runner.WHITENED_DETECTORS
+    ):
+        warmup_stream = (
+            streams[
+                "calibration_whitened"
+            ]
         )
 
-    if not np.isfinite(cal_std) or cal_std <= 0:
-        raise RuntimeError(
-            "Calibration absolute-error standard deviation "
-            "must be finite and greater than zero."
+        test_stream = (
+            streams[
+                "test_whitened"
+            ]
         )
 
-    test_errors = frozen_error_stream(
-        model,
-        test,
-        history_df=calibration,
-    )
-
-    test_abs = (
-        test_errors["error"]
-        .abs()
-        .to_numpy(dtype=float)
-    )
-
-    stream = (
-        test_abs - cal_mean
-    ) / cal_std
-
-    if not np.isfinite(stream).all():
-        raise RuntimeError(
-            "Normalized error stream contains NaN or infinite values."
+    else:
+        warmup_stream = (
+            streams[
+                "calibration_processed"
+            ]
         )
 
-    truth = [
-        int(cp - TEST_START)
-        for cp in full_truth
-    ]
+        test_stream = (
+            streams[
+                "test_processed"
+            ]
+        )
 
-    return stream, truth, cal_mean, cal_std
+    return (
+        warmup_stream,
+        test_stream,
+    )
+
+
+def build_seed_scenario(
+    drift_type,
+    seed,
+):
+    """
+    Build one synthetic scenario using the exact final T1 pipeline.
+    """
+
+    (
+        data,
+        full_truth,
+    ) = (
+        synthetic_runner.make_feature_series(
+            kind=drift_type,
+            n=synthetic_runner.N_OBSERVATIONS,
+            seed=seed,
+            changepoints=(
+                synthetic_runner
+                .SYNTHETIC_CHANGEPOINTS[
+                    drift_type
+                ]
+            ),
+        )
+    )
+
+    if (
+        len(data)
+        != synthetic_runner.N_OBSERVATIONS
+    ):
+        raise RuntimeError(
+            "Synthetic generator returned "
+            f"{len(data)} observations; "
+            f"expected "
+            f"{synthetic_runner.N_OBSERVATIONS}."
+        )
+
+    truth = (
+        synthetic_runner.to_test_relative(
+            full_changepoints=full_truth,
+            drift_type=drift_type,
+            seed=seed,
+        )
+    )
+
+    streams = (
+        synthetic_runner
+        .build_detector_streams(
+            data
+        )
+    )
+
+    return (
+        streams,
+        truth,
+    )
 
 
 def plot_detector_evaluation(
     detector_name,
-    detector_func,
-    detector_config,
+    detector_title,
     seed=REPRESENTATIVE_SEED,
 ):
     """
-    Reproduce the notebook's four-panel detector evaluation figure.
+    Plot the final T1 Seed-1 result for one detector.
     """
 
     fig, axes = plt.subplots(
         4,
         1,
-        figsize=(15, 14),
+        figsize=(
+            15,
+            14,
+        ),
         sharex=False,
     )
 
@@ -197,52 +169,73 @@ def plot_detector_evaluation(
         axes,
         DRIFT_TYPES,
     ):
-        
-        # Build detector input
-        stream, truth, _, _ = (
-            build_normalized_absolute_error_stream(
-                drift_type=drift_type,
-                seed=seed,
+
+        (
+            streams,
+            truth,
+        ) = build_seed_scenario(
+            drift_type=drift_type,
+            seed=seed,
+        )
+
+        (
+            warmup_stream,
+            test_stream,
+        ) = get_detector_streams(
+            detector_name,
+            streams,
+        )
+
+        (
+            detections,
+            detector_config,
+        ) = (
+            synthetic_runner
+            .run_registered_detector(
+                detector_name=detector_name,
+                test_stream=test_stream,
+                warmup_stream=warmup_stream,
             )
         )
 
-      
-        # Run detector
-        detections = detector_func(
-            stream,
-            **detector_config,
+        metrics = (
+            synthetic_runner
+            .evaluate_detections(
+                detected_changepoints=detections,
+                true_changepoints=truth,
+                n_observations=len(
+                    test_stream
+                ),
+                drift_type=drift_type,
+                tolerance=(
+                    synthetic_runner
+                    .TOLERANCE
+                ),
+            )
         )
 
-     
-        # Shared evaluation
-        metrics = evaluate_detections(
-            detected_changepoints=detections,
-            true_changepoints=truth,
-            n_observations=len(stream),
-            drift_type=drift_type,
-            tolerance=TOLERANCE,
+        matched_pairs = (
+            metrics[
+                "matched_pairs"
+            ]
         )
 
-        matched_pairs = metrics[
-            "matched_pairs"
-        ]
+        false_alarm_indices = (
+            metrics[
+                "false_alarm_indices"
+            ]
+        )
 
-        false_alarm_indices = metrics[
-            "false_alarm_indices"
-        ]
-
-        # Detector input stream
         ax.plot(
-            stream,
+            test_stream,
             color="steelblue",
             linewidth=0.7,
             alpha=0.8,
-            label="Normalized absolute forecast error",
+            label="Detector input",
         )
 
-
-        # Ground truth
         if drift_type == "gradual":
+
             drift_start = truth[0]
             drift_end = truth[1]
 
@@ -251,7 +244,9 @@ def plot_detector_evaluation(
                 drift_end,
                 color="red",
                 alpha=0.12,
-                label="True gradual drift window",
+                label=(
+                    "True gradual drift window"
+                ),
             )
 
             ax.axvline(
@@ -269,7 +264,11 @@ def plot_detector_evaluation(
             )
 
         else:
-            for i, true_cp in enumerate(truth):
+
+            for i, true_cp in enumerate(
+                truth
+            ):
+
                 ax.axvline(
                     true_cp,
                     color="red",
@@ -282,19 +281,30 @@ def plot_detector_evaluation(
                     ),
                 )
 
-        # Matched detections
-        for i, match in enumerate(matched_pairs):
+        for i, match in enumerate(
+            matched_pairs
+        ):
+
             detected_cp = int(
-                match["detected"]
+                match[
+                    "detected"
+                ]
             )
 
             if drift_type == "gradual":
+
                 true_reference = int(
-                    match["true_start"]
+                    match[
+                        "true_start"
+                    ]
                 )
+
             else:
+
                 true_reference = int(
-                    match["true"]
+                    match[
+                        "true"
+                    ]
                 )
 
             delay = (
@@ -313,11 +323,17 @@ def plot_detector_evaluation(
                 ),
             )
 
-            y_min, y_max = ax.get_ylim()
+            y_min, y_max = (
+                ax.get_ylim()
+            )
 
             y_position = (
                 y_min
-                + 0.82 * (y_max - y_min)
+                + 0.82
+                * (
+                    y_max
+                    - y_min
+                )
             )
 
             ax.text(
@@ -331,13 +347,14 @@ def plot_detector_evaluation(
                 horizontalalignment="right",
             )
 
-   
-        # Unmatched detections
         for i, detected_cp in enumerate(
             false_alarm_indices
         ):
+
             ax.axvline(
-                int(detected_cp),
+                int(
+                    detected_cp
+                ),
                 color="orange",
                 linestyle=":",
                 linewidth=1.5,
@@ -348,26 +365,33 @@ def plot_detector_evaluation(
                 ),
             )
 
+        detection_delay = (
+            metrics[
+                "detection_delay"
+            ]
+        )
 
-        # Evaluation summary
-        detection_delay = metrics[
-            "detection_delay"
-        ]
-
-        if np.isnan(detection_delay):
+        if np.isnan(
+            detection_delay
+        ):
             delay_text = "—"
+
         else:
             delay_text = (
                 f"{detection_delay:.1f}"
             )
 
-        false_alarm_rate = metrics[
-            "false_alarms_per_10000"
-        ]
+        false_alarm_rate = (
+            metrics[
+                "false_alarms_per_10000"
+            ]
+        )
 
-        missed = metrics[
-            "missed_detections"
-        ]
+        missed = (
+            metrics[
+                "missed_detections"
+            ]
+        )
 
         ax.set_title(
             f"{drift_type.capitalize()} drift"
@@ -377,8 +401,26 @@ def plot_detector_evaluation(
             f"  |  missed = {missed}"
         )
 
+        if (
+            detector_name
+            in synthetic_runner
+            .WHITENED_DETECTORS
+        ):
+
+            ylabel = (
+                "Partially whitened\n"
+                "standardised error"
+            )
+
+        else:
+
+            ylabel = (
+                "Standardised\n"
+                "absolute error"
+            )
+
         ax.set_ylabel(
-            "Normalized\nabsolute error"
+            ylabel
         )
 
         ax.legend(
@@ -394,14 +436,44 @@ def plot_detector_evaluation(
         "Test observation index"
     )
 
+    config = (
+        synthetic_runner
+        .DETECTOR_REGISTRY[
+            detector_name
+        ][
+            "config"
+        ]
+    )
+
     fig.suptitle(
-        f"{detector_name} — Synthetic Drift Detection Evaluation "
-        f"(Seed {seed})",
+        (
+            f"{detector_title} — "
+            f"Synthetic Drift Detection Evaluation "
+            f"(Seed {seed})"
+        ),
         fontsize=16,
         y=1.01,
     )
 
-    plt.tight_layout()
+    fig.text(
+        0.5,
+        0.005,
+        (
+            f"Final T1 configuration: "
+            f"{config}"
+        ),
+        ha="center",
+        fontsize=8,
+    )
+
+    plt.tight_layout(
+        rect=[
+            0,
+            0.025,
+            1,
+            1,
+        ]
+    )
 
     OUTPUT_DIR.mkdir(
         parents=True,
@@ -409,14 +481,25 @@ def plot_detector_evaluation(
     )
 
     safe_name = (
-        detector_name.lower()
-        .replace("-", "_")
-        .replace(" ", "_")
+        detector_name
+        .lower()
+        .replace(
+            "-",
+            "_",
+        )
+        .replace(
+            " ",
+            "_",
+        )
     )
 
     output_path = (
         OUTPUT_DIR
-        / f"{safe_name}_synthetic_evaluation_seed{seed}.png"
+        / (
+            f"{safe_name}_"
+            f"synthetic_evaluation_"
+            f"seed{seed}.png"
+        )
     )
 
     fig.savefig(
@@ -425,20 +508,57 @@ def plot_detector_evaluation(
         bbox_inches="tight",
     )
 
-    plt.close(fig)
+    plt.close(
+        fig
+    )
 
     print(
-        f"Saved: {output_path}"
+        f"Saved: "
+        f"{output_path}"
     )
 
 
 def main():
+    """
+    Generate the three final T1 representative Seed-1 figures.
+    """
+
+    synthetic_runner.validate_detector_registry()
+
     print(
-        "Generating notebook-style synthetic detection figures"
+        "Generating final T1 synthetic detection figures"
     )
 
     print(
-        f"Representative seed: {REPRESENTATIVE_SEED}"
+        f"Representative seed: "
+        f"{REPRESENTATIVE_SEED}"
+    )
+
+    print(
+        f"TRAIN: "
+        f"{synthetic_runner.TRAIN_LENGTH:,}"
+    )
+
+    print(
+        f"CALIBRATION: "
+        f"{synthetic_runner.CALIBRATION_LENGTH:,}"
+    )
+
+    print(
+        f"TEST: "
+        f"{synthetic_runner.TEST_LENGTH:,}"
+    )
+
+    print(
+        f"Refractory: "
+        f"{synthetic_runner.REFRACTORY_PERIOD} "
+        f"observations"
+    )
+
+    print(
+        f"Tolerance: "
+        f"{synthetic_runner.TOLERANCE} "
+        f"observations"
     )
 
     print(
@@ -446,21 +566,18 @@ def main():
     )
 
     plot_detector_evaluation(
-        detector_name="ADWIN",
-        detector_func=detectors.run_adwin,
-        detector_config=ADWIN_CONFIG,
+        detector_name="adwin",
+        detector_title="ADWIN",
     )
 
     plot_detector_evaluation(
-        detector_name="Page-Hinkley",
-        detector_func=detectors.run_page_hinkley,
-        detector_config=PAGE_HINKLEY_CONFIG,
+        detector_name="page_hinkley",
+        detector_title="Page-Hinkley",
     )
 
     plot_detector_evaluation(
-        detector_name="KSWIN",
-        detector_func=detectors.run_kswin,
-        detector_config=KSWIN_CONFIG,
+        detector_name="kswin",
+        detector_title="KSWIN",
     )
 
     print(
