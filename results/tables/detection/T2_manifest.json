@@ -1,5 +1,5 @@
 {
-  "created_at": "2026-09-21T01:21:45.103650+00:00",
+  "created_at": "2026-09-29T11:59:07.463750+00:00",
   "protocol": {
     "protocol_id": "aemo_t1_7day_one_to_one_v2",
     "point_window_days": 7,
@@ -11,7 +11,7 @@
     "boundary": "both_closed"
   },
   "source_sha256": {
-    "results/tables/detection/aemo_detection_changepoints.csv": "b4857a576fbadfd5b14ea4e049f5cdf0cc77587e1cde96ba9e8c3a820ec3bf49",
+    "results/tables/detection/aemo_detection_changepoints.csv": "f429755770c1e917244fe6406ccce352c4e00603bd5f68749366996cccc7e8d1",
     "data/events.csv": "7f8981ef7495d8374a01ef2fae5e3fb58f228de6973a4dcecc948f6103f49225",
     "docs/aemo_matching_protocol.json": "378eee3827e1f703c422fb62dba5acc42549adb9fa37457c3d16da4694c19b7c",
     "docs/aemo_matching_protocol.md": "27e8059695767973585aaf514d8bbf2ce93bda5fe694cb0ca6b2f8339b3778cd",
@@ -20,9 +20,9 @@
     "src/drift_lab/evaluation.py": "5be8dcdc3053a08f9ef671df7af306abfa4f1b0626551791f2758cb4c0378f2b",
     "src/drift_lab/run_logger.py": "5d4b2fad100d63b0b8d59f292c9ffeef4c77f570edf03f65a6c9a39e9dfb58aa",
     "src/drift_lab/data_loader.py": "b49689292340a9db59ab3a476e72c4dc0ee98d392d7b702c13d8bd1b93eb3074",
-    "src/drift_lab/detectors.py": "edc3bb5e1f0835918662d5dc0a5ebbe9557510d7159f82d5e1e0b1d77af2464b",
-    "experiments/detection/run_aemo_drift_detection.py": "efa524c2a92cc98019a70287cb7ea19f48283782a755e3468bc92b1b189141a8",
-    "experiments/detection/run_synthetic_drift_detection.py": "34ee224007134540a3ac2b418764ac00c5b30f38c70f23b2eea321873f69122f"
+    "src/drift_lab/detectors.py": "7b76d0a1f0d79cb1f4243b114edba930c9227dca91958f776da3678e93e2ba23",
+    "experiments/detection/run_aemo_drift_detection.py": "28d0635cd387f4849e268c8b7ebb3b739aa5b1dcf283abc1d0c2749a7ceee437",
+    "experiments/detection/run_synthetic_drift_detection.py": "2d5d8e4699f19ae1a77a4d7ee81f12d876843bb3be9155dc12d3afa5c18aee68"
   },
   "configurations": [
     {
@@ -31,13 +31,13 @@
       "train_samples": 35039,
       "calibration_samples": 2880,
       "detector_config": {
-        "delta": 1e-06
+        "delta": 1e-07
       },
       "seed": 0,
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "56acfc7459b990340a64d7de8c0a5a5c24c260941cf745f1478a92de5559d2ac"
+      "config_hash": "5f054dfc1cefb03d448b3a5dfacfdb3183377bfc4755a4a14292406a0955537c"
     },
     {
       "detector": "page_hinkley",
@@ -46,8 +46,8 @@
       "calibration_samples": 2880,
       "detector_config": {
         "min_instances": 30,
-        "delta": 0.005,
-        "threshold": 450,
+        "delta": 0.001,
+        "threshold": 700,
         "alpha": 0.999,
         "mode": "both"
       },
@@ -55,7 +55,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "e562bd48b205cbbc798b939b39aedc4e3f025417286591cc35860f895d664e86"
+      "config_hash": "8d67d01ff5c89be971be15dc88e652805f21f5db9bdf6054d34002a0d4a9c5aa"
     },
     {
       "detector": "kswin",
@@ -63,16 +63,16 @@
       "train_samples": 35039,
       "calibration_samples": 2880,
       "detector_config": {
-        "alpha": 2e-07,
-        "window_size": 672,
-        "stat_size": 168,
+        "alpha": 5e-08,
+        "window_size": 480,
+        "stat_size": 120,
         "seed": 12
       },
       "seed": 12,
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "42326c9a98f49d2b9282088d2d5bff256049c7011061f1059de1f89d52d898b5"
+      "config_hash": "ce33ce7c83cd54bc29cdb08e2d2a99c65989ad439478e5bb5bbc18a430a9c523"
     },
     {
       "detector": "adwin",
@@ -80,13 +80,13 @@
       "train_samples": 35039,
       "calibration_samples": 2880,
       "detector_config": {
-        "delta": 1e-06
+        "delta": 1e-07
       },
       "seed": 0,
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "2a7f05f7f5806f8504678d3253c31244e1fe0c967f7dce4f7fa61fb30712d67e"
+      "config_hash": "4716d36ce79e82df8248fb177b8d0c99e4a7534d3517b22485f01eb581280c0a"
     },
     {
       "detector": "page_hinkley",
@@ -95,8 +95,8 @@
       "calibration_samples": 2880,
       "detector_config": {
         "min_instances": 30,
-        "delta": 0.005,
-        "threshold": 450,
+        "delta": 0.001,
+        "threshold": 700,
         "alpha": 0.999,
         "mode": "both"
       },
@@ -104,7 +104,7 @@
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "bdbe56e5de476624b6c0f117d19027838ec7678ad81b9a38a8c980fd75f98725"
+      "config_hash": "2e3e5898e4c29ff24e1a129cb4e876a08b1e488b8877f695c1aad014bee4afe6"
     },
     {
       "detector": "kswin",
@@ -112,16 +112,16 @@
       "train_samples": 35039,
       "calibration_samples": 2880,
       "detector_config": {
-        "alpha": 2e-07,
-        "window_size": 672,
-        "stat_size": 168,
+        "alpha": 5e-08,
+        "window_size": 480,
+        "stat_size": 120,
         "seed": 12
       },
       "seed": 12,
       "test_samples": 67249,
       "test_start": "2020-03-01 00:00:00+10:00",
       "test_end": "2024-01-01 00:00:00+10:00",
-      "config_hash": "6b232fab5cfac5a4673c19770dcc87bbfcd2efd93b28b3f45c54a65f7a0ef551"
+      "config_hash": "5c6da45eb9f399387b06b497dc3241523420d1b27a6cdc7942db470ebff8f979"
     }
   ],
   "runs_path": "results/tables/runs.csv",

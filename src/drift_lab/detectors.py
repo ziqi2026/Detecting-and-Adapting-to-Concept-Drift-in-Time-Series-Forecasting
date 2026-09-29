@@ -220,7 +220,7 @@ def run_detector_with_protocol(
 # ADWIN
 def run_adwin(
     stream,
-    delta=1e-6,
+    delta=1e-7,
 ):
     """
     Run ADWIN over a chronological numeric stream.
@@ -241,8 +241,8 @@ def run_adwin(
 def run_page_hinkley(
     stream,
     min_instances=30,
-    delta=0.005,
-    threshold=450,
+    delta=0.001,
+    threshold=700,
     alpha=0.999,
     mode="both",
 ):
@@ -270,9 +270,9 @@ def run_page_hinkley(
 # KSWIN
 def run_kswin(
     stream,
-    alpha=2e-7,
-    window_size=672,
-    stat_size=168,
+    alpha=5e-8,
+    window_size=480,
+    stat_size=120,
     seed=12,
 ):
 
@@ -306,7 +306,7 @@ DETECTOR_REGISTRY = {
     "adwin": {
         "func": run_adwin,
         "config": {
-            "delta": 1e-6,
+            "delta": 1e-7,
         },
     },
 
@@ -314,8 +314,8 @@ DETECTOR_REGISTRY = {
         "func": run_page_hinkley,
         "config": {
             "min_instances": 30,
-            "delta": 0.005,
-            "threshold": 450,
+            "delta": 0.001,
+            "threshold": 700,
             "alpha": 0.999,
             "mode": "both",
         },
@@ -324,9 +324,9 @@ DETECTOR_REGISTRY = {
     "kswin": {
         "func": run_kswin,
         "config": {
-            "alpha": 2e-7,
-            "window_size": 672,
-            "stat_size": 168,
+            "alpha": 5e-8,
+            "window_size": 480,
+            "stat_size": 120,
             "seed": 12,
         },
     },

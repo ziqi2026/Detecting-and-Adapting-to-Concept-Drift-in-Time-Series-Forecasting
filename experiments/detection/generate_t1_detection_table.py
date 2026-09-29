@@ -13,7 +13,7 @@ SPLIT_ID = (
     "trainerror_zscore_"
     "warmup_calibration_"
     "refractory672_tol336_"
-    "registry_V2"
+    "registry_V2_Config"
 )
 DRIFT_ORDER = {"none": 0, "sudden": 1, "gradual": 2, "recurring": 3}
 DETECTOR_ORDER = {"adwin": 0, "kswin": 1, "page_hinkley": 2}

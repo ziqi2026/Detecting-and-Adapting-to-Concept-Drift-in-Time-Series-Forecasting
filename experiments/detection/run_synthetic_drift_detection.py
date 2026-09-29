@@ -295,7 +295,7 @@ SPLIT_ID = (
     "trainerror_zscore_"
     "warmup_calibration_"
     "refractory672_tol336_"
-    "registry_V2"
+    "registry_V2_Config"
 )
 
 

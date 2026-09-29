@@ -38,7 +38,6 @@ import pandas as pd
 
 from river.drift import ADWIN, KSWIN, PageHinkley
 
-
 # Project paths
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -51,7 +50,9 @@ if str(SRC_DIR) not in sys.path:
 # Project imports
 
 from drift_lab.data_loader import load_and_split_aemo
-
+from drift_lab.detector_diagnostics import (
+    run_detector_diagnostic,
+)
 from drift_lab.detectors import (
     DETECTOR_REGISTRY,
     run_detector_with_protocol,
@@ -66,6 +67,7 @@ from drift_lab.deseasonalise import (
     deseasonalise_demand_frame,
     ErrorZScorePreprocessor,
 )
+
 
 
 # Experiment settings
@@ -148,6 +150,14 @@ OUTPUT_PATH = (
     / "tables"
     / "detection"
     / "aemo_detection_changepoints.csv"
+)
+
+DIAGNOSTIC_OUTPUT_PATH = (
+    PROJECT_ROOT
+    / "results"
+    / "tables"
+    / "detection"
+    / "aemo_detection_diagnostics.csv.gz"
 )
 
 
@@ -649,7 +659,6 @@ def build_detector_streams(
             whitener.phi_,
     }
 
-
 def run_region(region):
     """Run the frozen detectors for one AEMO region."""
 
@@ -700,6 +709,7 @@ def run_region(region):
     )
 
     rows = []
+    diagnostic_rows = []
 
     for detector_name in REQUIRED_DETECTORS:
 
@@ -739,6 +749,24 @@ def run_region(region):
             warmup_stream=warmup_stream,
             refractory_period=REFRACTORY_PERIOD,
         )
+        diagnostic_result = run_detector_diagnostic(
+            stream=test_stream,
+            detector_name=detector_name,
+            config=config,
+            warmup_stream=warmup_stream,
+        )
+
+        diagnostic_trace = diagnostic_result[
+            "trace"
+        ]
+
+        if len(diagnostic_trace) != len(test_stream):
+            raise RuntimeError(
+                f"{region} / {detector_name}: "
+                "diagnostic trace length does not match "
+                "the detector TEST stream."
+            )
+
 
         preprocessing = (
             f"partial_AR1_lambda_{PARTIAL_AR1_LAMBDA:.2f}"
@@ -751,6 +779,94 @@ def run_region(region):
             f"{len(changepoints)} detections "
             f"[{preprocessing}]"
         )
+
+        # F2 diagnostic-only replay rows.
+        # raw_drift is the replay detector signal and is not an official
+        # refractory-filtered project changepoint.
+
+        for diagnostic in diagnostic_trace:
+
+            index = diagnostic["stream_index"]
+
+            if (
+                index < 0
+                or index >= len(streams["test_errors"])
+            ):
+                raise RuntimeError(
+                    f"{region} / {detector_name}: "
+                    f"out-of-range diagnostic index {index}."
+                )
+
+            error_row = (
+                streams["test_errors"]
+                .iloc[index]
+            )
+
+            diagnostic_rows.append(
+                {
+                    "region":
+                        region,
+
+                    "detector":
+                        detector_name,
+
+                    "stream_index":
+                        int(index),
+
+                    "SETTLEMENTDATE":
+                        error_row["SETTLEMENTDATE"],
+
+                    "forecast_error":
+                        float(error_row["error"]),
+
+                    "absolute_forecast_error":
+                        float(abs(error_row["error"])),
+
+                    "detector_input_value":
+                        float(
+                            diagnostic[
+                                "stream_value"
+                            ]
+                        ),
+
+                    "statistic":
+                        diagnostic["statistic"],
+
+                    "threshold":
+                        diagnostic["threshold"],
+
+                    "statistic_name":
+                        diagnostic["statistic_name"],
+
+                    "threshold_name":
+                        diagnostic["threshold_name"],
+
+                    "raw_drift":
+                        bool(
+                            diagnostic["raw_drift"]
+                        ),
+
+                    "detector_config":
+                        json.dumps(
+                            config,
+                            sort_keys=True,
+                        ),
+
+                    "warmup_samples":
+                        int(len(warmup_stream)),
+
+                    "test_samples":
+                        int(len(test_stream)),
+
+                    "whitening_type":
+                        whitening_type,
+
+                    "whitening_lambda":
+                        float(whitening_lambda),
+                }
+            )
+
+        # Official changepoint rows
 
         for index in changepoints:
 
@@ -791,12 +907,14 @@ def run_region(region):
                     "normalized_abs_error":
                         float(test_stream[index]),
 
+                    "detector_input_value":
+                        float(test_stream[index]),
+
                     "detector_config":
                         json.dumps(
                             config,
                             sort_keys=True,
                         ),
-
                     "warmup_samples":
                         int(len(warmup_stream)),
 
@@ -845,7 +963,7 @@ def run_region(region):
                 }
             )
 
-    return rows
+    return rows, diagnostic_rows
 
 
 OUTPUT_COLUMNS = [
@@ -856,6 +974,7 @@ OUTPUT_COLUMNS = [
     "forecast_error",
     "absolute_forecast_error",
     "normalized_abs_error",
+    "detector_input_value",
     "detector_config",
     "warmup_samples",
     "test_samples",
@@ -871,6 +990,27 @@ OUTPUT_COLUMNS = [
     "whitening_lambda",
     "ar1_intercept",
     "ar1_phi",
+]
+
+
+DIAGNOSTIC_COLUMNS = [
+    "region",
+    "detector",
+    "stream_index",
+    "SETTLEMENTDATE",
+    "forecast_error",
+    "absolute_forecast_error",
+    "detector_input_value",
+    "statistic",
+    "threshold",
+    "statistic_name",
+    "threshold_name",
+    "raw_drift",
+    "detector_config",
+    "warmup_samples",
+    "test_samples",
+    "whitening_type",
+    "whitening_lambda",
 ]
 
 
@@ -949,12 +1089,22 @@ def main():
         )
 
     all_rows = []
+    all_diagnostic_rows = []
 
     for region in REGIONS:
 
-        region_rows = run_region(region)
+        (
+            region_rows,
+            region_diagnostic_rows,
+        ) = run_region(region)
 
-        all_rows.extend(region_rows)
+        all_rows.extend(
+            region_rows
+        )
+
+        all_diagnostic_rows.extend(
+            region_diagnostic_rows
+        )
 
     output = pd.DataFrame(
         all_rows,
@@ -977,6 +1127,30 @@ def main():
     output.to_csv(
         OUTPUT_PATH,
         index=False,
+    )
+
+    diagnostic_output = pd.DataFrame(
+        all_diagnostic_rows,
+        columns=DIAGNOSTIC_COLUMNS,
+    )
+
+    if not diagnostic_output.empty:
+        diagnostic_output = (
+            diagnostic_output
+            .sort_values(
+                [
+                    "region",
+                    "detector",
+                    "stream_index",
+                ]
+            )
+            .reset_index(drop=True)
+        )
+
+    diagnostic_output.to_csv(
+        DIAGNOSTIC_OUTPUT_PATH,
+        index=False,
+        compression="gzip",
     )
 
     print()
@@ -1009,9 +1183,15 @@ def main():
 
     print()
     print("AEMO detection complete.")
+
     print(
         f"Saved changepoints to:\n"
         f"{OUTPUT_PATH}"
+    )
+
+    print(
+        f"Saved F2 diagnostics to:\n"
+        f"{DIAGNOSTIC_OUTPUT_PATH}"
     )
 
 
