@@ -304,8 +304,20 @@ def make_features(data, lags=(), target="TOTALDEMAND"):
     out["month"] = ts.dt.month
     out["dayofyear"] = ts.dt.dayofyear
 
-    for lag in lags:
-        out[f"lag_{lag}"] = data[target].shift(lag)
+    # Look up the actual half-hour timestamp for every lag. This preserves
+    # continuous-stream behavior and leaves missing history as NaN. fit()
+    # drops incomplete feature rows; no calibration values are added.
+    if lags:
+        times = pd.DatetimeIndex(ts)
+        if times.hasnans or times.has_duplicates or not times.is_monotonic_increasing:
+            raise ValueError("Lag features require unique chronological timestamps")
+        values = pd.Series(data[target].to_numpy(), index=times)
+        for lag in lags:
+            if isinstance(lag, bool) or not isinstance(lag, (int, np.integer)) or lag <= 0:
+                raise ValueError("Lags must be positive integer half-hour counts")
+            out[f"lag_{lag}"] = values.reindex(
+                times - pd.Timedelta(minutes=30 * int(lag))
+            ).to_numpy()
 
     return out
 
@@ -694,7 +706,11 @@ class GradientBoostedForecaster:
         y = train["TOTALDEMAND"]
         keep = X.notna().all(axis=1)
         self.feature_names_ = list(X.columns)
-        self.model.fit(X.loc[keep], y.loc[keep])    # strip out NaN rows before passing them to scikit-learn's .fit() method.
+        # Report actual fitted rows separately from raw input rows.
+        self.n_training_samples_ = int(keep.sum())
+        if not self.n_training_samples_:
+            raise ValueError("No complete training features remain after timestamp lag construction")
+        self.model.fit(X.loc[keep], y.loc[keep])
         return self
 
     def predict(self, data, history_df=None):
@@ -1190,4 +1206,3 @@ def make_forecasters():
         name: spec["class"](**spec["config"])
         for name, spec in MODEL_REGISTRY.items()
     }
-
