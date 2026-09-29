@@ -87,17 +87,30 @@ DEFAULT_CONCEPT_1 = {
     "base": 1500,
     "daily_amplitude": 300,
     "weekend_effect": -150,
+    "annual_amplitude": 150,
+    "annual_peak_day": 15,
 }
 
 DEFAULT_CONCEPT_2 = {
     "base": 1650,
     "daily_amplitude": 180,
     "weekend_effect": -80,
+    "annual_amplitude": 150,
+    "annual_peak_day": 15,
 }
 
 def _make_concept(data, concept):
     """
     Calculate synthetic electricity demand for one concept.
+
+    Demand contains:
+    - base demand level
+    - annual/day-of-year seasonality
+    - daily seasonality
+    - weekend effect
+
+    The annual seasonal component is treated as background
+    seasonality rather than concept drift.
 
     Parameters
     ----------
@@ -115,7 +128,9 @@ def _make_concept(data, concept):
 
     hour = data["hour"].to_numpy()
     weekend = data["is_weekend"].to_numpy()
+    day_of_year = data["day_of_year"].to_numpy()
 
+    # Daily / time-of-day seasonal pattern
     daily_pattern = (
         concept["daily_amplitude"]
         * np.sin(
@@ -123,18 +138,30 @@ def _make_concept(data, concept):
         )
     )
 
+    # Weekly effect
     weekend_pattern = (
         concept["weekend_effect"] * weekend
     )
 
+    # Annual / day-of-year seasonal pattern
+    annual_pattern = (
+        concept["annual_amplitude"]
+        * np.cos(
+            2 * np.pi
+            * (day_of_year - concept["annual_peak_day"])
+            / 365.25
+        )
+    )
+
     demand = (
         concept["base"]
+        + annual_pattern
         + daily_pattern
         + weekend_pattern
     )
 
     return demand
-
+    
 def make_time_features(
     n=20000,
     start="2018-01-01 00:30:00"
@@ -183,6 +210,11 @@ def make_time_features(
     # January = 1, ..., December = 12
     data["month"] = (
         data["SETTLEMENTDATE"].dt.month
+    )
+
+    # Day of year: 1, ..., 365/366
+    data["day_of_year"] = (
+        data["SETTLEMENTDATE"].dt.dayofyear
     )
 
     # Weekend indicator

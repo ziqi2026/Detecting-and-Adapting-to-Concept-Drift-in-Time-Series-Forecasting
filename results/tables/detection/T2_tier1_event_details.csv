@@ -1,31 +1,25 @@
 event_id,event_name,applicable,detected,status,delay_days,first_detection,delay_regime,assigned_detections,detector,region
-EVT-2020-02,NEM COVID-19 demand change - 1 Apr-17 May 2020,1,1,detected,0.3125,2020-04-01 07:30:00+10:00,drift,1,adwin,SA1
-EVT-2020-07,NEM December solar and mild-weather demand erosion,1,1,detected,3.6458333333333335,2020-12-04 15:30:00+10:00,drift,1,adwin,SA1
-EVT-2021-10,Five-Minute Settlement commencement - 1 Oct 2021,1,0,not detected,,,drift,0,adwin,SA1
-EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,1,detected,4.645833333333333,2022-06-19 15:30:00+10:00,drift,1,adwin,SA1
-EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,1,detected,5.645833333333333,2023-11-01 15:30:00+10:00,drift,1,adwin,SA1
-EVT-2020-02,NEM COVID-19 demand change - 1 Apr-17 May 2020,1,0,not detected,,,drift,0,page_hinkley,SA1
-EVT-2020-07,NEM December solar and mild-weather demand erosion,1,1,detected,14.770833333333334,2020-12-15 18:30:00+10:00,drift,1,page_hinkley,SA1
-EVT-2021-10,Five-Minute Settlement commencement - 1 Oct 2021,1,0,not detected,,,drift,0,page_hinkley,SA1
+EVT-2020-02,NEM COVID-19 demand change - 16 Mar-17 May 2020,1,1,detected,58.3125,2020-05-13 07:30:00+10:00,drift,1,adwin,SA1
+EVT-2020-07,NEM December solar and mild-weather demand erosion,1,1,detected,14.979166666666666,2020-12-15 23:30:00+10:00,drift,1,adwin,SA1
+EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,0,not detected,,,drift,0,adwin,SA1
+EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,0,not detected,,,drift,0,adwin,SA1
+EVT-2020-02,NEM COVID-19 demand change - 16 Mar-17 May 2020,1,1,detected,16.145833333333332,2020-04-01 03:30:00+10:00,drift,1,page_hinkley,SA1
+EVT-2020-07,NEM December solar and mild-weather demand erosion,1,0,not detected,,,drift,0,page_hinkley,SA1
 EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,0,not detected,,,drift,0,page_hinkley,SA1
 EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,0,not detected,,,drift,0,page_hinkley,SA1
-EVT-2020-02,NEM COVID-19 demand change - 1 Apr-17 May 2020,1,1,detected,0.20833333333333334,2020-04-01 05:00:00+10:00,drift,1,kswin,SA1
-EVT-2020-07,NEM December solar and mild-weather demand erosion,1,1,detected,2.2708333333333335,2020-12-03 06:30:00+10:00,drift,1,kswin,SA1
-EVT-2021-10,Five-Minute Settlement commencement - 1 Oct 2021,1,0,not detected,,,drift,0,kswin,SA1
-EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,0,not detected,,,drift,0,kswin,SA1
-EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,1,detected,2.2708333333333335,2023-10-29 06:30:00+10:00,drift,1,kswin,SA1
-EVT-2020-02,NEM COVID-19 demand change - 1 Apr-17 May 2020,1,1,detected,4.3125,2020-04-05 07:30:00+10:00,drift,1,adwin,NSW1
-EVT-2020-07,NEM December solar and mild-weather demand erosion,1,1,detected,0.3125,2020-12-01 07:30:00+10:00,drift,1,adwin,NSW1
-EVT-2021-10,Five-Minute Settlement commencement - 1 Oct 2021,1,1,detected,3.6458333333333335,2021-10-04 15:30:00+10:00,post-drift,1,adwin,NSW1
-EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,1,detected,5.979166666666667,2022-06-20 23:30:00+10:00,drift,1,adwin,NSW1
-EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,1,detected,10.3125,2023-11-06 07:30:00+10:00,drift,1,adwin,NSW1
-EVT-2020-02,NEM COVID-19 demand change - 1 Apr-17 May 2020,1,0,not detected,,,drift,0,page_hinkley,NSW1
-EVT-2020-07,NEM December solar and mild-weather demand erosion,1,1,detected,27.895833333333332,2020-12-28 21:30:00+10:00,drift,1,page_hinkley,NSW1
-EVT-2021-10,Five-Minute Settlement commencement - 1 Oct 2021,1,0,not detected,,,drift,0,page_hinkley,NSW1
+EVT-2020-02,NEM COVID-19 demand change - 16 Mar-17 May 2020,1,0,not detected,,,drift,0,kswin,SA1
+EVT-2020-07,NEM December solar and mild-weather demand erosion,1,1,detected,15.916666666666666,2020-12-16 22:00:00+10:00,drift,1,kswin,SA1
+EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,1,detected,14.75,2022-06-29 18:00:00+10:00,post-drift,1,kswin,SA1
+EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,0,not detected,,,drift,0,kswin,SA1
+EVT-2020-02,NEM COVID-19 demand change - 16 Mar-17 May 2020,1,0,not detected,,,drift,0,adwin,NSW1
+EVT-2020-07,NEM December solar and mild-weather demand erosion,1,0,not detected,,,drift,0,adwin,NSW1
+EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,0,not detected,,,drift,0,adwin,NSW1
+EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,0,not detected,,,drift,0,adwin,NSW1
+EVT-2020-02,NEM COVID-19 demand change - 16 Mar-17 May 2020,1,0,not detected,,,drift,0,page_hinkley,NSW1
+EVT-2020-07,NEM December solar and mild-weather demand erosion,1,0,not detected,,,drift,0,page_hinkley,NSW1
 EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,0,not detected,,,drift,0,page_hinkley,NSW1
 EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,0,not detected,,,drift,0,page_hinkley,NSW1
-EVT-2020-02,NEM COVID-19 demand change - 1 Apr-17 May 2020,1,1,detected,2.3958333333333335,2020-04-03 09:30:00+10:00,drift,1,kswin,NSW1
-EVT-2020-07,NEM December solar and mild-weather demand erosion,1,1,detected,0.25,2020-12-01 06:00:00+10:00,drift,1,kswin,NSW1
-EVT-2021-10,Five-Minute Settlement commencement - 1 Oct 2021,1,1,detected,2.875,2021-10-03 21:00:00+10:00,post-drift,1,kswin,NSW1
-EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,1,detected,1.4583333333333333,2022-06-16 11:00:00+10:00,drift,1,kswin,NSW1
-EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,1,detected,3.2916666666666665,2023-10-30 07:00:00+10:00,drift,1,kswin,NSW1
+EVT-2020-02,NEM COVID-19 demand change - 16 Mar-17 May 2020,1,1,detected,21.4375,2020-04-06 10:30:00+10:00,drift,1,kswin,NSW1
+EVT-2020-07,NEM December solar and mild-weather demand erosion,1,0,not detected,,,drift,0,kswin,NSW1
+EVT-2022-03,NEM spot market suspension begins - 15 Jun 2022,1,0,not detected,,,drift,0,kswin,NSW1
+EVT-2023-14,SA and NSW system-security directions - 27 Oct-25 Nov 2023,1,0,not detected,,,drift,0,kswin,NSW1

@@ -3,10 +3,18 @@ from pathlib import Path
 import pandas as pd
 
 RUNS_PATH = Path("results/tables/runs.csv")
-OUTPUT_PATH = Path("results/tables/detection/T1_V2_1_tuning_detection_on_synthetic.csv")
-GROUP = "detection"
-SPLIT_ID = "synthetic_4000_1000_15000_tol336_absnorm_gb_lags_v2_1_retuned"
+OUTPUT_PATH = Path("results/tables/detection/T1_detection_on_synthetic.csv")
 
+GROUP = "detection"
+
+SPLIT_ID = (
+    "synthetic_35040_2880_17520_"
+    "demand_deseasonalised_"
+    "trainerror_zscore_"
+    "warmup_calibration_"
+    "refractory672_tol336_"
+    "registry_V2_Config"
+)
 DRIFT_ORDER = {"none": 0, "sudden": 1, "gradual": 2, "recurring": 3}
 DETECTOR_ORDER = {"adwin": 0, "kswin": 1, "page_hinkley": 2}
 

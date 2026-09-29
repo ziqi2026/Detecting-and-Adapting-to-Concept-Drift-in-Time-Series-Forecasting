@@ -1,7 +1,7 @@
-detector,region,COVID delay,solar/mild-weather delay,5-minute settlement delay,2022 suspension delay,security-directions delay,tier1_unmatched,tier2_contextual,unmatched,precision
-adwin,SA1,0.312,3.646,not detected,4.646,5.646,139,14,125,0.1258741258741259
-page_hinkley,SA1,not detected,14.771,not detected,not detected,not detected,10,2,8,0.2727272727272727
-kswin,SA1,0.208,2.271,not detected,not detected,2.271,294,17,277,0.06734006734006734
-adwin,NSW1,4.312,0.312,3.646,5.979,10.312,156,7,149,0.07453416149068323
-page_hinkley,NSW1,not detected,27.896,not detected,not detected,not detected,3,0,3,0.25
-kswin,NSW1,2.396,0.25,2.875,1.458,3.292,287,15,272,0.0684931506849315
+detector,region,COVID delay,solar/mild-weather delay,2022 suspension delay,security-directions delay,detections,tier1_matched,tier1_precision,tier2_matched,tier2_precision,unmatched,tier1_chance_matches
+adwin,SA1,58.312,14.979,not detected,not detected,13,2,0.15384615384615385,1,0.07692307692307693,10,0.2521628386443764
+page_hinkley,SA1,16.146,not detected,not detected,not detected,5,1,0.2,0,0.0,4,0.0989335698301041
+kswin,SA1,not detected,15.917,14.75,not detected,17,2,0.11764705882352941,2,0.11764705882352941,13,0.326505476596274
+adwin,NSW1,not detected,not detected,not detected,not detected,16,0,0.0,2,0.125,14,0.3080592231049692
+page_hinkley,NSW1,not detected,not detected,not detected,not detected,5,0,0.0,0,0.0,5,0.0989335698301041
+kswin,NSW1,21.438,not detected,not detected,not detected,25,1,0.04,3,0.12,21,0.4707959904570882
