@@ -19,6 +19,7 @@ escalation sweeps, F4/F5, or T5/T6.
 """
 
 from pathlib import Path
+import argparse
 import sys
 
 import numpy as np
@@ -49,30 +50,8 @@ from drift_lab.uncertainty import (
 REGIONS = ("SA1", "NSW1")
 DATA_PATH = PROJECT_ROOT / "data" / "raw"
 
-OUTPUT_PATH = (
-    PROJECT_ROOT
-    / "results"
-    / "tables"
-    / "uncertainty"
-    / "aemo_prediction_intervals_90.csv"
-)
 
-SUMMARY_PATH = (
-    PROJECT_ROOT
-    / "results"
-    / "tables"
-    / "uncertainty"
-    / "aemo_prediction_intervals_90_summary.csv"
-)
-
-FORECASTER_CONFIG = {
-    "feature_mode": "calendar+lags",
-    "lags": (48, 336),
-    "seed": 0,
-}
-
-
-def run_region(region):
+def run_region(region, forecaster_config):
     """Generate and evaluate static 90% prediction intervals for one region."""
     print(f"Loading {region}...")
 
@@ -87,7 +66,7 @@ def run_region(region):
         f"test={len(test)}"
     )
 
-    model = GradientBoostedForecaster(**FORECASTER_CONFIG)
+    model = GradientBoostedForecaster(**forecaster_config)
     model.fit(train)
 
     calibration_stream = frozen_error_stream(
@@ -179,6 +158,55 @@ def run_region(region):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description=__doc__
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        required=True,
+        help="Forecast model seed for this uncertainty run.",
+    )
+
+    parser.add_argument(
+        "--run-id",
+        required=True,
+        help=(
+            "Parent adaptation run ID. Outputs are written under "
+            "results/tables/adaptation/revised/<run-id>/seed_<seed>/uncertainty."
+        ),
+    )
+
+    args = parser.parse_args()
+
+    output_dir = (
+        PROJECT_ROOT
+        / "results"
+        / "tables"
+        / "adaptation"
+        / "revised"
+        / args.run_id
+        / f"seed_{args.seed}"
+        / "uncertainty"
+    )
+
+    output_path = (
+        output_dir
+        / "aemo_prediction_intervals_90.csv"
+    )
+
+    summary_path = (
+        output_dir
+        / "aemo_prediction_intervals_90_summary.csv"
+    )
+
+    forecaster_config = {
+        "feature_mode": "calendar+lags",
+        "lags": (48, 336),
+        "seed": args.seed,
+    }
+
     print("=" * 72)
     print("PGS242-141: Initial 90% AEMO prediction intervals")
     print("=" * 72)
@@ -190,6 +218,7 @@ def main():
         "UQ: static calibration-residual interval; "
         "no test residuals used for interval construction"
     )
+    print(f"Forecast seed: {args.seed}")
     print(f"Raw AEMO path: {DATA_PATH}")
     print()
 
@@ -197,7 +226,10 @@ def main():
     summaries = []
 
     for region in REGIONS:
-        output, summary = run_region(region)
+        output, summary = run_region(
+            region,
+            forecaster_config,
+        )
         outputs.append(output)
         summaries.append(summary)
         print()
@@ -205,19 +237,18 @@ def main():
     all_output = pd.concat(outputs, ignore_index=True)
     summary_output = pd.DataFrame(summaries)
 
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    all_output.to_csv(OUTPUT_PATH, index=False)
-    summary_output.to_csv(SUMMARY_PATH, index=False)
+    all_output.to_csv(output_path, index=False)
+    summary_output.to_csv(summary_path, index=False)
 
     print("=" * 72)
     print("Uncertainty baseline complete")
     print("=" * 72)
     print(summary_output.to_string(index=False))
     print()
-    print(f"Saved timestamp-level output to:\n{OUTPUT_PATH}")
-    print(f"Saved summary output to:\n{SUMMARY_PATH}")
-
+    print(f"Saved timestamp-level output to:\n{output_path}")
+    print(f"Saved summary output to:\n{summary_path}")
 
 if __name__ == "__main__":
     main()
