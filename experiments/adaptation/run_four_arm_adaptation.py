@@ -32,6 +32,7 @@ from drift_lab.run_logger import log_run
 
 REGIONS = ("SA1", "NSW1")
 WINDOW_DAYS = (30, 60, 120, 180)
+DEFAULT_FORECAST_SEEDS = (1, 2, 3, 4, 5)
 PR29_DETECTORS = ("adwin", "page_hinkley", "kswin")
 PR29_REFRACTORY_DAYS = 14
 PR29_WARMUP_SAMPLES = 2880
@@ -238,7 +239,7 @@ def run_region_pr29_sensitivity(changepoints, train, calibration, test, *, regio
 
 def run_pr29_detector_sensitivity_experiment(
         *, detections_path, decisions_path, run_id, detectors=PR29_DETECTORS,
-        seed=0, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
+        seed=seed, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
         output_root=ROOT / "results/tables/adaptation/revised",
         shared_runs=ROOT / "results/tables/runs.csv"):
     """Execute the revised 128 detector-sensitivity design from PR #29 inputs.
@@ -374,6 +375,112 @@ def run_pr29_detector_sensitivity_experiment(
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     return summary
 
+def run_pr29_multi_seed_experiment(
+    *,
+    detections_path,
+    decisions_path,
+    run_id,
+    seeds=DEFAULT_FORECAST_SEEDS,
+    detectors=PR29_DETECTORS,
+    windows=WINDOW_DAYS,
+    data_path=ROOT / "data/raw",
+    output_root=ROOT / "results/tables/adaptation/revised",
+    shared_runs=ROOT / "results/tables/runs.csv",
+):
+    """
+    Run PGS242-128 once for each forecasting seed.
+
+    Each seed gets its own output subdirectory:
+    <output_root>/<run_id>/seed_<seed>/
+    """
+    seeds = tuple(seeds)
+
+    if not seeds:
+        raise ValueError("At least one forecasting seed is required.")
+
+    if len(set(seeds)) != len(seeds):
+        raise ValueError("Forecast seeds must be unique.")
+
+    if any(
+        isinstance(seed, bool)
+        or not isinstance(seed, int)
+        for seed in seeds
+    ):
+        raise ValueError(
+            "Forecast seeds must be integer values."
+        )
+
+    parent_output = Path(output_root) / run_id
+
+    if parent_output.exists():
+        raise FileExistsError(
+            f"Refusing to overwrite existing run: {parent_output}"
+        )
+
+    parent_output.mkdir(parents=True, exist_ok=False)
+
+    summaries = []
+
+    try:
+        for seed in seeds:
+            seed_run_id = f"{run_id}_seed{seed}"
+
+            summary = run_pr29_detector_sensitivity_experiment(
+                detections_path=detections_path,
+                decisions_path=decisions_path,
+                run_id=seed_run_id,
+                detectors=detectors,
+                seed=seed,
+                windows=windows,
+                data_path=data_path,
+                output_root=parent_output,
+                shared_runs=shared_runs,
+            )
+
+            summary = summary.copy()
+            summary["seed"] = seed
+            summaries.append(summary)
+
+        combined = pd.concat(
+            summaries,
+            ignore_index=True,
+        )
+
+        combined.to_csv(
+            parent_output / "summary_all_seeds.csv",
+            index=False,
+        )
+
+        manifest = {
+            "run_id": run_id,
+            "seeds": list(seeds),
+            "seed_run_ids": [
+                f"{run_id}_seed{seed}"
+                for seed in seeds
+            ],
+            "status": "complete",
+        }
+
+        (parent_output / "multi_seed_manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        return combined
+
+    except Exception:
+        manifest = {
+            "run_id": run_id,
+            "seeds": list(seeds),
+            "status": "failed",
+        }
+
+        (parent_output / "multi_seed_manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+        raise
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -384,17 +491,21 @@ def main():
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--decisions", type=Path, required=True,
                         help="Shared PR #29 decisions.md")
-    parser.add_argument("--seed", type=int, default=0, help="Forecast model seed")
+    parser.add_argument("--seeds",nargs="+", type=int, default=list(DEFAULT_FORECAST_SEEDS), help="Forecast model seeds. Default: 1 2 3 4 5.")
     parser.add_argument("--windows", nargs="+", type=int, default=list(WINDOW_DAYS))
     parser.add_argument("--data-path", type=Path, default=ROOT / "data/raw")
     parser.add_argument("--output-root", type=Path, default=ROOT / "results/tables/adaptation/revised")
     args = parser.parse_args()
-    run_pr29_detector_sensitivity_experiment(
-        detections_path=args.detections, decisions_path=args.decisions,
-        run_id=args.run_id, detectors=tuple(args.detectors), seed=args.seed,
-        windows=tuple(args.windows), data_path=args.data_path,
-        output_root=args.output_root,
-    )
+    run_pr29_multi_seed_experiment(
+    detections_path=args.detections,
+    decisions_path=args.decisions,
+    run_id=args.run_id,
+    detectors=tuple(args.detectors),
+    seeds=tuple(args.seeds),
+    windows=tuple(args.windows),
+    data_path=args.data_path,
+    output_root=args.output_root,
+)
 
 
 if __name__ == "__main__":
