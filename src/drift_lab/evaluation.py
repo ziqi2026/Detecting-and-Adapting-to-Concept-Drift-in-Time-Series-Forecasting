@@ -255,6 +255,7 @@ Uncertainty evaluation:
     - worst 24-hour coverage
 """
 
+import math
 import numpy as np
 import pandas as pd
 
@@ -467,6 +468,121 @@ def calculate_mean_interval_width(
         (upper_bound - lower_bound).mean()
     )
 
+def calculate_pinball_loss(y_true, y_quantile, quantile):
+    """
+    Calculate mean pinball loss for one quantile forecast.
+
+    Parameters
+    ----------
+    y_true : array-like
+        Observed values.
+
+    y_quantile : array-like
+        Predicted values for the requested quantile.
+
+    quantile : float
+        Quantile level strictly between 0 and 1.
+
+    Returns
+    -------
+    float
+        Mean pinball loss.
+    """
+    y_true = pd.Series(y_true, dtype=float)
+    y_quantile = pd.Series(y_quantile, dtype=float)
+
+    if len(y_true) != len(y_quantile):
+        raise ValueError(
+            "y_true and y_quantile must have the same length."
+        )
+
+    if y_true.isna().any() or y_quantile.isna().any():
+        raise ValueError(
+            "y_true and y_quantile must not contain missing values."
+        )
+
+    if not 0.0 < quantile < 1.0:
+        raise ValueError(
+            "quantile must be strictly between 0 and 1."
+        )
+
+    error = y_true.to_numpy() - y_quantile.to_numpy()
+
+    losses = np.where(
+        error >= 0.0,
+        quantile * error,
+        (quantile - 1.0) * error,
+    )
+
+    return float(np.mean(losses))
+
+
+def calculate_interval_pinball_loss(
+    y_true,
+    lower_bound,
+    upper_bound,
+    alpha=0.10,
+):
+    """
+    Calculate mean lower and upper pinball loss for a 1 - alpha interval.
+
+    For a 90% interval, this returns the average of:
+    - q = 0.05 pinball loss for the lower bound
+    - q = 0.95 pinball loss for the upper bound
+    """
+    y_true = pd.Series(y_true, dtype=float)
+    lower_bound = pd.Series(lower_bound, dtype=float)
+    upper_bound = pd.Series(upper_bound, dtype=float)
+
+    if (
+        len(y_true) != len(lower_bound)
+        or len(y_true) != len(upper_bound)
+    ):
+        raise ValueError(
+            "y_true, lower_bound, and upper_bound "
+            "must have the same length."
+        )
+
+    if (
+        y_true.isna().any()
+        or lower_bound.isna().any()
+        or upper_bound.isna().any()
+    ):
+        raise ValueError(
+            "y_true, lower_bound, and upper_bound "
+            "must not contain missing values."
+        )
+
+    if not 0.0 < alpha < 1.0:
+        raise ValueError(
+            "alpha must be strictly between 0 and 1."
+        )
+
+    if (lower_bound.to_numpy() > upper_bound.to_numpy()).any():
+        raise ValueError(
+            "lower_bound must not exceed upper_bound."
+        )
+
+    lower_loss = calculate_pinball_loss(
+        y_true,
+        lower_bound,
+        quantile=alpha / 2.0,
+    )
+
+    upper_loss = calculate_pinball_loss(
+        y_true,
+        upper_bound,
+        quantile=1.0 - alpha / 2.0,
+    )
+
+    return float((lower_loss + upper_loss) / 2.0)
+
+FORECAST_REGIMES = (
+    "pre-drift",
+    "drift",
+    "post-drift",
+    "unassigned",
+)
 
 
 # Detection evaluation metrics
@@ -925,6 +1041,190 @@ def load_aemo_events(source):
         raise ValueError("Event end_date precedes start_date.")
     return events.sort_values(["tier", "start_date", "event_id"]).reset_index(drop=True)
 
+def build_forecast_event_windows(
+    events,
+    region,
+    regime_days=7,
+):
+    """
+    Build event-relative windows for T3 forecast evaluation.
+
+    NEM events apply to both SA1 and NSW1. Region-specific events apply
+    only to their matching region.
+
+    Window convention is left-closed and right-open:
+    - pre-drift:  [event_start - regime_days, event_start)
+    - drift:      [event_start, event_end + 1 day)
+    - post-drift: [event_end + 1 day, event_end + 1 day + regime_days)
+
+    Returns
+    -------
+    pd.DataFrame
+        event_id, event_name, region, drift_start, drift_end,
+        pre_drift_start, post_drift_end
+    """
+    if region not in {"SA1", "NSW1"}:
+        raise ValueError("region must be 'SA1' or 'NSW1'.")
+
+    if isinstance(regime_days, bool) or not isinstance(regime_days, int):
+        raise ValueError("regime_days must be a positive integer.")
+
+    if regime_days <= 0:
+        raise ValueError("regime_days must be a positive integer.")
+
+    events = load_aemo_events(events)
+
+    applicable = events[
+        events["region"].isin(["NEM", region])
+    ].copy()
+
+    one_day = pd.Timedelta(days=1)
+    span = pd.Timedelta(days=regime_days)
+
+    applicable["drift_start"] = applicable["start_date"]
+    applicable["drift_end"] = applicable["end_date"] + one_day
+    applicable["pre_drift_start"] = applicable["drift_start"] - span
+    applicable["post_drift_end"] = applicable["drift_end"] + span
+
+    return applicable[
+        [
+            "event_id",
+            "event_name",
+            "region",
+            "tier",
+            "drift_start",
+            "drift_end",
+            "pre_drift_start",
+            "post_drift_end",
+        ]
+    ].sort_values(
+        ["drift_start", "event_id"]
+    ).reset_index(drop=True)
+
+def assign_forecast_regimes(
+    timestamps,
+    event_windows,
+):
+    """
+    Assign exactly one T3 regime to each timestamp.
+
+    Priority when event windows overlap:
+    1. drift: earliest matching event
+    2. pre-drift: earliest upcoming matching event
+    3. post-drift: most recently started matching event
+    4. unassigned: outside all event-relative windows
+
+    Parameters
+    ----------
+    timestamps : array-like
+        Forecast timestamps.
+
+    event_windows : pd.DataFrame
+        Output from build_forecast_event_windows().
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns:
+        SETTLEMENTDATE, regime, event_id
+    """
+    required = {
+        "event_id",
+        "drift_start",
+        "drift_end",
+        "pre_drift_start",
+        "post_drift_end",
+    }
+
+    missing = required - set(event_windows.columns)
+
+    if missing:
+        raise ValueError(
+            "event_windows is missing columns: "
+            f"{sorted(missing)}"
+        )
+
+    windows = event_windows.copy()
+
+    for column in (
+        "drift_start",
+        "drift_end",
+        "pre_drift_start",
+        "post_drift_end",
+    ):
+        windows[column] = pd.to_datetime(
+            windows[column],
+            errors="raise",
+        )
+
+    windows = windows.sort_values(
+        ["drift_start", "event_id"]
+    ).reset_index(drop=True)
+
+    timestamp_index = pd.DatetimeIndex(
+        pd.to_datetime(timestamps, errors="raise")
+    )
+
+    records = []
+
+    for timestamp in timestamp_index:
+        drift_matches = windows[
+            (windows["drift_start"] <= timestamp)
+            & (timestamp < windows["drift_end"])
+        ]
+
+        if not drift_matches.empty:
+            event = drift_matches.iloc[0]
+            records.append(
+                {
+                    "SETTLEMENTDATE": timestamp,
+                    "regime": "drift",
+                    "event_id": event["event_id"],
+                }
+            )
+            continue
+
+        pre_matches = windows[
+            (windows["pre_drift_start"] <= timestamp)
+            & (timestamp < windows["drift_start"])
+        ]
+
+        if not pre_matches.empty:
+            event = pre_matches.iloc[0]
+            records.append(
+                {
+                    "SETTLEMENTDATE": timestamp,
+                    "regime": "pre-drift",
+                    "event_id": event["event_id"],
+                }
+            )
+            continue
+
+        post_matches = windows[
+            (windows["drift_end"] <= timestamp)
+            & (timestamp < windows["post_drift_end"])
+        ]
+
+        if not post_matches.empty:
+            event = post_matches.iloc[-1]
+            records.append(
+                {
+                    "SETTLEMENTDATE": timestamp,
+                    "regime": "post-drift",
+                    "event_id": event["event_id"],
+                }
+            )
+            continue
+
+        records.append(
+            {
+                "SETTLEMENTDATE": timestamp,
+                "regime": "unassigned",
+                "event_id": pd.NA,
+            }
+        )
+
+    return pd.DataFrame(records)
 
 def build_aemo_event_windows(event, *, regime_days):
     """F1-compatible event-relative windows, all left-closed/right-open."""
