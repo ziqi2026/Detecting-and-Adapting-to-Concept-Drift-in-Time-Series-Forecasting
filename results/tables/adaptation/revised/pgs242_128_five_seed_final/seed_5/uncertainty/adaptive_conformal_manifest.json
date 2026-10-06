@@ -1,0 +1,16 @@
+{
+  "task": "PGS242-160",
+  "protocol": "pgs242-160-adaptive-conformal-v1",
+  "upstream_run_id": "pgs242_128_five_seed_final_seed5",
+  "seed": 5,
+  "split_id": "aemo_train2018_2019_cal202001_202002_test202003_pr29",
+  "alpha": 0.1,
+  "gamma": 0.005,
+  "regions": [
+    "SA1",
+    "NSW1"
+  ],
+  "adaptive_update": "alpha_(t+1) = alpha_t + gamma * (target_alpha - error_t)",
+  "causal_order": "construct interval_t before observing y_t",
+  "shared_log_written": true
+}
