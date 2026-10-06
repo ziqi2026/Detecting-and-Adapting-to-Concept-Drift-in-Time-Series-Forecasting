@@ -23,6 +23,7 @@ import numpy as np
 
 
 DEFAULT_ALPHA = 0.10
+DEFAULT_GAMMA = 0.005
 
 
 def _validate_calibration_residuals(calibration_residuals):
@@ -130,3 +131,133 @@ def prediction_intervals(
     escalate = np.zeros(len(forecasts), dtype=bool)
 
     return lower, upper, escalate
+
+
+def _validate_gamma(gamma):
+    """Validate the adaptive conformal learning rate."""
+    gamma = float(gamma)
+
+    if not np.isfinite(gamma) or gamma <= 0.0:
+        raise ValueError("gamma must be finite and greater than zero.")
+
+    return gamma
+
+
+def adaptive_prediction_intervals(
+    point_forecasts,
+    observed_values,
+    calibration_residuals,
+    alpha=DEFAULT_ALPHA,
+    gamma=DEFAULT_GAMMA,
+):
+    """Generate causal adaptive conformal prediction intervals.
+
+    At timestamp t, the interval is constructed before observed_values[t]
+    is used. The realised coverage error at t updates the adaptive alpha
+    only for timestamp t + 1.
+
+    The Sprint 4 static functions remain unchanged.
+
+    Returns
+    -------
+    lower : np.ndarray
+    upper : np.ndarray
+    escalate : np.ndarray
+        False for all timestamps; escalation is handled separately.
+    alpha_path : np.ndarray
+        Adaptive alpha used to construct each timestamp's interval.
+    radius_path : np.ndarray
+        Conformal radius used at each timestamp.
+    """
+    forecasts = np.asarray(point_forecasts, dtype=float)
+    observations = np.asarray(observed_values, dtype=float)
+
+    if forecasts.ndim != 1:
+        raise ValueError("point_forecasts must be one-dimensional.")
+
+    if observations.ndim != 1:
+        raise ValueError("observed_values must be one-dimensional.")
+
+    if len(forecasts) != len(observations):
+        raise ValueError(
+            "point_forecasts and observed_values must have equal length."
+        )
+
+    if not np.isfinite(forecasts).all():
+        raise ValueError(
+            "point_forecasts must not contain NaN or infinite values."
+        )
+
+    if not np.isfinite(observations).all():
+        raise ValueError(
+            "observed_values must not contain NaN or infinite values."
+        )
+
+    residuals = _validate_calibration_residuals(
+        calibration_residuals
+    )
+    target_alpha = _validate_alpha(alpha)
+    gamma = _validate_gamma(gamma)
+
+    sorted_scores = np.sort(np.abs(residuals))
+    n_scores = len(sorted_scores)
+
+    # Finite-sample order statistics can represent ranks 1 through n.
+    min_alpha = 1.0 / (n_scores + 1.0)
+    max_alpha = n_scores / (n_scores + 1.0)
+
+    current_alpha = float(
+        np.clip(target_alpha, min_alpha, max_alpha)
+    )
+
+    lower = np.empty(len(forecasts), dtype=float)
+    upper = np.empty(len(forecasts), dtype=float)
+    alpha_path = np.empty(len(forecasts), dtype=float)
+    radius_path = np.empty(len(forecasts), dtype=float)
+    escalate = np.zeros(len(forecasts), dtype=bool)
+
+    for index in range(len(forecasts)):
+        # Construct C_t before consulting y_t.
+        alpha_path[index] = current_alpha
+
+        rank = min(
+            math.ceil(
+                (n_scores + 1)
+                * (1.0 - current_alpha)
+            ),
+            n_scores,
+        )
+
+        radius = float(sorted_scores[rank - 1])
+        radius_path[index] = radius
+
+        lower[index] = forecasts[index] - radius
+        upper[index] = forecasts[index] + radius
+
+        # Only after C_t exists do we observe y_t and update alpha_(t+1).
+        missed = (
+            observations[index] < lower[index]
+            or observations[index] > upper[index]
+        )
+
+        error = 1.0 if missed else 0.0
+
+        current_alpha = current_alpha + gamma * (
+            target_alpha - error
+        )
+
+        current_alpha = float(
+            np.clip(
+                current_alpha,
+                min_alpha,
+                max_alpha,
+            )
+        )
+
+    return (
+        lower,
+        upper,
+        escalate,
+        alpha_path,
+        radius_path,
+    )
