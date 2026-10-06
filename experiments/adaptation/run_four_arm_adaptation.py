@@ -437,6 +437,23 @@ def run_pr29_multi_seed_experiment(
                 shared_runs=shared_runs,
             )
 
+            seed_output = parent_output / seed_run_id
+            canonical_output = parent_output / f"seed_{seed}"
+
+            if not seed_output.is_dir():
+                raise RuntimeError(
+                    f"Expected seed output directory was not created: "
+                    f"{seed_output}"
+                )
+
+            if canonical_output.exists():
+                raise FileExistsError(
+                    f"Refusing to overwrite seed directory: "
+                    f"{canonical_output}"
+                )
+
+            seed_output.rename(canonical_output)
+
             summary = summary.copy()
             summary["seed"] = seed
             summaries.append(summary)
