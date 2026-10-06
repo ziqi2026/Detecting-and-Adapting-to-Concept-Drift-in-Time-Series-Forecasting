@@ -239,7 +239,7 @@ def run_region_pr29_sensitivity(changepoints, train, calibration, test, *, regio
 
 def run_pr29_detector_sensitivity_experiment(
         *, detections_path, decisions_path, run_id, detectors=PR29_DETECTORS,
-        seed=seed, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
+        seed=0, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
         output_root=ROOT / "results/tables/adaptation/revised",
         shared_runs=ROOT / "results/tables/runs.csv"):
     """Execute the revised 128 detector-sensitivity design from PR #29 inputs.
