@@ -103,6 +103,15 @@ def parse_args():
         help="Prediction interval alpha; 0.10 means 90%% intervals.",
     )
 
+    parser.add_argument(
+        "--write-rolling-mae",
+        action="store_true",
+        help=(
+            "Write timestamp-level 336-observation rolling MAE. "
+            "This file is large and is disabled by default."
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -115,6 +124,18 @@ def load_seed_forecasts(run_dir, seed):
             f"Missing seed output directory: {seed_dir}"
         )
 
+    required_columns = [
+        "SETTLEMENTDATE",
+        "y_true",
+        "y_pred",
+        "arm",
+        "configuration",
+        "detector",
+        "window_days",
+        "region",
+        "seed",
+    ]
+
     frames = []
 
     for region in REGIONS:
@@ -125,7 +146,10 @@ def load_seed_forecasts(run_dir, seed):
                 f"Missing forecast stream: {path}"
             )
 
-        frame = pd.read_csv(path)
+        frame = pd.read_csv(
+            path,
+            usecols=lambda column: column in required_columns,
+        )
 
         required = {
             "SETTLEMENTDATE",
@@ -145,14 +169,28 @@ def load_seed_forecasts(run_dir, seed):
                 f"{sorted(missing)}"
             )
 
+        if "detector" not in frame.columns:
+            frame["detector"] = pd.NA
+
+        if "window_days" not in frame.columns:
+            frame["window_days"] = np.nan
+
         if set(frame["region"].dropna().unique()) != {region}:
             raise ValueError(
                 f"{path} does not contain only region {region}."
             )
 
-        if set(frame["seed"].dropna().unique()) != {seed}:
+        seed_values = set(
+            pd.to_numeric(
+                frame["seed"],
+                errors="raise",
+            ).dropna().astype(int).unique()
+        )
+
+        if seed_values != {seed}:
             raise ValueError(
-                f"{path} does not contain only seed {seed}."
+                f"{path} does not contain only seed {seed}. "
+                f"Found {sorted(seed_values)}."
             )
 
         frames.append(frame)
@@ -187,6 +225,11 @@ def load_seed_forecasts(run_dir, seed):
         forecasts["y_pred"],
         errors="raise",
     )
+
+    forecasts["seed"] = pd.to_numeric(
+        forecasts["seed"],
+        errors="raise",
+    ).astype(int)
 
     if forecasts[["y_true", "y_pred"]].isna().any().any():
         raise ValueError(
@@ -496,34 +539,96 @@ def main():
     events = pd.read_csv(args.events)
     radii = load_seed_radii(args.run_dir, args.seeds)
 
-    all_forecasts = []
+    all_seed_metrics = []
+    all_regime_audits = []
+    rolling_paths = []
 
     for seed in args.seeds:
+        print(f"Processing seed {seed}...", flush=True)
+
         forecasts = load_seed_forecasts(args.run_dir, seed)
+
         forecasts = add_regimes(
             forecasts,
             events,
             regime_days=args.regime_days,
         )
-        all_forecasts.append(forecasts)
 
-    all_forecasts = pd.concat(
-        all_forecasts,
+        forecasts = make_intervals(
+            forecasts,
+            radii=radii,
+            alpha=args.alpha,
+        )
+
+        seed_metrics = calculate_seed_metrics(
+            forecasts,
+            alpha=args.alpha,
+        )
+
+        all_seed_metrics.append(seed_metrics)
+
+        regime_audit = forecasts[
+            [
+                "SETTLEMENTDATE",
+                "region",
+                "regime",
+                "event_id",
+            ]
+        ].drop_duplicates().sort_values(
+            [
+                "region",
+                "SETTLEMENTDATE",
+            ]
+        )
+
+        all_regime_audits.append(regime_audit)
+
+        if args.write_rolling_mae:
+            rolling = add_rolling_mae(forecasts)
+
+            rolling_path = (
+                output_dir
+                / f"rolling_mae_336_seed_{seed}.csv"
+            )
+
+            rolling[
+                [
+                    "SETTLEMENTDATE",
+                    "region",
+                    "arm",
+                    "configuration",
+                    "detector",
+                    "window_days",
+                    "seed",
+                    "regime",
+                    "event_id",
+                    "rolling_mae_336",
+                ]
+            ].to_csv(
+                rolling_path,
+                index=False,
+            )
+
+            rolling_paths.append(rolling_path.name)
+
+        del forecasts
+        del seed_metrics
+        del regime_audit
+
+    seed_metrics = pd.concat(
+        all_seed_metrics,
         ignore_index=True,
     )
 
-    all_forecasts = make_intervals(
-        all_forecasts,
-        radii=radii,
-        alpha=args.alpha,
+    regime_audit = pd.concat(
+        all_regime_audits,
+        ignore_index=True,
+    ).drop_duplicates().sort_values(
+        [
+            "region",
+            "SETTLEMENTDATE",
+        ]
     )
-
-    seed_metrics = calculate_seed_metrics(
-        all_forecasts,
-        alpha=args.alpha,
-    )
-
-    rolling = add_rolling_mae(all_forecasts)
 
     t3 = aggregate_t3(
         seed_metrics,
@@ -540,38 +645,6 @@ def main():
         index=False,
     )
 
-    rolling[
-        [
-            "SETTLEMENTDATE",
-            "region",
-            "arm",
-            "configuration",
-            "detector",
-            "window_days",
-            "seed",
-            "regime",
-            "event_id",
-            "rolling_mae_336",
-        ]
-    ].to_csv(
-        output_dir / "rolling_mae_336.csv",
-        index=False,
-    )
-
-    regime_audit = all_forecasts[
-        [
-            "SETTLEMENTDATE",
-            "region",
-            "regime",
-            "event_id",
-        ]
-    ].drop_duplicates().sort_values(
-        [
-            "region",
-            "SETTLEMENTDATE",
-        ]
-    )
-
     regime_audit.to_csv(
         output_dir / "forecast_regime_assignment_audit.csv",
         index=False,
@@ -583,6 +656,8 @@ def main():
         "regime_days": args.regime_days,
         "alpha": args.alpha,
         "rolling_window": ROLLING_WINDOW,
+        "rolling_mae_written": args.write_rolling_mae,
+        "rolling_mae_files": rolling_paths,
         "pinball_method": (
             "mean of lower q=alpha/2 and upper "
             "q=1-alpha/2 pinball losses"
@@ -599,6 +674,9 @@ def main():
         encoding="utf-8",
     )
 
+    print()
+    print("T3 generation complete.")
+    print()
     print(t3.to_string(index=False))
 
 
