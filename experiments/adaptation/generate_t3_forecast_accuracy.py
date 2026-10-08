@@ -159,8 +159,19 @@ def load_seed_forecasts(run_dir, seed):
     forecasts = pd.concat(frames, ignore_index=True)
 
     forecasts["SETTLEMENTDATE"] = pd.to_datetime(
-        forecasts["SETTLEMENTDATE"],
-        errors="raise",
+    forecasts["SETTLEMENTDATE"],
+    errors="raise",
+)
+
+if forecasts["SETTLEMENTDATE"].dt.tz is None:
+    forecasts["SETTLEMENTDATE"] = (
+        forecasts["SETTLEMENTDATE"]
+        .dt.tz_localize("Etc/GMT-10")
+    )
+else:
+    forecasts["SETTLEMENTDATE"] = (
+        forecasts["SETTLEMENTDATE"]
+        .dt.tz_convert("Etc/GMT-10")
     )
 
     forecasts["y_true"] = pd.to_numeric(

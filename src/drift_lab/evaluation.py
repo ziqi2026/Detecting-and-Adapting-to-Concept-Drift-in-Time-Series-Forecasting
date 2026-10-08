@@ -1162,7 +1162,16 @@ def assign_forecast_regimes(
     ).reset_index(drop=True)
 
     timestamp_index = pd.DatetimeIndex(
-        pd.to_datetime(timestamps, errors="raise")
+    pd.to_datetime(timestamps, errors="raise")
+)
+
+if timestamp_index.tz is None:
+    timestamp_index = timestamp_index.tz_localize(
+        AEMO_TIMEZONE
+    )
+else:
+    timestamp_index = timestamp_index.tz_convert(
+        AEMO_TIMEZONE
     )
 
     records = []
