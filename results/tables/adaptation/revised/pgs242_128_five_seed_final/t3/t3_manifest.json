@@ -1,0 +1,23 @@
+{
+  "events_path": "/workspaces/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/data/events.csv",
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "regime_days": 7,
+  "alpha": 0.1,
+  "rolling_window": 336,
+  "rolling_mae_written": false,
+  "rolling_mae_files": [],
+  "pinball_method": "mean of lower q=alpha/2 and upper q=1-alpha/2 pinball losses",
+  "interval_method": "seed-specific fixed conformal radius around each adaptation point forecast",
+  "primary_configurations": {
+    "A": "A",
+    "B": "B",
+    "C": "C_kswin",
+    "D": "D_180d_page_hinkley"
+  }
+}

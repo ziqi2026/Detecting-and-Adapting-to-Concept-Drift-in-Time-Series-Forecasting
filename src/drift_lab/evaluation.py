@@ -1106,27 +1106,13 @@ def assign_forecast_regimes(
     event_windows,
 ):
     """
-    Assign exactly one T3 regime to each timestamp.
+    Assign exactly one forecasting regime and event ID per timestamp.
 
-    Priority when event windows overlap:
+    Priority for overlaps:
     1. drift: earliest matching event
-    2. pre-drift: earliest upcoming matching event
+    2. pre-drift: earliest upcoming event
     3. post-drift: most recently started matching event
-    4. unassigned: outside all event-relative windows
-
-    Parameters
-    ----------
-    timestamps : array-like
-        Forecast timestamps.
-
-    event_windows : pd.DataFrame
-        Output from build_forecast_event_windows().
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns:
-        SETTLEMENTDATE, regime, event_id
+    4. unassigned: outside every event-relative window
     """
     required = {
         "event_id",
@@ -1162,17 +1148,17 @@ def assign_forecast_regimes(
     ).reset_index(drop=True)
 
     timestamp_index = pd.DatetimeIndex(
-    pd.to_datetime(timestamps, errors="raise")
-)
+        pd.to_datetime(timestamps, errors="raise")
+    )
 
-if timestamp_index.tz is None:
-    timestamp_index = timestamp_index.tz_localize(
-        AEMO_TIMEZONE
-    )
-else:
-    timestamp_index = timestamp_index.tz_convert(
-        AEMO_TIMEZONE
-    )
+    if timestamp_index.tz is None:
+        timestamp_index = timestamp_index.tz_localize(
+            AEMO_TIMEZONE
+        )
+    else:
+        timestamp_index = timestamp_index.tz_convert(
+            AEMO_TIMEZONE
+        )
 
     records = []
 
@@ -1184,6 +1170,7 @@ else:
 
         if not drift_matches.empty:
             event = drift_matches.iloc[0]
+
             records.append(
                 {
                     "SETTLEMENTDATE": timestamp,
@@ -1191,6 +1178,7 @@ else:
                     "event_id": event["event_id"],
                 }
             )
+
             continue
 
         pre_matches = windows[
@@ -1200,6 +1188,7 @@ else:
 
         if not pre_matches.empty:
             event = pre_matches.iloc[0]
+
             records.append(
                 {
                     "SETTLEMENTDATE": timestamp,
@@ -1207,6 +1196,7 @@ else:
                     "event_id": event["event_id"],
                 }
             )
+
             continue
 
         post_matches = windows[
@@ -1216,6 +1206,7 @@ else:
 
         if not post_matches.empty:
             event = post_matches.iloc[-1]
+
             records.append(
                 {
                     "SETTLEMENTDATE": timestamp,
@@ -1223,6 +1214,7 @@ else:
                     "event_id": event["event_id"],
                 }
             )
+
             continue
 
         records.append(

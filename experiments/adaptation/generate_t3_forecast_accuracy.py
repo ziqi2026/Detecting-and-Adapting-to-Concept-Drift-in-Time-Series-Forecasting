@@ -141,7 +141,8 @@ def load_seed_forecasts(run_dir, seed):
 
         if missing:
             raise ValueError(
-                f"{path} is missing required columns: {sorted(missing)}"
+                f"{path} is missing required columns: "
+                f"{sorted(missing)}"
             )
 
         if set(frame["region"].dropna().unique()) != {region}:
@@ -156,23 +157,26 @@ def load_seed_forecasts(run_dir, seed):
 
         frames.append(frame)
 
-    forecasts = pd.concat(frames, ignore_index=True)
+    forecasts = pd.concat(
+        frames,
+        ignore_index=True,
+    )
 
     forecasts["SETTLEMENTDATE"] = pd.to_datetime(
-    forecasts["SETTLEMENTDATE"],
-    errors="raise",
-)
+        forecasts["SETTLEMENTDATE"],
+        errors="raise",
+    )
 
-if forecasts["SETTLEMENTDATE"].dt.tz is None:
-    forecasts["SETTLEMENTDATE"] = (
-        forecasts["SETTLEMENTDATE"]
-        .dt.tz_localize("Etc/GMT-10")
-    )
-else:
-    forecasts["SETTLEMENTDATE"] = (
-        forecasts["SETTLEMENTDATE"]
-        .dt.tz_convert("Etc/GMT-10")
-    )
+    if forecasts["SETTLEMENTDATE"].dt.tz is None:
+        forecasts["SETTLEMENTDATE"] = (
+            forecasts["SETTLEMENTDATE"]
+            .dt.tz_localize("Etc/GMT-10")
+        )
+    else:
+        forecasts["SETTLEMENTDATE"] = (
+            forecasts["SETTLEMENTDATE"]
+            .dt.tz_convert("Etc/GMT-10")
+        )
 
     forecasts["y_true"] = pd.to_numeric(
         forecasts["y_true"],
@@ -185,7 +189,9 @@ else:
     )
 
     if forecasts[["y_true", "y_pred"]].isna().any().any():
-        raise ValueError("Forecast values contain missing values.")
+        raise ValueError(
+            "Forecast values contain missing values."
+        )
 
     keys = [
         "region",
