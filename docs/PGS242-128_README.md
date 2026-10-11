@@ -80,13 +80,28 @@ and overwrite protection.
 
 ## Reproduction
 
+The command-line entry point calls `run_multi_seed_adaptation_experiment()`.
+For Python callers, the runner exposes these functional entry points:
+
+| Function | Responsibility |
+| --- | --- |
+| `validate_experiment_decisions()` | Check the shared detection and adaptation decisions before running. |
+| `validate_frozen_detector_changepoints()` | Check detector provenance and timestamp alignment for a region/detector. |
+| `run_regional_four_arm_comparison()` | Compare A/B/C/D for one region and forecasting seed. |
+| `run_four_arm_adaptation_experiment()` | Run both regions for one forecasting seed and save the results. |
+| `run_multi_seed_adaptation_experiment()` | Run the requested seeds and save their combined summary and manifest. |
+
 ```sh
 python3 experiments/adaptation/run_four_arm_adaptation.py \
   --detections results/tables/detection/aemo_detection_changepoints.csv \
   --decisions docs/decisions.md \
   --detectors adwin page_hinkley kswin \
-  --run-id pr29_detector_sensitivity_NEW_RUN_ID
+  --run-id four_arm_adaptation_NEW_RUN_ID \
+  --seeds 1 2 3 4 5
 ```
 
 Each run writes a new directory under `results/tables/adaptation/revised/` and
-refuses to overwrite an existing run ID.
+refuses to overwrite an existing run ID. Per-seed forecasts are written to
+`<run_id>/seed_<seed>/forecasts_SA1.csv.gz` and `forecasts_NSW1.csv.gz`.
+The parent directory contains `summary_all_seeds.csv` and
+`multi_seed_manifest.json`.

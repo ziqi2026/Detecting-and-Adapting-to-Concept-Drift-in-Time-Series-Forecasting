@@ -33,11 +33,13 @@ from drift_lab.run_logger import log_run
 REGIONS = ("SA1", "NSW1")
 WINDOW_DAYS = (30, 60, 120, 180)
 DEFAULT_FORECAST_SEEDS = (1, 2, 3, 4, 5)
-PR29_DETECTORS = ("adwin", "page_hinkley", "kswin")
-PR29_REFRACTORY_DAYS = 14
-PR29_WARMUP_SAMPLES = 2880
-PR29_GROUP = "adaptive_forecasting_v3_pr29"
-PR29_SPLIT_ID = "aemo_train2018_2019_cal202001_202002_test202003_pr29"
+SUPPORTED_DETECTORS = ("adwin", "page_hinkley", "kswin")
+DETECTOR_REFRACTORY_DAYS = 14
+DETECTOR_WARMUP_SAMPLES = 2880
+# Persisted identifiers retain their original values so existing run logs and
+# manifests remain comparable. Python names describe their role in this runner.
+ADAPTATION_RUN_GROUP = "adaptive_forecasting_v3_pr29"
+ADAPTATION_SPLIT_ID = "aemo_train2018_2019_cal202001_202002_test202003_pr29"
 EVENT_COLUMNS = [
     "event_id", "retrain_timestamp", "first_forecast_timestamp", "strategy",
     "region", "window_days", "trigger_type", "detector", "training_window_start",
@@ -63,8 +65,8 @@ def configurations(windows=WINDOW_DAYS):
     ] + [("D", "drift_recent_window", w) for w in windows]
 
 
-def validate_pr29_decisions(decisions_path):
-    """Validate the shared PR #29 settings used by detector sensitivity runs.
+def validate_experiment_decisions(decisions_path):
+    """Validate the documented detection and four-arm experiment decisions.
 
     Revision R8: 128 consumes accepted upstream alarms and never reruns,
     retunes, deseasonalises, standardises, warms, or refractory-filters a
@@ -94,15 +96,15 @@ def validate_pr29_decisions(decisions_path):
     return decisions_path.resolve()
 
 
-def validate_pr29_changepoints(changepoints, test, *, region, detector):
-    """Validate PR #29 detector provenance before it reaches Arms C and D.
+def validate_frozen_detector_changepoints(changepoints, test, *, region, detector):
+    """Validate frozen detector provenance before it reaches Arms C and D.
 
     The checks deliberately reject old Task 120 output. They verify that the
     stored sequence already carries the agreed preprocessing and 14-day
     refractory metadata. This function never changes accepted detections.
     """
-    if detector not in PR29_DETECTORS:
-        raise ValueError(f"PR #29 detector must be one of {PR29_DETECTORS}")
+    if detector not in SUPPORTED_DETECTORS:
+        raise ValueError(f"PR #29 detector must be one of {SUPPORTED_DETECTORS}")
     required = {
         "region", "detector", "detected_index", "SETTLEMENTDATE", "detector_config",
         "warmup_samples", "test_samples", "refractory_period", "refractory_days",
@@ -118,10 +120,10 @@ def validate_pr29_changepoints(changepoints, test, *, region, detector):
     if selected.empty:
         raise ValueError(f"PR #29 has no stored {detector}/{region} run")
     expected = {
-        "warmup_samples": PR29_WARMUP_SAMPLES,
+        "warmup_samples": DETECTOR_WARMUP_SAMPLES,
         "test_samples": len(test),
-        "refractory_period": PR29_REFRACTORY_DAYS * 48,
-        "refractory_days": PR29_REFRACTORY_DAYS,
+        "refractory_period": DETECTOR_REFRACTORY_DAYS * 48,
+        "refractory_days": DETECTOR_REFRACTORY_DAYS,
         "seasonal_reference": "complete_TRAIN_only",
         "warmup_reference": "processed CALIBRATION forecast errors",
         "detector_input": "TRAIN_zscored_absolute_forecast_error",
@@ -142,10 +144,10 @@ def validate_pr29_changepoints(changepoints, test, *, region, detector):
     return selected
 
 
-def run_region_pr29_sensitivity(changepoints, train, calibration, test, *, region,
-                                model_factory, detectors=PR29_DETECTORS,
-                                windows=WINDOW_DAYS, seed=0):
-    """Run A/B once and the C/D window sweep once for each PR #29 detector.
+def run_regional_four_arm_comparison(
+        changepoints, train, calibration, test, *, region, model_factory,
+        detectors=SUPPORTED_DETECTORS, windows=WINDOW_DAYS, seed=0):
+    """Compare all four adaptation arms for one region and forecasting seed.
 
     Revision R9: the accepted detector outputs are experimental scenarios, not
     candidates for retuning inside 128.  A and B are detector-independent, so
@@ -155,12 +157,12 @@ def run_region_pr29_sensitivity(changepoints, train, calibration, test, *, regio
     configurations(windows)
     detectors = tuple(detectors)
     if not detectors or len(set(detectors)) != len(detectors) or any(
-        detector not in PR29_DETECTORS for detector in detectors
+        detector not in SUPPORTED_DETECTORS for detector in detectors
     ):
-        raise ValueError(f"detectors must be a unique non-empty subset of {PR29_DETECTORS}")
+        raise ValueError(f"detectors must be a unique non-empty subset of {SUPPORTED_DETECTORS}")
 
     selected = {
-        detector: validate_pr29_changepoints(
+        detector: validate_frozen_detector_changepoints(
             changepoints, test, region=region, detector=detector
         )
         for detector in detectors
@@ -237,12 +239,12 @@ def run_region_pr29_sensitivity(changepoints, train, calibration, test, *, regio
             pd.DataFrame(summaries))
 
 
-def run_pr29_detector_sensitivity_experiment(
-        *, detections_path, decisions_path, run_id, detectors=PR29_DETECTORS,
+def run_four_arm_adaptation_experiment(
+        *, detections_path, decisions_path, run_id, detectors=SUPPORTED_DETECTORS,
         seed=0, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
         output_root=ROOT / "results/tables/adaptation/revised",
         shared_runs=ROOT / "results/tables/runs.csv"):
-    """Execute the revised 128 detector-sensitivity design from PR #29 inputs.
+    """Run the four-arm experiment across regions for one forecasting seed.
 
     The function intentionally has no event-catalogue parameter: Arms C/D
     retrain from every accepted upstream detector alarm, including alarms that
@@ -254,14 +256,14 @@ def run_pr29_detector_sensitivity_experiment(
     configurations(windows)
     detectors = tuple(detectors)
     if not detectors or len(set(detectors)) != len(detectors) or any(
-        detector not in PR29_DETECTORS for detector in detectors
+        detector not in SUPPORTED_DETECTORS for detector in detectors
     ):
-        raise ValueError(f"detectors must be a unique non-empty subset of {PR29_DETECTORS}")
+        raise ValueError(f"detectors must be a unique non-empty subset of {SUPPORTED_DETECTORS}")
     output = Path(output_root) / run_id
     if output.exists():
         raise FileExistsError(f"Refusing to overwrite existing run: {output}")
     detections_path = Path(detections_path).resolve()
-    decisions_path = validate_pr29_decisions(decisions_path)
+    decisions_path = validate_experiment_decisions(decisions_path)
     rows = pd.read_csv(detections_path)
     sources = [
         Path(__file__), ROOT / "src/drift_lab/adaptation.py",
@@ -277,7 +279,7 @@ def run_pr29_detector_sensitivity_experiment(
     identity = {
         "source_sha256": hashes, "model_config": model_config,
         "detectors": list(detectors), "windows": list(windows),
-        "split_id": PR29_SPLIT_ID, "upstream_detection_artifact": str(detections_path),
+        "split_id": ADAPTATION_SPLIT_ID, "upstream_detection_artifact": str(detections_path),
         "decisions_file": str(decisions_path), "execution_design":
             "A/B_once_per_region; C/D_per_detector; D_window_sensitivity",
     }
@@ -287,12 +289,12 @@ def run_pr29_detector_sensitivity_experiment(
         _, train, calibration, test = load_and_split_aemo(region, data_path)
         # Validate every region/detector provenance before writing any result.
         for detector in detectors:
-            validate_pr29_changepoints(rows, test, region=region, detector=detector)
+            validate_frozen_detector_changepoints(rows, test, region=region, detector=detector)
         prepared.append((region, train, calibration, test))
-    split = f"{PR29_SPLIT_ID}|run={run_id}"
+    split = f"{ADAPTATION_SPLIT_ID}|run={run_id}"
     if Path(shared_runs).exists():
         previous = pd.read_csv(shared_runs, usecols=["group", "split_id"])
-        if (previous.group.eq(PR29_GROUP) & previous.split_id.eq(split)).any():
+        if (previous.group.eq(ADAPTATION_RUN_GROUP) & previous.split_id.eq(split)).any():
             raise ValueError("This PR #29 run ID already exists in the shared log")
     output.mkdir(parents=True, exist_ok=False)
     manifest = {
@@ -307,8 +309,8 @@ def run_pr29_detector_sensitivity_experiment(
         "upstream_processing_verified": {
             "train_only_deseasonalisation": True,
             "train_only_zscore": True,
-            "warmup_samples": PR29_WARMUP_SAMPLES,
-            "refractory_days": PR29_REFRACTORY_DAYS,
+            "warmup_samples": DETECTOR_WARMUP_SAMPLES,
+            "refractory_days": DETECTOR_REFRACTORY_DAYS,
         },
         "review_note": (
             "The shared decisions file records the Calibration warm-up proposal "
@@ -327,7 +329,7 @@ def run_pr29_detector_sensitivity_experiment(
     summaries, all_events = [], []
     try:
         for region, train, calibration, test in prepared:
-            forecasts, events, summary = run_region_pr29_sensitivity(
+            forecasts, events, summary = run_regional_four_arm_comparison(
                 rows, train, calibration, test, region=region,
                 model_factory=lambda: spec["class"](**model_config),
                 detectors=detectors, windows=windows, seed=seed,
@@ -351,7 +353,7 @@ def run_pr29_detector_sensitivity_experiment(
         for record in summary.to_dict("records"):
             common = dict(
                 method=record["configuration"], dataset="AEMO_TOTALDEMAND",
-                region=record["region"], group=PR29_GROUP, regime="full-test",
+                region=record["region"], group=ADAPTATION_RUN_GROUP, regime="full-test",
                 seed=seed, config_hash=config_hash, split_id=split,
                 train_samples=record["train_samples_total"],
                 n_retrains=record["n_retrains"], wall_clock_s=record["arm_wall_clock_s"],
@@ -375,20 +377,20 @@ def run_pr29_detector_sensitivity_experiment(
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     return summary
 
-def run_pr29_multi_seed_experiment(
+def run_multi_seed_adaptation_experiment(
     *,
     detections_path,
     decisions_path,
     run_id,
     seeds=DEFAULT_FORECAST_SEEDS,
-    detectors=PR29_DETECTORS,
+    detectors=SUPPORTED_DETECTORS,
     windows=WINDOW_DAYS,
     data_path=ROOT / "data/raw",
     output_root=ROOT / "results/tables/adaptation/revised",
     shared_runs=ROOT / "results/tables/runs.csv",
 ):
     """
-    Run PGS242-128 once for each forecasting seed.
+    Run the four-arm adaptation experiment once for each forecasting seed.
 
     Each seed gets its own output subdirectory:
     <output_root>/<run_id>/seed_<seed>/
@@ -425,7 +427,7 @@ def run_pr29_multi_seed_experiment(
         for seed in seeds:
             seed_run_id = f"{run_id}_seed{seed}"
 
-            summary = run_pr29_detector_sensitivity_experiment(
+            summary = run_four_arm_adaptation_experiment(
                 detections_path=detections_path,
                 decisions_path=decisions_path,
                 run_id=seed_run_id,
@@ -502,8 +504,8 @@ def run_pr29_multi_seed_experiment(
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--detections", type=Path, required=True)
-    parser.add_argument("--detectors", nargs="+", choices=PR29_DETECTORS,
-                        default=list(PR29_DETECTORS),
+    parser.add_argument("--detectors", nargs="+", choices=SUPPORTED_DETECTORS,
+                        default=list(SUPPORTED_DETECTORS),
                         help="Frozen PR #29 detector scenarios for C/D")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--decisions", type=Path, required=True,
@@ -513,7 +515,7 @@ def main():
     parser.add_argument("--data-path", type=Path, default=ROOT / "data/raw")
     parser.add_argument("--output-root", type=Path, default=ROOT / "results/tables/adaptation/revised")
     args = parser.parse_args()
-    run_pr29_multi_seed_experiment(
+    run_multi_seed_adaptation_experiment(
     detections_path=args.detections,
     decisions_path=args.decisions,
     run_id=args.run_id,
