@@ -93,7 +93,7 @@ def example_inputs():
 
 def test_shared_initial_state_and_all_d_windows():
     train, calibration, test, _ = example_inputs()
-    cp = pr29_rows(test, region="SA1", detector="adwin")
+    cp = make_frozen_detector_changepoints(test, region="SA1", detector="adwin")
 
     class FitSpy(MeanForecaster):
         calls = []
@@ -103,7 +103,7 @@ def test_shared_initial_state_and_all_d_windows():
             self.n_training_samples_ = len(data)
             return super().fit(data)
 
-    forecasts, events, summary = runner.run_region_pr29_sensitivity(
+    forecasts, events, summary = runner.run_regional_four_arm_comparison(
         cp, train, calibration, test, region="SA1", model_factory=FitSpy,
         detectors=("adwin",))
     initial_calls = [call for call in FitSpy.calls if call == train.SETTLEMENTDATE.tolist()]
@@ -228,8 +228,8 @@ def test_effective_training_samples_and_real_model_causality():
     np.testing.assert_array_equal(reference[:21], actual[:21])
 
 
-def pr29_rows(test, *, region, detector, index=3):
-    """Build a minimal provenance-complete PR #29 detector fixture."""
+def make_frozen_detector_changepoints(test, *, region, detector, index=3):
+    """Build a minimal frozen detector fixture with complete provenance."""
     return pd.DataFrame({
         "region": [region], "detector": [detector], "detected_index": [index],
         "SETTLEMENTDATE": [test.SETTLEMENTDATE.iloc[index]],
@@ -245,7 +245,7 @@ def pr29_rows(test, *, region, detector, index=3):
     })
 
 
-def pr29_decisions_fixture(path):
+def write_experiment_decisions(path):
     """Write only the shared-decision statements required by the runner."""
     path.write_text("\n".join([
         "**COVID-19 event:** 16 Mar 2020 – 17 May 2020.",
@@ -260,42 +260,42 @@ def pr29_decisions_fixture(path):
     ]))
 
 
-def test_pr29_changepoint_contract_rejects_rows_without_provenance():
+def test_frozen_changepoint_contract_rejects_rows_without_provenance():
     _, _, test, incomplete_rows = example_inputs()
     with pytest.raises(ValueError, match="provenance"):
-        runner.validate_pr29_changepoints(
+        runner.validate_frozen_detector_changepoints(
             incomplete_rows, test, region="SA1", detector="adwin")
-    accepted = pr29_rows(test, region="SA1", detector="adwin")
-    selected = runner.validate_pr29_changepoints(
+    accepted = make_frozen_detector_changepoints(test, region="SA1", detector="adwin")
+    selected = runner.validate_frozen_detector_changepoints(
         accepted, test, region="SA1", detector="adwin")
     assert selected.detected_index.tolist() == [3]
 
 
-def test_pr29_sensitivity_runs_a_b_once_and_reuses_each_detector_schedule(tmp_path, monkeypatch):
+def test_four_arm_comparison_runs_a_b_once_and_reuses_each_detector_schedule(tmp_path, monkeypatch):
     train, calibration, test, _ = example_inputs()
     changepoints = pd.concat([
-        pr29_rows(test, region=region, detector=detector)
-        for region in runner.REGIONS for detector in runner.PR29_DETECTORS
+        make_frozen_detector_changepoints(test, region=region, detector=detector)
+        for region in runner.REGIONS for detector in runner.SUPPORTED_DETECTORS
     ], ignore_index=True)
-    detections = tmp_path / "pr29_changepoints.csv"
+    detections = tmp_path / "frozen_detector_changepoints.csv"
     changepoints.to_csv(detections, index=False)
     decisions = tmp_path / "decisions.md"
-    pr29_decisions_fixture(decisions)
+    write_experiment_decisions(decisions)
     monkeypatch.setattr(runner, "load_and_split_aemo", lambda *args: (None, train, calibration, test))
     monkeypatch.setitem(runner.MODEL_REGISTRY, "gradient_boosted",
                         {"class": lambda **kw: MeanForecaster(), "config": {}})
     run_args = dict(
-        detections_path=detections, decisions_path=decisions, run_id="pr29_fixture",
+        detections_path=detections, decisions_path=decisions, run_id="four_arm_fixture",
         data_path=tmp_path, output_root=tmp_path / "out",
         shared_runs=tmp_path / "runs.csv")
-    summary = runner.run_pr29_detector_sensitivity_experiment(**run_args)
-    out = tmp_path / "out/pr29_fixture"
+    summary = runner.run_four_arm_adaptation_experiment(**run_args)
+    out = tmp_path / "out/four_arm_fixture"
     assert len(summary) == 34  # A/B once plus C and four D windows for each detector.
     for region, records in summary.groupby("region"):
         assert records.loc[records.arm.isin(["A", "B"])].configuration.tolist() == ["A", "B"]
         assert len(records.loc[records.arm.eq("C")]) == 3
         assert len(records.loc[records.arm.eq("D")]) == 12
-        assert set(records.loc[records.arm.isin(["C", "D"]), "detector"]) == set(runner.PR29_DETECTORS)
+        assert set(records.loc[records.arm.isin(["C", "D"]), "detector"]) == set(runner.SUPPORTED_DETECTORS)
     events = pd.read_csv(out / "retraining_events.csv")
     assert len(events) == 30
     for (region, detector), rows in events.groupby(["region", "detector"]):
@@ -311,4 +311,4 @@ def test_pr29_sensitivity_runs_a_b_once_and_reuses_each_detector_schedule(tmp_pa
         "window_sensitivity.csv", "detector_comparison.csv", "retraining_events.csv",
     }
     with pytest.raises(FileExistsError):
-        runner.run_pr29_detector_sensitivity_experiment(**run_args)
+        runner.run_four_arm_adaptation_experiment(**run_args)

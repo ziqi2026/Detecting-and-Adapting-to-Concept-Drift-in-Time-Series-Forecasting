@@ -1448,3 +1448,46 @@ def evaluate_aemo_detections(detections, events, region, *, protocol,
 # Planned uncertainty metrics for later Step 6 work:
 # - normalised interval width
 # - worst 24-hour coverage
+
+
+def calculate_adaptation_gain(arm_drift_mae, arm_a_drift_mae, n_retrains):
+    """
+    Drift-MAE difference vs Arm A (T4): arm - arm A, negative = better,
+    plus the difference per retrain (NaN with no retrains). Pair arm and
+    Arm A on region and seed first.
+    """
+
+    try:
+        arm_drift_mae = float(arm_drift_mae)
+        arm_a_drift_mae = float(arm_a_drift_mae)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("MAE values must be finite, non-negative numbers.") from exc
+
+    if (
+        not math.isfinite(arm_drift_mae)
+        or not math.isfinite(arm_a_drift_mae)
+        or arm_drift_mae < 0
+        or arm_a_drift_mae < 0
+    ):
+        raise ValueError("MAE values must be finite, non-negative numbers.")
+
+    if isinstance(n_retrains, bool):
+        raise TypeError("n_retrains must be a non-negative integer.")
+
+    try:
+        retrain_count = int(n_retrains)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("n_retrains must be a non-negative integer.") from exc
+
+    if retrain_count != n_retrains or retrain_count < 0:
+        raise ValueError("n_retrains must be a non-negative integer.")
+
+    difference = arm_drift_mae - arm_a_drift_mae
+    difference_per_retrain = (
+        difference / retrain_count if retrain_count > 0 else float("nan")
+    )
+
+    return {
+        "drift_mae_difference_vs_arm_a": float(difference),
+        "drift_mae_difference_per_retrain": float(difference_per_retrain),
+    }

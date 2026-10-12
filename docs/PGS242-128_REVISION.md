@@ -17,6 +17,13 @@ provenance includes:
 
 The runner does not reproduce or modify the upstream detection pipeline.
 
+`validate_experiment_decisions()` checks the shared decisions document, and
+`validate_frozen_detector_changepoints()` checks each frozen detector sequence.
+The execution chain is `run_multi_seed_adaptation_experiment()` →
+`run_four_arm_adaptation_experiment()` → `run_regional_four_arm_comparison()`.
+These names describe the functions' responsibilities; PR #29 remains the
+historical source of the detection protocol.
+
 ## Forecasting invariants
 
 - Every configuration starts from a copy of one fitted initial model state per
@@ -56,6 +63,11 @@ Each successful run directory contains:
   `adaptive_forecasting_v3_pr29`;
 - `manifest.json` with hashes, configuration, software versions, upstream
   metadata, and completion status.
+
+`ADAPTATION_RUN_GROUP` and `ADAPTATION_SPLIT_ID` retain the existing persisted
+values `adaptive_forecasting_v3_pr29` and
+`aemo_train2018_2019_cal202001_202002_test202003_pr29`. Historical result folders,
+CSV fields, and manifest values remain valid when the Python identifiers change.
 
 The D-window comparison is sensitivity analysis on the test stream. The runner
 does not automatically label the lowest-MAE window as an independently
