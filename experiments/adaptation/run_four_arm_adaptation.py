@@ -239,7 +239,7 @@ def run_region_pr29_sensitivity(changepoints, train, calibration, test, *, regio
 
 def run_pr29_detector_sensitivity_experiment(
         *, detections_path, decisions_path, run_id, detectors=PR29_DETECTORS,
-        seed=seed, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
+        seed=0, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
         output_root=ROOT / "results/tables/adaptation/revised",
         shared_runs=ROOT / "results/tables/runs.csv"):
     """Execute the revised 128 detector-sensitivity design from PR #29 inputs.
@@ -436,6 +436,23 @@ def run_pr29_multi_seed_experiment(
                 output_root=parent_output,
                 shared_runs=shared_runs,
             )
+
+            seed_output = parent_output / seed_run_id
+            canonical_output = parent_output / f"seed_{seed}"
+
+            if not seed_output.is_dir():
+                raise RuntimeError(
+                    f"Expected seed output directory was not created: "
+                    f"{seed_output}"
+                )
+
+            if canonical_output.exists():
+                raise FileExistsError(
+                    f"Refusing to overwrite seed directory: "
+                    f"{canonical_output}"
+                )
+
+            seed_output.rename(canonical_output)
 
             summary = summary.copy()
             summary["seed"] = seed
