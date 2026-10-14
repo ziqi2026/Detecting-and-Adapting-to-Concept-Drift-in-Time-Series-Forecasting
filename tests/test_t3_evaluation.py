@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -42,6 +44,10 @@ def test_regime_assignment_uses_drift_before_pre_or_post():
         }
     )
 
+    # Keep the frozen Tier 1 catalogue required by production validation.
+    catalogue = pd.read_csv(Path(__file__).resolve().parents[1] / "data/events.csv")
+    events = pd.concat([catalogue[catalogue.tier == 1], events], ignore_index=True)
+
     windows = build_forecast_event_windows(
         events,
         region="SA1",
@@ -66,3 +72,4 @@ def test_regime_assignment_uses_drift_before_pre_or_post():
         "post-drift",
         "unassigned",
     ]
+

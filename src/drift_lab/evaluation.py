@@ -227,8 +227,9 @@ Different stages use different subsets of these metrics:
       metrics here.
 
     - Uncertainty evaluation uses calculate_empirical_coverage() and
-      calculate_mean_interval_width(). Normalised interval width and
-      worst 24-hour coverage remain planned for later Step 6 work.
+      calculate_mean_interval_width(), calculate_normalised_interval_width(),
+      calculate_rolling_24h_coverage(), and calculate_worst_24h_coverage().
+      Reference scale and rolling boundary policy are explicit inputs.
 
 Per-run evaluation metrics are calculated here. Aggregation across
 seeds, including mean ± standard deviation where required, is performed
@@ -357,8 +358,8 @@ def _validate_interval_inputs(
     """
     Validate prediction-interval bounds and return float Series.
     """
-    lower_bound = pd.Series(lower_bound, dtype=float)
-    upper_bound = pd.Series(upper_bound, dtype=float)
+    lower_bound = pd.Series(lower_bound, dtype=float).reset_index(drop=True)
+    upper_bound = pd.Series(upper_bound, dtype=float).reset_index(drop=True)
 
     if len(lower_bound) != len(upper_bound):
         raise ValueError(
@@ -413,7 +414,7 @@ def calculate_empirical_coverage(
     float
         Fraction of observations covered by the interval.
     """
-    y_true = pd.Series(y_true, dtype=float)
+    y_true = pd.Series(y_true, dtype=float).reset_index(drop=True)
     lower_bound, upper_bound = _validate_interval_inputs(
         lower_bound,
         upper_bound,
@@ -467,6 +468,81 @@ def calculate_mean_interval_width(
     return float(
         (upper_bound - lower_bound).mean()
     )
+
+def calculate_normalised_interval_width(lower_bound, upper_bound, *, scale):
+    """Mean width divided by an explicitly supplied positive reference scale.
+
+    The caller must define and record the reference population/statistic.
+    No test-set or regime-dependent denominator is selected implicitly.
+    """
+    if isinstance(scale, bool) or not np.isscalar(scale):
+        raise ValueError("scale must be a finite positive scalar.")
+    scale = float(scale)
+    if not np.isfinite(scale) or scale <= 0:
+        raise ValueError("scale must be a finite positive scalar.")
+    return calculate_mean_interval_width(lower_bound, upper_bound) / scale
+
+
+def calculate_rolling_24h_coverage(
+    timestamps, y_true, lower_bound, upper_bound, *,
+    cadence, regimes=None, boundary_policy,
+):
+    """Trailing empirical coverage in (t - 24h, t].
+
+    Only complete, regular windows qualify: exactly 24h/cadence observations
+    on the cadence grid. Gaps invalidate windows until a full contiguous
+    window is available again. Inputs must already be strictly chronological;
+    duplicate/missing timestamps and non-finite values are rejected.
+
+    boundary_policy must be explicit:
+      within_regime: every observation in a window has the same regime;
+      ending_regime: cross-regime windows qualify and are attributed to t.
+    Incomplete windows return NaN. A 30min grid needs 48 observations,
+    including the current one, spanning 23h30min between endpoint timestamps.
+    """
+    if boundary_policy not in {"within_regime", "ending_regime"}:
+        raise ValueError("Unsupported rolling boundary_policy.")
+    cadence = pd.Timedelta(cadence)
+    duration = pd.Timedelta(hours=24)
+    if cadence <= pd.Timedelta(0) or cadence > duration or duration % cadence:
+        raise ValueError("cadence must positively and exactly divide 24h.")
+    count = int(duration / cadence)
+    index = pd.DatetimeIndex([aemo_timestamp(t) for t in timestamps])
+    if not index.is_monotonic_increasing or index.has_duplicates:
+        raise ValueError("timestamps must be strictly increasing and unique.")
+    # Reuse shared validation, including inclusive interval endpoints.
+    calculate_empirical_coverage(y_true, lower_bound, upper_bound)
+    if len(index) != len(y_true):
+        raise ValueError("timestamps and observations must have the same length.")
+    lower, upper = _validate_interval_inputs(lower_bound, upper_bound)
+    actual = np.asarray(y_true, dtype=float)
+    covered = pd.Series((actual >= lower.to_numpy()) & (actual <= upper.to_numpy()),
+                        index=index, dtype=float)
+    breaks = pd.Series(index.to_series().diff().to_numpy() != cadence, index=index)
+    if regimes is not None:
+        labels = pd.Series(list(regimes), index=index)
+        if labels.isna().any():
+            raise ValueError("regimes must not contain missing values.")
+        if boundary_policy == "within_regime":
+            breaks |= labels.ne(labels.shift())
+    elif boundary_policy == "within_regime":
+        raise ValueError("within_regime requires regime labels.")
+    contiguous_count = breaks.groupby(breaks.cumsum()).cumcount() + 1
+    rolling = covered.rolling("24h", closed="right", min_periods=count).mean()
+    return rolling.where(contiguous_count >= count).rename("rolling_24h_coverage")
+
+
+def calculate_worst_24h_coverage(
+    timestamps, y_true, lower_bound, upper_bound, *,
+    cadence, regimes=None, boundary_policy,
+):
+    """Minimum eligible rolling coverage, or NaN if no full window exists."""
+    rolling = calculate_rolling_24h_coverage(
+        timestamps, y_true, lower_bound, upper_bound,
+        cadence=cadence, regimes=regimes, boundary_policy=boundary_policy,
+    )
+    return float(rolling.min())
+
 
 def calculate_pinball_loss(y_true, y_quantile, quantile):
     """
@@ -1446,8 +1522,6 @@ def evaluate_aemo_detections(detections, events, region, *, protocol,
 
 
 # Planned uncertainty metrics for later Step 6 work:
-# - normalised interval width
-# - worst 24-hour coverage
 
 
 def calculate_adaptation_gain(arm_drift_mae, arm_a_drift_mae, n_retrains):
@@ -1590,3 +1664,4 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
             "event_id": event_ids,
         }
     )
+
