@@ -2,19 +2,24 @@
 
 ## Status and evidence
 
-Inspected main at d02c42528177ccbedc71ac7e50cad47600a4598d and
-PGS242-160 at c924f38e5c6fbf83e03ba19ed39a3d3bc4d4a2b8 on 2026-10-14.
-Neither complete Git tree contains
-seed_<1..5>/uncertainty/aemo_conformal_intervals_<SA1|NSW1>.csv.gz.
-These are the exact files written by run_aemo_adaptive_conformal.py.
-They may exist on the original operator's machine, but are not available here.
+The ten timestamp-level interval streams were added to PGS242-160 at
+8987f528797c9c8982a99cac867521839569d07c and supplied as five seed archives.
+All ten uploaded streams were read successfully. Each contains 17 configurations
+with 67,249 consecutive half-hour observations per configuration, from
+2020-03-01 00:00 through 2024-01-01 00:00 inclusive (fixed AEST).
 
-The committed aemo_conformal_comparison_all_seeds.csv contains 340 rows:
-17 configurations x 5 seeds x 2 regions x 2 methods (170 paired comparisons).
-It is a full-test summary, not timestamp-level data. It cannot establish
-worst 24h coverage or regime-level coverage. No real T5 has been generated.
-No training or adaptive interval reconstruction has been performed.
-The target in this upstream implementation is AEMO_TOTALDEMAND, measured in MW.
+Input checks passed for manifest seed/run/split identities, finite ordered
+bounds, continuous unique timestamps, identical truth/grid across seeds and
+configurations, stored coverage flags and widths, and recomputed full-test
+coverage/mean width versus upstream summaries. This is an input audit, not
+validation of a formal regime-level T5. The target is TOTALDEMAND in MW.
+
+A generated synthetic demonstration is now stored in
+[the T5 simulation directory](../results/tables/uncertainty/t5_simulation/README.md).
+Its README declares the current denominator, regime scope and rolling boundary
+policy. These are explicitly changeable simulation conventions, not team-approved
+AEMO methodology. No formal AEMO T5 or new canonical results/runs.csv entries
+have been generated. No models were retrained.
 
 ## Methodology: established versus unresolved
 
