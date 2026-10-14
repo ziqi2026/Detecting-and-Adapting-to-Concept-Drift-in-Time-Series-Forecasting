@@ -6,6 +6,7 @@ See docs/T5_EVALUATION.md for the required explicit protocol JSON.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import os
@@ -51,9 +52,31 @@ def minimum_windows(protocol):
     return value
 
 
+def training_source_files(source):
+    """Accept a regional CSV or the 24 original monthly TRAIN source files."""
+    source = Path(source)
+    if source.is_file():
+        return [source]
+    files = sorted([*source.glob("PRICE_AND_DEMAND_2018*.csv"),
+                    *source.glob("PRICE_AND_DEMAND_2019*.csv")])
+    if len(files) != 24:
+        raise ValueError(f"Expected 24 monthly TRAIN files in {source}.")
+    return files
+
+
+def training_source_digest(source):
+    files = training_source_files(source)
+    if Path(source).is_file():
+        return digest(source)
+    # Canonical text hashes are stable across Git's CRLF/LF checkout conversion.
+    return json_hash({path.name: hashlib.sha256(path.read_text().encode()).hexdigest()
+                      for path in files})
+
+
 def training_demand_mean(source, start, end_exclusive):
     """Calculate mean actual demand from a regional source within TRAIN only."""
-    frame = pd.read_csv(source, usecols=["SETTLEMENTDATE", "TOTALDEMAND"])
+    frame = pd.concat([pd.read_csv(path, usecols=["SETTLEMENTDATE", "TOTALDEMAND"])
+                       for path in training_source_files(source)], ignore_index=True)
     timestamps = frame.SETTLEMENTDATE.map(aemo_timestamp)
     if timestamps.isna().any() or timestamps.duplicated().any():
         raise ValueError("Training source has missing or duplicate timestamps.")
@@ -67,6 +90,25 @@ def training_demand_mean(source, start, end_exclusive):
     if value <= 0:
         raise ValueError("Training mean actual demand must be positive.")
     return value, len(actual)
+
+
+def resolve_aemo_normalisation(protocol, training_data_dir=None):
+    """Derive both regional denominators automatically; never request manual means."""
+    resolved = copy.deepcopy(protocol)
+    if is_simulation(resolved):
+        return resolved
+    window = resolved.setdefault("training_window", {
+        "start": "2018-01-01", "end_exclusive": "2020-01-01"})
+    scales = resolved.setdefault("normalisation", {})
+    root = Path(training_data_dir) if training_data_dir else ROOT / "data/raw"
+    for region in REGIONS:
+        source = root / region if training_data_dir else Path(
+            scales.get(region, {}).get("source", root / region))
+        value, count = training_demand_mean(source, **window)
+        scales[region] = dict(value=value, statistic="training_mean_actual_demand",
+            source=str(source), source_sha256=training_source_digest(source),
+            n_training_observations=count)
+    return resolved
 
 
 def verify_aemo_normalisation(protocol):
@@ -83,7 +125,7 @@ def verify_aemo_normalisation(protocol):
         scale = protocol["normalisation"][region]
         if scale["statistic"] != "training_mean_actual_demand":
             raise ValueError("AEMO denominator must be training_mean_actual_demand.")
-        if digest(scale["source"]) != scale["source_sha256"]:
+        if training_source_digest(scale["source"]) != scale["source_sha256"]:
             raise ValueError(f"Training source hash mismatch for {region}.")
         actual_mean, _ = training_demand_mean(scale["source"], **window)
         if not np.isclose(scale["value"], actual_mean, rtol=1e-12, atol=1e-12):
@@ -291,7 +333,8 @@ def append_logs_safely(rows, runs_path):
     return recorded
 
 
-def generate(run_dir, events_path, output_dir, runs_path, protocol):
+def generate(run_dir, events_path, output_dir, runs_path, protocol, training_data_dir=None):
+    protocol = resolve_aemo_normalisation(protocol, training_data_dir)
     validate_protocol(protocol)
     verify_aemo_normalisation(protocol)
     preflight(run_dir)
@@ -394,6 +437,11 @@ def generate(run_dir, events_path, output_dir, runs_path, protocol):
     selected = recorded.merge(pd.DataFrame(identities).drop_duplicates(),
                               on=list(identities[0]), how="inner", validate="many_to_one")
     output_dir.mkdir(parents=True)
+    if not is_simulation(protocol):
+        (output_dir / "t5_normalisation.json").write_text(json.dumps({
+            "training_window": protocol["training_window"],
+            "normalisation": protocol["normalisation"],
+        }, indent=2) + "\n")
     selected.to_csv(output_dir / "t5_seed_metrics.csv", index=False)
     audit_frame = pd.DataFrame(audit)
     audit_frame.to_csv(output_dir / "t5_window_audit.csv", index=False)
@@ -422,9 +470,11 @@ def main():
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--runs", type=Path, default=ROOT / "results/runs.csv")
+    parser.add_argument("--training-data-dir", type=Path,
+                        help="AEMO raw-data root containing SA1/NSW1 monthly TRAIN CSVs.")
     args = parser.parse_args()
     generate(args.run_dir, args.events, args.output_dir, args.runs,
-             json.loads(args.protocol.read_text()))
+             json.loads(args.protocol.read_text()), args.training_data_dir)
 
 
 if __name__ == "__main__":

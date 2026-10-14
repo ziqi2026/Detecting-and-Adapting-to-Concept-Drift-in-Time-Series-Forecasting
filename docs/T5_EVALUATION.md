@@ -28,7 +28,7 @@ reporting, five seeds, mean plus sample SD, and runs.csv traceability.
 The supervisor has specified the AEMO width denominator: the mean actual
 TOTALDEMAND in the TRAIN window, computed separately for SA1 and NSW1 and
 held fixed across methods, configurations, seeds and regimes. The generator
-verifies each configured value against its hashed regional data source using
+automatically calculates each value from its hashed regional data source using
 TRAIN only: [2018-01-01, 2020-01-01), fixed AEST. Calibration/TEST values are
 excluded. Each generated Markdown table caption reports the numeric regional
 denominator in MW and the training window. Simulation retains scale 10.
@@ -50,8 +50,9 @@ The generator requires a supplied protocol JSON. It makes no claim that the
 following choices have already been agreed:
 
 - normalisation: `training_mean_actual_demand`, one positive TRAIN mean per
-  region, with source and SHA256. The generator recalculates and verifies it;
-  arbitrary ranges/SDs or manually entered inconsistent values are rejected.
+  region, automatically calculated from the regional TRAIN CSVs. No manual
+  scale values are needed. The resolved protocol records value, observation
+  count, source and hash; the generator verifies them before logging.
   The existing `synthetic-test-only` fixture is the sole exception (scale 10).
 - window support: AEMO protocols must explicitly set a positive integer
   `minimum_complete_24h_windows`. The supervisor has not specified the numeric
@@ -79,6 +80,33 @@ count and a large count alone does not establish statistical reliability. The ge
 rejects missing timestamps against the full test grid rather than silently
 evaluating a smaller test population.
 
+## Automatic AEMO TRAIN means
+
+T5 computes the denominators itself; no manual mean values are required.
+By default it reads the 24 original monthly CSV files for 2018–2019 under
+`data/raw/SA1/` and `data/raw/NSW1/`, keeps only timestamps in TRAIN, and
+calculates the arithmetic mean of actual `TOTALDEMAND`. The monthly files'
+2020-01-01 endpoint is excluded. Each region contributes 35,039 observations.
+
+| Region | Mean actual TRAIN demand (MW) |
+| --- | ---: |
+| SA1 | 1300.8730537401182 |
+| NSW1 | 7982.25166471646 |
+
+The calculation was independently checked using CSV parsing and decimal
+arithmetic. Machine-readable values are in
+[the TRAIN-mean reference](../results/tables/uncertainty/t5_training_mean_demand.json).
+These are real training statistics, not formal T5 performance results.
+
+Use `--training-data-dir /path/to/data/raw` for another data root with SA1/NSW1
+subdirectories. A regional CSV can alternatively be supplied through its
+`normalisation.<region>.source`. The generator replaces supplied scale values
+with the computed means and records them in the resolved protocol, output
+`t5_normalisation.json`, manifest and table captions. Directory provenance uses
+a hash of sorted filenames and per-file UTF-8 hashes with canonical LF newlines,
+so Git CRLF/LF checkout conversion does not alter the source identity. Single
+CSV sources retain their raw SHA256. All 24 monthly TRAIN files must be present.
+
 ## Required protocol JSON
 
 Create a protocol using the supervisor's training-mean denominator and the
@@ -101,12 +129,7 @@ not a runnable or approved protocol (placeholders deliberately fail validation):
   "test_start": "ACTUAL-FIRST-TEST-TIMESTAMP",
   "test_end": "ACTUAL-LAST-TEST-TIMESTAMP",
   "configurations": ["EXPLICIT-CONFIGURATIONS-FROM-EXPERIMENT"],
-  "normalisation": {
-    "SA1": {"value": null, "statistic": "training_mean_actual_demand",
-            "source": "REFERENCE-ARTIFACT", "source_sha256": "ACTUAL-SHA256"},
-    "NSW1": {"value": null, "statistic": "training_mean_actual_demand",
-             "source": "REFERENCE-ARTIFACT", "source_sha256": "ACTUAL-SHA256"}
-  }
+  "normalisation": {}
 }
 ```
 
@@ -162,7 +185,7 @@ Tests use synthetic fixtures only; their tables are never real project results.
 
 Command: PYTHONPATH=src python -m pytest -q tests/uncertainty tests/test_t3_evaluation.py
 
-Result: 46 passed after adding TRAIN-mean verification, caption/window-count
+Result: 48 passed after adding TRAIN-mean verification, caption/window-count
 reporting, explicit AEMO threshold and sparse-window tests. Includes independently enumerated 48-point coverage,
 right-open exclusion at t-24h, gaps, irregular cadence, DST-aware conversion,
 duplicate/unsorted/missing timestamp rejection, disjoint regime segments,

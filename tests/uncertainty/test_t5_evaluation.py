@@ -287,3 +287,35 @@ def test_caption_and_window_counts_are_published(tmp_path):
     assert "| drift | 1 |" in report
     audit = pd.read_csv(tmp_path / "out/t5_window_audit.csv")
     assert set(audit.worst_window_status) == {"sufficient"}
+
+
+def test_aemo_denominators_are_derived_without_manual_values(tmp_path):
+    sources = {}
+    for region, demand in [("SA1", 100.), ("NSW1", 500.)]:
+        path = tmp_path / f"{region}.csv"
+        pd.DataFrame(dict(SETTLEMENTDATE=["2018-01-01", "2019-01-01", "2020-01-01"],
+                          TOTALDEMAND=[demand, demand * 3, 99999.])).to_csv(path, index=False)
+        sources[region] = {"source": str(path), "value": -999}
+    p = dict(protocol_id="aemo-t5-training-mean-v1", normalisation=sources)
+    resolved = t5.resolve_aemo_normalisation(p)
+    assert resolved["normalisation"]["SA1"]["value"] == 200.
+    assert resolved["normalisation"]["NSW1"]["value"] == 1000.
+    assert resolved["normalisation"]["SA1"]["n_training_observations"] == 2
+    assert p["normalisation"]["SA1"]["value"] == -999  # caller's input stays untouched
+    t5.verify_aemo_normalisation(resolved)
+
+
+def test_monthly_training_sources_and_hash_are_cross_platform(tmp_path):
+    for year in [2018, 2019]:
+        for month in range(1, 13):
+            path = tmp_path / f"PRICE_AND_DEMAND_{year}{month:02d}_SA1.csv"
+            path.write_text(f"SETTLEMENTDATE,TOTALDEMAND\n{year}-{month:02d}-01,100\n")
+    value, count = t5.training_demand_mean(tmp_path, "2018-01-01", "2020-01-01")
+    assert value == 100. and count == 24
+    before = t5.training_source_digest(tmp_path)
+    for path in tmp_path.glob("*.csv"):
+        path.write_bytes(path.read_bytes().replace(b"\n", b"\r\n"))
+    assert t5.training_source_digest(tmp_path) == before
+    next(tmp_path.glob("*.csv")).unlink()
+    with pytest.raises(ValueError, match="24 monthly"):
+        t5.training_source_files(tmp_path)
