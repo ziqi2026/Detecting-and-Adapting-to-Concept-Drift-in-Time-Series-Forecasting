@@ -107,6 +107,54 @@ This document records the settings agreed between Teams 41 and 42 following the 
 - **Arm D — Drift-Triggered Recent Window:** retrain when an accepted drift is detected, using only recent historical data. Evaluate training windows of **30, 60, 120, and 180 days**.
 - For Arm D, the window determines **how much recent data is used at each drift-triggered retraining**, not how frequently retraining occurs.
 
+## T3: Full-stream and event-local forecast evaluation
+
+T3 is generated from saved timestamp-level forecasts for seeds 1–5.
+
+### Main T3: full-stream evaluation
+
+For each region, use applicable NEM and region-specific events whose
+buffered windows overlap the evaluated forecast period.
+
+For an event with start date s and inclusive end date e, its buffered
+drift window is:
+
+[s - 7 days, e + 1 day + 7 days)
+
+All boundaries use fixed AEST (UTC+10), with left-inclusive,
+right-exclusive windows.
+
+Assign every forecast timestamp exactly once:
+
+- pre-drift: before the first applicable buffered drift window;
+- drift: inside any applicable buffered drift window;
+- post-drift: outside the buffered drift windows, after the first
+  buffered window begins.
+
+Overlapping buffered windows are treated as a union. No timestamp is
+double-counted or labelled unassigned.
+
+### Secondary T3-local: event-local evaluation
+
+- pre-drift: seven days before the documented event;
+- drift: the documented event interval, including its final date;
+- post-drift: seven days after the documented event;
+- timestamps outside these windows are excluded from local metrics.
+
+Local overlap priority remains:
+drift > pre-drift > post-drift.
+
+### Metrics
+
+Calculate metrics separately for each configuration, region, and seed,
+then report mean and sample standard deviation across seeds 1–5.
+
+Main T3 pinball loss uses all test timestamps.
+T3-local pinball loss uses only timestamps included in local windows.
+
+The forecast and uncertainty methods remain unchanged.
+This update changes evaluation labels, not adaptation triggers.
+
 ## Shared Comparison Principle
 
 All applicable settings above should be identical between the teams.
