@@ -30,6 +30,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from drift_lab.evaluation import (
+    assign_full_stream_forecast_regimes,
     assign_forecast_regimes,
     build_forecast_event_windows,
     calculate_interval_pinball_loss,
@@ -258,26 +259,36 @@ def load_seed_forecasts(run_dir, seed):
     ).reset_index(drop=True)
 
 
-def add_regimes(forecasts, events, regime_days):
-    """Assign event-aware regimes separately for SA1 and NSW1."""
+def add_regimes(forecasts, events, regime_days, scope="full"):
+    """Attach either full-stream or event-local regime labels."""
+    if scope not in {"full", "local"}:
+        raise ValueError("scope must be 'full' or 'local'.")
+
     outputs = []
 
-    for region, region_frame in forecasts.groupby(
-        "region",
-        sort=False,
-    ):
+    for region, region_frame in forecasts.groupby("region", sort=False):
         windows = build_forecast_event_windows(
             events,
             region=region,
             regime_days=regime_days,
         )
 
-        timestamps = region_frame["SETTLEMENTDATE"].drop_duplicates()
-
-        assignments = assign_forecast_regimes(
-            timestamps,
-            windows,
+        timestamps = (
+            region_frame["SETTLEMENTDATE"]
+            .drop_duplicates()
+            .sort_values()
         )
+
+        if scope == "full":
+            assignments = assign_full_stream_forecast_regimes(
+                timestamps,
+                windows,
+            )
+        else:
+            assignments = assign_forecast_regimes(
+                timestamps,
+                windows,
+            )
 
         output = region_frame.merge(
             assignments,
@@ -287,9 +298,10 @@ def add_regimes(forecasts, events, regime_days):
         )
 
         if output["regime"].isna().any():
-            raise RuntimeError(
-                f"Missing regime assignment for {region}."
-            )
+            raise RuntimeError(f"Missing regime assignment for {region}.")
+
+        if scope == "full" and output["regime"].eq("unassigned").any():
+            raise RuntimeError("Full-stream evaluation must assign every row.")
 
         outputs.append(output)
 
@@ -446,7 +458,7 @@ def format_mean_sd(series):
     series = pd.Series(series, dtype=float).dropna()
 
     if len(series) == 0:
-        return ""
+        return "N/A"
 
     if len(series) == 1:
         return f"{series.iloc[0]:.1f}"
@@ -524,149 +536,210 @@ def aggregate_t3(seed_metrics, expected_seeds):
 def main():
     args = parse_args()
 
-    if args.regime_days <= 0:
-        raise ValueError("--regime-days must be positive.")
-
+    if args.regime_days != 7:
+        raise ValueError("The agreed T3 protocol uses seven-day buffers.")
     if not 0.0 < args.alpha < 1.0:
         raise ValueError("--alpha must be strictly between 0 and 1.")
-
     if len(set(args.seeds)) != len(args.seeds):
         raise ValueError("--seeds must be unique.")
 
-    output_dir = args.output_dir or (args.run_dir / "t3")
+    output_dir = args.output_dir or (args.run_dir / "t3_full_and_local")
+    if output_dir.exists() and any(output_dir.iterdir()):
+        raise FileExistsError(
+            f"Output folder is not empty: {output_dir}. "
+            "Use a new --output-dir to preserve earlier results."
+        )
     output_dir.mkdir(parents=True, exist_ok=True)
 
     events = pd.read_csv(args.events)
     radii = load_seed_radii(args.run_dir, args.seeds)
 
-    all_seed_metrics = []
-    all_regime_audits = []
-    rolling_paths = []
+    metrics_by_scope = {"full": [], "local": []}
+    audits = {}
+    counts = []
 
     for seed in args.seeds:
         print(f"Processing seed {seed}...", flush=True)
 
         forecasts = load_seed_forecasts(args.run_dir, seed)
-
-        forecasts = add_regimes(
-            forecasts,
-            events,
-            regime_days=args.regime_days,
-        )
-
         forecasts = make_intervals(
             forecasts,
             radii=radii,
             alpha=args.alpha,
         )
 
-        seed_metrics = calculate_seed_metrics(
-            forecasts,
-            alpha=args.alpha,
-        )
-
-        all_seed_metrics.append(seed_metrics)
-
-        regime_audit = forecasts[
-            [
-                "SETTLEMENTDATE",
-                "region",
-                "regime",
-                "event_id",
-            ]
-        ].drop_duplicates().sort_values(
-            [
-                "region",
-                "SETTLEMENTDATE",
-            ]
-        )
-
-        all_regime_audits.append(regime_audit)
-
-        if args.write_rolling_mae:
-            rolling = add_rolling_mae(forecasts)
-
-            rolling_path = (
-                output_dir
-                / f"rolling_mae_336_seed_{seed}.csv"
+        for scope in ("full", "local"):
+            labelled = add_regimes(
+                forecasts,
+                events,
+                regime_days=args.regime_days,
+                scope=scope,
             )
 
-            rolling[
-                [
-                    "SETTLEMENTDATE",
-                    "region",
-                    "arm",
-                    "configuration",
-                    "detector",
-                    "window_days",
-                    "seed",
-                    "regime",
-                    "event_id",
-                    "rolling_mae_336",
+            # Preserve all local assignments in the audit, including
+            # unassigned rows. Metrics use only included local rows.
+            audit = labelled[
+                ["SETTLEMENTDATE", "region", "regime", "event_id"]
+            ].drop_duplicates().sort_values(
+                ["region", "SETTLEMENTDATE"]
+            ).reset_index(drop=True)
+
+            if scope not in audits:
+                audits[scope] = audit
+                audit.to_csv(
+                    output_dir / f"regime_assignment_{scope}.csv",
+                    index=False,
+                )
+            else:
+                pd.testing.assert_frame_equal(
+                    audits[scope],
+                    audit,
+                    check_dtype=False,
+                )
+
+            selected = (
+                labelled
+                if scope == "full"
+                else labelled[
+                    labelled["regime"].isin(REGIME_ORDER)
                 ]
-            ].to_csv(
-                rolling_path,
-                index=False,
             )
 
-            rolling_paths.append(rolling_path.name)
+            group_keys = ["region", "configuration", "seed"]
+            total_counts = labelled.groupby(
+                group_keys
+            ).size()
+
+            for key, group in selected.groupby(group_keys):
+                row = dict(zip(group_keys, key))
+                row["scope"] = scope
+                row["n_total"] = int(total_counts.loc[key])
+                row["n_included"] = len(group)
+
+                for regime in REGIME_ORDER:
+                    row[f"n_{regime}"] = int(
+                        group["regime"].eq(regime).sum()
+                    )
+
+                if scope == "full":
+                    if row["n_included"] != row["n_total"]:
+                        raise RuntimeError("Full-stream rows were excluded.")
+                    if sum(
+                        row[f"n_{regime}"] for regime in REGIME_ORDER
+                    ) != row["n_total"]:
+                        raise RuntimeError("Full-stream regimes are incomplete.")
+
+                counts.append(row)
+
+            metrics_by_scope[scope].append(
+                calculate_seed_metrics(selected, alpha=args.alpha)
+            )
+            del selected, labelled
 
         del forecasts
-        del seed_metrics
-        del regime_audit
 
-    seed_metrics = pd.concat(
-        all_seed_metrics,
-        ignore_index=True,
-    )
+    for scope in ("full", "local"):
+        seed_metrics = pd.concat(
+            metrics_by_scope[scope],
+            ignore_index=True,
+        )
+        table = aggregate_t3(
+            seed_metrics,
+            expected_seeds=args.seeds,
+        )
 
-    regime_audit = pd.concat(
-        all_regime_audits,
-        ignore_index=True,
-    ).drop_duplicates().sort_values(
-        [
-            "region",
-            "SETTLEMENTDATE",
+        # Match the required seven-column T3 schema.
+        table["arm"] = table["arm_label"]
+        table = table[
+            [
+                "arm",
+                "region",
+                "MAE pre-drift",
+                "MAE drift",
+                "MAE post-drift",
+                "pinball loss",
+                "seeds",
+            ]
         ]
-    )
 
-    t3 = aggregate_t3(
-        seed_metrics,
-        expected_seeds=args.seeds,
-    )
+        table.to_csv(
+            output_dir / f"t3_{scope}.csv",
+            index=False,
+        )
+        seed_metrics.to_csv(
+            output_dir / f"t3_seed_metrics_{scope}.csv",
+            index=False,
+        )
 
-    seed_metrics.to_csv(
-        output_dir / "t3_seed_level_metrics.csv",
+        headers = list(table.columns)
+        lines = [
+            f"# T3 — {scope} forecast accuracy by regime",
+            "",
+            "| " + " | ".join(headers) + " |",
+            "| " + " | ".join(["---"] * len(headers)) + " |",
+        ]
+        for values in table.itertuples(index=False, name=None):
+            lines.append(
+                "| " + " | ".join(map(str, values)) + " |"
+            )
+
+        (output_dir / f"t3_{scope}.md").write_text(
+            "\n".join(lines) + "\n",
+            encoding="utf-8",
+        )
+
+        print(f"\nT3 — {scope}")
+        print(table.to_string(index=False))
+
+    pd.DataFrame(counts).to_csv(
+        output_dir / "regime_observation_counts.csv",
         index=False,
     )
 
-    t3.to_csv(
-        output_dir / "t3_forecast_accuracy_by_regime.csv",
-        index=False,
-    )
-
-    regime_audit.to_csv(
-        output_dir / "forecast_regime_assignment_audit.csv",
-        index=False,
-    )
+    import hashlib
 
     manifest = {
-        "events_path": str(args.events.resolve()),
         "seeds": args.seeds,
         "regime_days": args.regime_days,
-        "alpha": args.alpha,
-        "rolling_window": ROLLING_WINDOW,
-        "rolling_mae_written": args.write_rolling_mae,
-        "rolling_mae_files": rolling_paths,
-        "pinball_method": (
-            "mean of lower q=alpha/2 and upper "
-            "q=1-alpha/2 pinball losses"
+        "timezone": "Etc/GMT-10",
+        "boundary": "left_closed_right_open",
+        "full_rule": (
+            "pre before first buffered window; drift inside union "
+            "of buffered windows; post elsewhere after first window"
         ),
+        "event_selection": (
+            "NEM plus region-specific events; full-stream buffered "
+            "windows must overlap evaluated stream"
+        ),
+        "local_rule": (
+            "7-day pre; documented event drift; 7-day post; "
+            "outside excluded; priority drift > pre > post"
+        ),
+        "pinball_scope": {
+            "full": "all test timestamps",
+            "local": "union of included local timestamps",
+        },
         "interval_method": (
-            "seed-specific fixed conformal radius around "
-            "each adaptation point forecast"
+            "seed-specific fixed regional conformal radius "
+            "transferred to each adaptation point forecast"
         ),
+        "alpha": args.alpha,
+        "standard_deviation": "sample, ddof=1",
         "primary_configurations": PRIMARY_CONFIGURATIONS,
+        "selection_note": (
+            "Primary configurations retained from previous analysis; "
+            "not newly selected using these regime results."
+        ),
+        "events_sha256": hashlib.sha256(
+            args.events.read_bytes()
+        ).hexdigest(),
+        "generator_sha256": hashlib.sha256(
+            Path(__file__).read_bytes()
+        ).hexdigest(),
+        "rolling_mae": (
+            "Not regenerated; rolling errors do not change when "
+            "only regime labels change."
+        ),
     }
 
     (output_dir / "t3_manifest.json").write_text(
@@ -674,10 +747,7 @@ def main():
         encoding="utf-8",
     )
 
-    print()
-    print("T3 generation complete.")
-    print()
-    print(t3.to_string(index=False))
+    print(f"\nBoth T3 tables saved to: {output_dir}")
 
 
 if __name__ == "__main__":
