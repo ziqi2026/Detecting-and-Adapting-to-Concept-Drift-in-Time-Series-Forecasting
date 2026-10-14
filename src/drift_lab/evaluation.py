@@ -1491,3 +1491,102 @@ def calculate_adaptation_gain(arm_drift_mae, arm_a_drift_mae, n_retrains):
         "drift_mae_difference_vs_arm_a": float(difference),
         "drift_mae_difference_per_retrain": float(difference_per_retrain),
     }
+
+def assign_full_stream_forecast_regimes(timestamps, event_windows):
+    """
+    Assign every timestamp to pre-drift, drift, or post-drift.
+
+    Buffered drift windows:
+        [event_start - 7 days, event_end + 1 day + 7 days)
+
+    Uses the pre_drift_start and post_drift_end columns produced by
+    build_forecast_event_windows(). Only windows overlapping the
+    evaluated stream are applicable.
+
+    Overlapping windows are classified as a union.
+    """
+    required = {
+        "event_id",
+        "pre_drift_start",
+        "post_drift_end",
+    }
+    missing = required - set(event_windows.columns)
+    if missing:
+        raise ValueError(
+            f"event_windows is missing columns: {sorted(missing)}"
+        )
+
+    timestamps = pd.DatetimeIndex(
+        pd.to_datetime(timestamps, errors="raise")
+    )
+    if timestamps.empty or timestamps.isna().any():
+        raise ValueError("Forecast timestamps must be nonempty and valid.")
+
+    if timestamps.tz is None:
+        timestamps = timestamps.tz_localize(AEMO_TIMEZONE)
+    else:
+        timestamps = timestamps.tz_convert(AEMO_TIMEZONE)
+
+    windows = event_windows.copy()
+    for column in ("pre_drift_start", "post_drift_end"):
+        values = pd.DatetimeIndex(
+            pd.to_datetime(windows[column], errors="raise")
+        )
+        if values.tz is None:
+            values = values.tz_localize(AEMO_TIMEZONE)
+        else:
+            values = values.tz_convert(AEMO_TIMEZONE)
+        windows[column] = values
+
+    if (
+        windows["post_drift_end"] <= windows["pre_drift_start"]
+    ).any():
+        raise ValueError("Buffered event windows must have positive duration.")
+
+    stream_start = timestamps.min()
+    stream_last = timestamps.max()
+
+    windows = windows[
+        (windows["post_drift_end"] > stream_start)
+        & (windows["pre_drift_start"] <= stream_last)
+    ].sort_values(["pre_drift_start", "event_id"])
+
+    if windows.empty:
+        raise ValueError(
+            "No buffered event windows overlap the forecast stream. "
+            "Check catalogue dates and stream coverage."
+        )
+
+    first_window_start = windows["pre_drift_start"].min()
+
+    labels = np.where(
+        timestamps < first_window_start,
+        "pre-drift",
+        "post-drift",
+    ).astype(object)
+
+    event_ids = np.full(len(timestamps), "", dtype=object)
+
+    for event in windows.itertuples(index=False):
+        mask = (
+            (timestamps >= event.pre_drift_start)
+            & (timestamps < event.post_drift_end)
+        )
+        labels[mask] = "drift"
+
+        # Retain all matching IDs for overlap auditing.
+        for position in np.flatnonzero(mask):
+            existing = event_ids[position]
+            event_ids[position] = (
+                f"{existing};{event.event_id}"
+                if existing
+                else str(event.event_id)
+            )
+
+    return pd.DataFrame(
+        {
+            "SETTLEMENTDATE": timestamps,
+            "regime": labels,
+            "event_id": event_ids,
+        }
+    )
