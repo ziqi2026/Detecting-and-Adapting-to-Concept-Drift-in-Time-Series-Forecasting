@@ -38,6 +38,58 @@ T5_COLUMNS = ("UQ method", "regime", "coverage", "mean width",
 GROUP = "t5_uncertainty"
 
 
+def is_simulation(protocol):
+    """Recognise the existing synthetic arithmetic fixture only."""
+    return protocol["protocol_id"] == "synthetic-test-only"
+
+
+def minimum_windows(protocol):
+    """AEMO requires an explicit reporting threshold; the fixture keeps one."""
+    value = protocol.get("minimum_complete_24h_windows", 1 if is_simulation(protocol) else None)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError("Set minimum_complete_24h_windows to an agreed positive integer.")
+    return value
+
+
+def training_demand_mean(source, start, end_exclusive):
+    """Calculate mean actual demand from a regional source within TRAIN only."""
+    frame = pd.read_csv(source, usecols=["SETTLEMENTDATE", "TOTALDEMAND"])
+    timestamps = frame.SETTLEMENTDATE.map(aemo_timestamp)
+    if timestamps.isna().any() or timestamps.duplicated().any():
+        raise ValueError("Training source has missing or duplicate timestamps.")
+    start, end = aemo_timestamp(start), aemo_timestamp(end_exclusive)
+    if start >= end:
+        raise ValueError("Training window must have start < end_exclusive.")
+    actual = frame.loc[(timestamps >= start) & (timestamps < end), "TOTALDEMAND"].to_numpy(dtype=float)
+    if not len(actual) or not np.isfinite(actual).all():
+        raise ValueError("Training actual demand must be nonempty and finite.")
+    value = float(actual.mean())
+    if value <= 0:
+        raise ValueError("Training mean actual demand must be positive.")
+    return value, len(actual)
+
+
+def verify_aemo_normalisation(protocol):
+    """Verify fixed regional TRAIN means and their source hashes before logging."""
+    if is_simulation(protocol):
+        return
+    window = protocol.get("training_window", {})
+    if not {"start", "end_exclusive"} <= window.keys():
+        raise ValueError("AEMO needs training_window start and end_exclusive.")
+    if (aemo_timestamp(window["start"]), aemo_timestamp(window["end_exclusive"])) != (
+            aemo_timestamp("2018-01-01"), aemo_timestamp("2020-01-01")):
+        raise ValueError("Use the agreed AEMO TRAIN window [2018-01-01, 2020-01-01).")
+    for region in REGIONS:
+        scale = protocol["normalisation"][region]
+        if scale["statistic"] != "training_mean_actual_demand":
+            raise ValueError("AEMO denominator must be training_mean_actual_demand.")
+        if digest(scale["source"]) != scale["source_sha256"]:
+            raise ValueError(f"Training source hash mismatch for {region}.")
+        actual_mean, _ = training_demand_mean(scale["source"], **window)
+        if not np.isclose(scale["value"], actual_mean, rtol=1e-12, atol=1e-12):
+            raise ValueError(f"Denominator differs from TRAIN mean actual demand for {region}.")
+
+
 def digest(path):
     with Path(path).open("rb") as stream:
         result = hashlib.file_digest(stream, "sha256") if hasattr(hashlib, "file_digest") else None
@@ -63,6 +115,7 @@ def validate_protocol(protocol):
         raise ValueError(f"Missing explicit protocol fields: {sorted(required - protocol.keys())}")
     if not protocol["protocol_id"]:
         raise ValueError("protocol_id is required.")
+    minimum_windows(protocol)
     if protocol["regime_scope"] not in {"full", "event-local"}:
         raise ValueError("regime_scope must be full or event-local.")
     if protocol["regime_days"] != 7:
@@ -121,6 +174,7 @@ def evaluate_stream(frame, labels, *, scale, protocol):
         boundary_policy=protocol["rolling_boundary"],
     ).to_numpy()
     rows = []
+    required_windows = minimum_windows(protocol)
     for regime in REGIMES:
         mask = np.asarray(labels) == regime
         subset = frame.loc[mask]
@@ -133,10 +187,14 @@ def evaluate_stream(frame, labels, *, scale, protocol):
                 mean_interval_width=calculate_mean_interval_width(subset.lower, subset.upper),
                 normalised_interval_width=calculate_normalised_interval_width(
                     subset.lower, subset.upper, scale=scale),
-                worst_24h_coverage=float(valid.min()) if len(valid) else float("nan"),
+                worst_24h_coverage=float(valid.min()) if len(valid) >= required_windows else float("nan"),
             )
         rows.append({"regime": regime, "n_observations": len(subset),
-                     "n_eligible_24h_windows": len(valid), **values})
+                     "n_eligible_24h_windows": len(valid),
+                     "minimum_complete_24h_windows": required_windows,
+                     "worst_window_status": ("no_complete_windows" if not len(valid) else
+                         "insufficient_windows" if len(valid) < required_windows else "sufficient"),
+                     **values})
     return rows
 
 
@@ -154,6 +212,40 @@ def aggregate(logs):
                            f"{values.mean():.8f} ± {values.std(ddof=1):.8f}")
         rows.append(row)
     return pd.DataFrame(rows, columns=T5_COLUMNS)
+
+
+def write_table_report(output_dir, region, configuration, table, audit, protocol):
+    """Keep the six-column CSV while publishing its caption and window support."""
+    scale = protocol["normalisation"][region]
+    selected = audit[(audit.region == region) &
+                     audit.method.eq(configuration + "|static_conformal")].sort_values(["regime", "seed"])
+    # Eligibility depends on timestamps/regimes, not interval coverage or UQ method.
+    comparison = audit[(audit.region == region) &
+                       audit.method.eq(configuration + "|adaptive_conformal")]
+    counts = selected.merge(comparison, on=["region", "regime", "seed"], suffixes=("_static", "_adaptive"))
+    if not (counts.n_eligible_24h_windows_static == counts.n_eligible_24h_windows_adaptive).all():
+        raise ValueError("Static/adaptive complete-window counts differ.")
+    caption = (f"T5 — {region}, {configuration}. Normalised width denominator: "
+               f"{scale['value']:.17g} ({scale['statistic']}); fixed across all methods, seeds and regimes.")
+    if not is_simulation(protocol):
+        window = protocol["training_window"]
+        caption += f" TRAIN actual demand in MW, [{window['start']}, {window['end_exclusive']}) in fixed AEST."
+    else:
+        caption += " Synthetic demonstration only."
+    lines = [f"# T5 — {region} / {configuration}", "", caption, "",
+             "| " + " | ".join(T5_COLUMNS) + " |",
+             "| " + " | ".join(["---"] * len(T5_COLUMNS)) + " |"]
+    lines += ["| " + " | ".join(map(str, row)) + " |" for row in table.itertuples(index=False, name=None)]
+    lines += ["", "## Complete 24-hour windows", "",
+              f"Minimum required per seed/regime: {minimum_windows(protocol)}. "
+              "Worst coverage is N/A if any seed has too few windows. "
+              "Counts are identical for static and adaptive intervals. "
+              "These overlapping rolling windows are not independent samples.", "",
+              "| Regime | Seed | Complete windows | Worst-window status |",
+              "| --- | --- | --- | --- |"]
+    lines += [f"| {row.regime} | {row.seed} | {row.n_eligible_24h_windows} | {row.worst_window_status} |"
+              for row in selected.itertuples()]
+    (output_dir / f"T5_{region}_{configuration}.md").write_text("\n".join(lines) + "\n")
 
 
 def append_logs_safely(rows, runs_path):
@@ -201,6 +293,7 @@ def append_logs_safely(rows, runs_path):
 
 def generate(run_dir, events_path, output_dir, runs_path, protocol):
     validate_protocol(protocol)
+    verify_aemo_normalisation(protocol)
     preflight(run_dir)
     output_dir = Path(output_dir)
     if output_dir.exists():
@@ -302,12 +395,15 @@ def generate(run_dir, events_path, output_dir, runs_path, protocol):
                               on=list(identities[0]), how="inner", validate="many_to_one")
     output_dir.mkdir(parents=True)
     selected.to_csv(output_dir / "t5_seed_metrics.csv", index=False)
-    pd.DataFrame(audit).to_csv(output_dir / "t5_window_audit.csv", index=False)
+    audit_frame = pd.DataFrame(audit)
+    audit_frame.to_csv(output_dir / "t5_window_audit.csv", index=False)
     for region in REGIONS:
         for config in protocol["configurations"]:
             subset = selected[(selected.region == region) &
                               selected.method.str.startswith(config + "|")]
-            aggregate(subset).to_csv(output_dir / f"T5_{region}_{config}.csv", index=False)
+            table = aggregate(subset)
+            table.to_csv(output_dir / f"T5_{region}_{config}.csv", index=False)
+            write_table_report(output_dir, region, config, table, audit_frame, protocol)
     (output_dir / "t5_manifest.json").write_text(json.dumps({
         "protocol": protocol, "sources": sources, "events_sha256": digest(events_path),
         "runs_path": str(Path(runs_path).resolve()), "runs_sha256": digest(runs_path),

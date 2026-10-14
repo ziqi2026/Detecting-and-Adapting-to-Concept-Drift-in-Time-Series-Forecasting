@@ -21,8 +21,12 @@ synthetic zeros; both methods cover every observation by construction. Thus
 
 **These conventions can be changed after team feedback.** The fixed scale 10
 is only a synthetic fixture parameter and must not be reused as an AEMO
-normalisation denominator. A formal run needs explicit regional scale values
-with source/statistic/hash provenance and agreement on regime/window policy.
+normalisation denominator. For AEMO, the supervisor requires each region's mean actual demand in TRAIN
+[2018-01-01, 2020-01-01) as the fixed denominator. Formal runs verify the
+regional source/hash and mean, state the numeric value in each table caption,
+and publish complete-window counts per seed/regime. An explicitly agreed
+minimum window count is required; below-threshold worst coverage is N/A.
+Regime/window policy and the numeric support threshold still need agreement.
 Changing those rules requires regenerating the affected tables and logging a
 new protocol identity; it does not require model retraining.
 

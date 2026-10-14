@@ -227,3 +227,63 @@ def test_aggregation_does_not_silently_drop_missing_seed():
         for seed in range(1,5) for metric in t5.METRICS])
     with pytest.raises(ValueError, match="seeds"):
         t5.aggregate(frame)
+
+
+def test_training_mean_excludes_calibration_and_test(tmp_path):
+    source = tmp_path / "SA1.csv"
+    pd.DataFrame({
+        "SETTLEMENTDATE": ["2018-01-01", "2019-12-31 23:30", "2020-01-01", "2020-03-01"],
+        "TOTALDEMAND": [100., 300., 9000., 9999.],
+    }).to_csv(source, index=False)
+    value, count = t5.training_demand_mean(source, "2018-01-01", "2020-01-01")
+    assert value == 200. and count == 2
+
+
+def test_aemo_requires_window_support_threshold():
+    p = protocol(pd.date_range("2020-03-01", periods=60, freq="30min"))
+    p["protocol_id"] = "aemo-t5-training-mean-v1"
+    with pytest.raises(ValueError, match="minimum_complete"):
+        t5.validate_protocol(p)
+
+
+def test_too_few_complete_windows_masks_only_worst_metric():
+    index = pd.date_range("2020-03-01", periods=49, freq="30min")
+    p = protocol(index)
+    p["minimum_complete_24h_windows"] = 3
+    frame = pd.DataFrame(dict(SETTLEMENTDATE=index, y_true=0., lower=-1., upper=1.))
+    row = t5.evaluate_stream(frame, ["drift"] * len(index), scale=10, protocol=p)[1]
+    assert row["n_eligible_24h_windows"] == 2
+    assert row["worst_window_status"] == "insufficient_windows"
+    assert np.isnan(row["worst_24h_coverage"])
+    assert row["empirical_coverage"] == 1
+    p["minimum_complete_24h_windows"] = 2
+    row = t5.evaluate_stream(frame, ["drift"] * len(index), scale=10, protocol=p)[1]
+    assert row["worst_24h_coverage"] == 1
+    assert row["worst_window_status"] == "sufficient"
+
+
+def test_aemo_scales_must_match_regional_training_means(tmp_path):
+    p = protocol(pd.date_range("2020-03-01", periods=60, freq="30min"))
+    p.update(protocol_id="aemo-t5-training-mean-v1", minimum_complete_24h_windows=5,
+             training_window={"start": "2018-01-01", "end_exclusive": "2020-01-01"})
+    for region, value in [("SA1", 100.), ("NSW1", 500.)]:
+        source = tmp_path / f"{region}.csv"
+        pd.DataFrame(dict(SETTLEMENTDATE=["2018-01-01", "2020-01-01"],
+                          TOTALDEMAND=[value, 99999.])).to_csv(source, index=False)
+        p["normalisation"][region] = dict(value=value, statistic="training_mean_actual_demand",
+            source=str(source), source_sha256=t5.digest(source))
+    t5.verify_aemo_normalisation(p)
+    p["normalisation"]["NSW1"]["value"] = 100.
+    with pytest.raises(ValueError, match="TRAIN mean"):
+        t5.verify_aemo_normalisation(p)
+
+
+def test_caption_and_window_counts_are_published(tmp_path):
+    inputs, p = make_inputs(tmp_path)
+    t5.generate(inputs, ROOT / "data/events.csv", tmp_path / "out", tmp_path / "runs.csv", p)
+    report = (tmp_path / "out/T5_SA1_A.md").read_text()
+    assert "denominator: 10" in report
+    assert "Complete 24-hour windows" in report
+    assert "| drift | 1 |" in report
+    audit = pd.read_csv(tmp_path / "out/t5_window_audit.csv")
+    assert set(audit.worst_window_status) == {"sufficient"}

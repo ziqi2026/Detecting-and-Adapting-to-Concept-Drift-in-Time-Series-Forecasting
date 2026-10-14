@@ -25,8 +25,13 @@ have been generated. No models were retrained.
 
 The source requirements specify six columns, nominal 90% coverage, regime
 reporting, five seeds, mean plus sample SD, and runs.csv traceability.
-docs/decisions.md does not define the width denominator or T5 rolling policy.
-The source PDFs do not define these either.
+The supervisor has specified the AEMO width denominator: the mean actual
+TOTALDEMAND in the TRAIN window, computed separately for SA1 and NSW1 and
+held fixed across methods, configurations, seeds and regimes. The generator
+verifies each configured value against its hashed regional data source using
+TRAIN only: [2018-01-01, 2020-01-01), fixed AEST. Calibration/TEST values are
+excluded. Each generated Markdown table caption reports the numeric regional
+denominator in MW and the training window. Simulation retains scale 10.
 
 Current T3 supports two explicitly different scopes:
 
@@ -44,11 +49,17 @@ Selecting which scope is the official T5 scope remains a team decision.
 The generator requires a supplied protocol JSON. It makes no claim that the
 following choices have already been agreed:
 
-- normalisation: one positive fixed regional scale, with statistic, source and
-  source SHA256. Shared across methods, seeds, configurations and regimes.
-  Values and provenance must be supplied; they are recorded, not independently
-  derived or verified by this generator. A TRAIN-only regional statistic is a
-  reasonable proposal, but no TRAIN range/SD/IQR has been chosen here.
+- normalisation: `training_mean_actual_demand`, one positive TRAIN mean per
+  region, with source and SHA256. The generator recalculates and verifies it;
+  arbitrary ranges/SDs or manually entered inconsistent values are rejected.
+  The existing `synthetic-test-only` fixture is the sole exception (scale 10).
+- window support: AEMO protocols must explicitly set a positive integer
+  `minimum_complete_24h_windows`. The supervisor has not specified the numeric
+  threshold, so no AEMO default is assumed. Regimes with fewer complete windows
+  are marked `insufficient_windows` and their reported worst coverage is N/A.
+  Zero windows are marked `no_complete_windows`. Counts/status are reported for
+  every seed/regime, with no pooling or silent dropping of seeds. The fixture
+  keeps its existing threshold of one and its simulation values are unchanged.
 - rolling attribution: within_regime (every observation must share the label)
   or ending_regime (a full window may cross boundaries, attributed to its end).
 - scope: full or event-local.
@@ -62,13 +73,17 @@ Supported rolling convention is explicitly selected by the protocol:
 48 half-hour intervals even though the first-to-last timestamp separation is
 23h30min. Only complete contiguous windows qualify. Missing or irregular
 timestamps invalidate windows; duplicated or unsorted timestamps are rejected.
-An incomplete regime has NaN worst coverage, rendered N/A. The generator
+A regime below the explicit window-support threshold has NaN worst coverage,
+rendered N/A. Rolling windows overlap; their count is not an independent-sample
+count and a large count alone does not establish statistical reliability. The generator
 rejects missing timestamps against the full test grid rather than silently
 evaluating a smaller test population.
 
 ## Required protocol JSON
 
-Create a protocol using the team's actual choices. The following is a template,
+Create a protocol using the supervisor's training-mean denominator and the
+team's remaining actual choices. The window-count threshold must be agreed
+and supplied; null below deliberately fails validation. The following is a template,
 not a runnable or approved protocol (placeholders deliberately fail validation):
 
 ```json
@@ -76,6 +91,8 @@ not a runnable or approved protocol (placeholders deliberately fail validation):
   "protocol_id": "TEAM-SUPPLIED-ID",
   "regime_scope": "TEAM-SELECTS-full-OR-event-local",
   "regime_days": 7,
+  "training_window": {"start": "2018-01-01", "end_exclusive": "2020-01-01"},
+  "minimum_complete_24h_windows": null,
   "rolling_boundary": "TEAM-SELECTS-within_regime-OR-ending_regime",
   "rolling_closed": "right",
   "incomplete_windows": "exclude",
@@ -85,9 +102,9 @@ not a runnable or approved protocol (placeholders deliberately fail validation):
   "test_end": "ACTUAL-LAST-TEST-TIMESTAMP",
   "configurations": ["EXPLICIT-CONFIGURATIONS-FROM-EXPERIMENT"],
   "normalisation": {
-    "SA1": {"value": null, "statistic": "TEAM-SUPPLIED",
+    "SA1": {"value": null, "statistic": "training_mean_actual_demand",
             "source": "REFERENCE-ARTIFACT", "source_sha256": "ACTUAL-SHA256"},
-    "NSW1": {"value": null, "statistic": "TEAM-SUPPLIED",
+    "NSW1": {"value": null, "statistic": "training_mean_actual_demand",
              "source": "REFERENCE-ARTIFACT", "source_sha256": "ACTUAL-SHA256"}
   }
 }
@@ -130,8 +147,11 @@ If any seed is undefined, the displayed cell is N/A; no four-seed result is
 silently substituted. Coverage and SD use fractions; width uses MW.
 
 t5_seed_metrics.csv snapshots the exact selected runs.csv rows.
-t5_window_audit.csv records seed-level metrics, observation and valid-window
-counts. t5_manifest.json records protocol, source hashes, upstream identities,
+t5_window_audit.csv records seed-level metrics, observation counts, complete
+window counts, the support threshold, and worst-window status. Each
+T5_<region>_<configuration>.md contains a numeric denominator caption, the
+same six-column table and complete-window counts/status for every seed/regime.
+The CSV schema remains exactly six columns. t5_manifest.json records protocol, source hashes, upstream identities,
 scale provenance, catalogue hash and log hash. The evaluation config_hash
 incorporates source, UQ configuration, catalogue and protocol.
 wall_clock_s=0 documents that T5 does not record a new training run.
@@ -142,7 +162,8 @@ Tests use synthetic fixtures only; their tables are never real project results.
 
 Command: PYTHONPATH=src python -m pytest -q tests/uncertainty tests/test_t3_evaluation.py
 
-Result: 41 passed. Includes independently enumerated 48-point coverage,
+Result: 46 passed after adding TRAIN-mean verification, caption/window-count
+reporting, explicit AEMO threshold and sparse-window tests. Includes independently enumerated 48-point coverage,
 right-open exclusion at t-24h, gaps, irregular cadence, DST-aware conversion,
 duplicate/unsorted/missing timestamp rejection, disjoint regime segments,
 overlap union, five-seed sample SD, full end-to-end synthetic generation,
