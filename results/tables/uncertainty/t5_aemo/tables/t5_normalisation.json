@@ -1,0 +1,22 @@
+{
+  "training_window": {
+    "start": "2018-01-01",
+    "end_exclusive": "2020-01-01"
+  },
+  "normalisation": {
+    "SA1": {
+      "value": 1300.8730537401182,
+      "statistic": "training_mean_actual_demand",
+      "source": "../drift-t5-data/data/raw/SA1",
+      "source_sha256": "4f74f9058df051bb91f96544d3d69d909171a5fc4017e93f8930ee08f6bde142",
+      "n_training_observations": 35039
+    },
+    "NSW1": {
+      "value": 7982.25166471646,
+      "statistic": "training_mean_actual_demand",
+      "source": "../drift-t5-data/data/raw/NSW1",
+      "source_sha256": "3fd4fe740ffa8a810993e5963d07a25d25b8cd86ed70b0d3356bba67a0a4e093",
+      "n_training_observations": 35039
+    }
+  }
+}
