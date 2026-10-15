@@ -14,6 +14,7 @@ from pathlib import Path
 import re
 import sys
 import tempfile
+import time
 
 import numpy as np
 import pandas as pd
@@ -163,7 +164,14 @@ def validate_protocol(protocol):
     if protocol["regime_scope"] not in {"full", "event-local"}:
         raise ValueError("regime_scope must be full or event-local.")
     if protocol["regime_days"] != 7:
-        raise ValueError("Shared T3 buffers are seven days.")
+        raise ValueError("regime_days must remain seven days.")
+    if protocol["regime_scope"] == "full":
+        if (protocol.get("pre_event_buffer_days"),
+            protocol.get("post_event_grace_days")) != (0, 7):
+            raise ValueError(
+                "Full-stream T5 requires explicit pre_event_buffer_days=0 "
+                "and post_event_grace_days=7."
+            )
     if protocol["rolling_boundary"] not in {"within_regime", "ending_regime"}:
         raise ValueError("Unsupported rolling_boundary.")
     if (protocol["rolling_closed"], protocol["incomplete_windows"],
@@ -381,7 +389,9 @@ def generate_uncertainty_tables(run_dir, events_path, output_dir, runs_path, pro
             if set(frame.configuration) != set(protocol["configurations"]):
                 raise ValueError("Interval configurations differ from explicit protocol.")
             frame["SETTLEMENTDATE"] = frame.SETTLEMENTDATE.map(aemo_timestamp)
-            windows = build_forecast_event_windows(events_path, region, regime_days=7)
+            windows = build_forecast_event_windows(
+                events_path, region, regime_days=protocol["regime_days"]
+            )
             assign = (assign_full_stream_forecast_regimes if protocol["regime_scope"] == "full"
                       else assign_forecast_regimes)
             labels = assign(expected, windows).regime.to_numpy()
@@ -426,15 +436,21 @@ def generate_uncertainty_tables(run_dir, events_path, output_dir, runs_path, pro
                                     dataset="AEMO_TOTALDEMAND", region=region, seed=seed,
                                     config_hash=evaluation_hash, split_id=split_id)
                     identities.append(identity)
-                    for evaluated in evaluate_interval_stream_by_regime(bounds, labels,
-                            scale=protocol["normalisation"][region]["value"], protocol=protocol):
+                    evaluation_started = time.perf_counter()
+                    regime_metrics = evaluate_interval_stream_by_regime(
+                        bounds, labels,
+                        scale=protocol["normalisation"][region]["value"],
+                        protocol=protocol,
+                    )
+                    evaluation_seconds = time.perf_counter() - evaluation_started
+                    for evaluated in regime_metrics:
                         audit.append({**identity, **evaluated})
                         for metric in METRICS:
                             rows.append({**identity, "regime": evaluated["regime"],
                                          "metric_name": metric, "metric_value": evaluated[metric],
                                          "n_retrains": int(meta.n_retrains),
                                          "train_samples": int(meta.train_samples_total),
-                                         "wall_clock_s": 0.0})
+                                         "wall_clock_s": evaluation_seconds})
     # Data validation is complete before any writes.
     recorded = append_run_metrics_safely(rows, runs_path)
     selected = recorded.merge(pd.DataFrame(identities).drop_duplicates(),
@@ -461,7 +477,9 @@ def generate_uncertainty_tables(run_dir, events_path, output_dir, runs_path, pro
         "metric_count": len(rows), "sd_ddof": 1,
         "units": "coverage fractions; mean width MW; normalised width dimensionless",
         "undefined": "N/A if any seed lacks observations or a qualifying full 24h window",
-        "logging": "wall_clock_s=0: T5 evaluation does not rerun model training",
+        "logging": ("wall_clock_s measures metric evaluation per seed/region/configuration/UQ method; "
+                    "repeated across its metric/regime rows, not additive. "
+                    "Excludes input loading, export and upstream model training."),
     }, indent=2) + "\n")
     return pd.DataFrame(audit)
 

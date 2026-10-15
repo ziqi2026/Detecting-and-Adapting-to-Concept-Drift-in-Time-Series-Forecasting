@@ -1570,18 +1570,20 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
     """
     Assign every timestamp to pre-drift, drift, or post-drift.
 
-    Buffered drift windows:
-        [event_start - 7 days, event_end + 1 day + 7 days)
+    Event and post-event grace windows:
+        [event_start, event_end + 1 day + regime_days)
 
-    Uses the pre_drift_start and post_drift_end columns produced by
+    Uses the drift_start and post_drift_end columns produced by
     build_forecast_event_windows(). Only windows overlapping the
     evaluated stream are applicable.
 
+    No pre-event buffer is included. Before the first applicable event
+    is pre-drift; gaps after it remain post-drift.
     Overlapping windows are classified as a union.
     """
     required = {
         "event_id",
-        "pre_drift_start",
+        "drift_start",
         "post_drift_end",
     }
     missing = required - set(event_windows.columns)
@@ -1602,7 +1604,7 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
         timestamps = timestamps.tz_convert(AEMO_TIMEZONE)
 
     windows = event_windows.copy()
-    for column in ("pre_drift_start", "post_drift_end"):
+    for column in ("drift_start", "post_drift_end"):
         values = pd.DatetimeIndex(
             pd.to_datetime(windows[column], errors="raise")
         )
@@ -1613,28 +1615,28 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
         windows[column] = values
 
     if (
-        windows["post_drift_end"] <= windows["pre_drift_start"]
+        windows["post_drift_end"] <= windows["drift_start"]
     ).any():
-        raise ValueError("Buffered event windows must have positive duration.")
+        raise ValueError("Event and grace windows must have positive duration.")
 
     stream_start = timestamps.min()
     stream_last = timestamps.max()
 
     windows = windows[
         (windows["post_drift_end"] > stream_start)
-        & (windows["pre_drift_start"] <= stream_last)
-    ].sort_values(["pre_drift_start", "event_id"])
+        & (windows["drift_start"] <= stream_last)
+    ].sort_values(["drift_start", "event_id"])
 
     if windows.empty:
         raise ValueError(
-            "No buffered event windows overlap the forecast stream. "
+            "No event or grace windows overlap the forecast stream. "
             "Check catalogue dates and stream coverage."
         )
 
-    first_window_start = windows["pre_drift_start"].min()
+    first_event_start = windows["drift_start"].min()
 
     labels = np.where(
-        timestamps < first_window_start,
+        timestamps < first_event_start,
         "pre-drift",
         "post-drift",
     ).astype(object)
@@ -1643,7 +1645,7 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
 
     for event in windows.itertuples(index=False):
         mask = (
-            (timestamps >= event.pre_drift_start)
+            (timestamps >= event.drift_start)
             & (timestamps < event.post_drift_end)
         )
         labels[mask] = "drift"

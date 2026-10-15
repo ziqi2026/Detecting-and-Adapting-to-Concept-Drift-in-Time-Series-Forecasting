@@ -1,0 +1,54 @@
+{
+  "protocol_id": "aemo-t5-full-within-regime-post-event-grace-v2",
+  "regime_scope": "full",
+  "regime_days": 7,
+  "rolling_boundary": "within_regime",
+  "rolling_closed": "right",
+  "incomplete_windows": "exclude",
+  "cadence": "30min",
+  "granularity": "region_configuration",
+  "configurations": [
+    "A",
+    "B",
+    "C_adwin",
+    "C_kswin",
+    "C_page_hinkley",
+    "D_120d_adwin",
+    "D_120d_kswin",
+    "D_120d_page_hinkley",
+    "D_180d_adwin",
+    "D_180d_kswin",
+    "D_180d_page_hinkley",
+    "D_30d_adwin",
+    "D_30d_kswin",
+    "D_30d_page_hinkley",
+    "D_60d_adwin",
+    "D_60d_kswin",
+    "D_60d_page_hinkley"
+  ],
+  "test_start": "2020-03-01 00:00:00",
+  "test_end": "2024-01-01 00:00:00",
+  "minimum_complete_24h_windows": 10,
+  "training_window": {
+    "start": "2018-01-01",
+    "end_exclusive": "2020-01-01"
+  },
+  "normalisation": {
+    "SA1": {
+      "value": 1300.8730537401182,
+      "statistic": "training_mean_actual_demand",
+      "source": "../drift-t5-data/data/raw/SA1",
+      "source_sha256": "4f74f9058df051bb91f96544d3d69d909171a5fc4017e93f8930ee08f6bde142",
+      "n_training_observations": 35039
+    },
+    "NSW1": {
+      "value": 7982.25166471646,
+      "statistic": "training_mean_actual_demand",
+      "source": "../drift-t5-data/data/raw/NSW1",
+      "source_sha256": "3fd4fe740ffa8a810993e5963d07a25d25b8cd86ed70b0d3356bba67a0a4e093",
+      "n_training_observations": 35039
+    }
+  },
+  "pre_event_buffer_days": 0,
+  "post_event_grace_days": 7
+}

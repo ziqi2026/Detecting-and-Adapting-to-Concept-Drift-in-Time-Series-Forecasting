@@ -11,36 +11,36 @@ with 67,249 consecutive half-hour observations per configuration, from
 Input checks passed for manifest seed/run/split identities, finite ordered
 bounds, continuous unique timestamps, identical truth/grid across seeds and
 configurations, stored coverage flags and widths, and recomputed full-test
-coverage/mean width versus upstream summaries. The target is TOTALDEMAND in MW. A complete real AEMO T5 run has now been
-uploaded; the input audit remains separate from the scope of numerical review.
+coverage/mean width versus upstream summaries. The target is TOTALDEMAND in MW. A complete real AEMO T5 run has been generated locally; the input audit remains separate from the scope of numerical review.
 
 ## Current real AEMO run
 
-[Results README](../results/tables/uncertainty/t5_aemo/README.md) ·
-[Tables and captions](../results/tables/uncertainty/t5_aemo/tables/) ·
-[Protocol](../results/tables/uncertainty/t5_aemo/protocol.json) ·
-[Evaluation log](../results/tables/uncertainty/t5_aemo/runs.csv)
+[Results and interpretation](../results/tables/uncertainty/t5_aemo_post_event_grace/README.md) ·
+[Tables and captions](../results/tables/uncertainty/t5_aemo_post_event_grace/tables/) ·
+[Resolved protocol](../results/tables/uncertainty/t5_aemo_post_event_grace/protocol.json) ·
+[Canonical log](../results/runs.csv)
 
-The user reports successful local completion (exit code 0), without retraining.
-The uploaded outputs contain 34 CSV and 34 Markdown tables; the manifest records
-4,080 metric rows. The 1,020-row window audit was checked and all statuses are
-sufficient under the selected threshold of 10. Counts per seed/configuration/method:
+The corrected local run completed with exit code 0, reusing stored intervals
+without retraining. It generated 34 CSV and 34 Markdown tables, 4080 canonical
+metric rows and 1020 window-audit records. All 816 mean ± sample SD cells agree
+with independent aggregation of the log. Review did not include raw input streams. The aggregate verification described
+here applies to the supplied pre-timing result package; the timed run has only
+been checked through the user-reported exit code, row count, positive timing and
+table counts. Its final snapshot/hash and aggregate checks remain to be repeated.
 
-| Region | Pre-drift | Drift | Post-drift |
-| --- | ---: | ---: | ---: |
-| SA1 | 337 | 22099 | 43121 |
-| NSW1 | 337 | 18639 | 46816 |
+| Region | Regime | Observations | Complete 24h windows |
+| --- | --- | ---: | ---: |
+| SA1 | pre-drift | 720 | 673 |
+| SA1 | drift | 16609 | 15716 |
+| SA1 | post-drift | 49920 | 49074 |
+| NSW1 | pre-drift | 720 | 673 |
+| NSW1 | drift | 14304 | 13599 |
+| NSW1 | post-drift | 52225 | 51520 |
 
-The run uses full regime scope and within_regime rolling windows, reported by the
-user as supervisor-approved. The minimum count of 10 is an adjustable implementation
-choice, not a supervisor-specified threshold. Overlapping windows are not
-independent observations. These counts must not be added across seeds as extra
-temporal support. Full interpretation of all 17 configurations remains outstanding.
-
-The [synthetic demonstration](../results/tables/uncertainty/t5_simulation/README.md)
-remains separate. Real evaluation metrics are stored in the run-specific runs.csv
-linked above; this update does not claim they have been consolidated into the
-canonical results/runs.csv.
+All window counts exceed 10; sufficient support is not a coverage-quality claim.
+The minimum of 10 remains an implementation choice, not a supervisor threshold.
+The previous symmetric-buffer tables are historical. The full/within_regime choice
+was reported as approved; separate approval of this correction is not asserted.
 
 ## Methodology: established versus unresolved
 
@@ -54,11 +54,11 @@ TRAIN only: [2018-01-01, 2020-01-01), fixed AEST. Calibration/TEST values are
 excluded. Each generated Markdown table caption reports the numeric regional
 denominator in MW and the training window. Simulation retains scale 10.
 
-Current T3 supports two explicitly different scopes:
+T5 code supports two explicitly different scopes (event-local T3 behavior is retained):
 
 - full: fixed AEST (Etc/GMT-10); NEM and region-specific events; union of
-  [start - 7d, end-date + 1d + 7d); pre before the first overlapping buffered
-  window; post elsewhere after it. Overlaps are unioned.
+  [start, end-date + 1d + 7d); no pre-event buffer; pre before the first
+  applicable event, post elsewhere after it. Overlaps are unioned.
 - event-local: [start-7d,start) pre; [start,end-date+1d) drift;
   [end-date+1d,end-date+1d+7d) post. Drift wins overlapping assignments,
   then pre, then post. Outside windows remains unassigned and is excluded
@@ -82,7 +82,7 @@ full/within_regime and threshold 10; the following describes supported controls:
   are marked `insufficient_windows` and their reported worst coverage is N/A.
   Zero windows are marked `no_complete_windows`. Counts/status are reported for
   every seed/regime, with no pooling or silent dropping of seeds. The fixture
-  keeps its existing threshold of one and its simulation values are unchanged.
+  keeps its existing threshold of one and stored simulation outputs remain historical; regenerating under the corrected scope may change them.
 - rolling attribution: within_regime (every observation must share the label)
   or ending_regime (a full window may cross boundaries, attributed to its end).
 - scope: full or event-local.
@@ -141,6 +141,8 @@ not a runnable or approved protocol (placeholders deliberately fail validation):
   "protocol_id": "TEAM-SUPPLIED-ID",
   "regime_scope": "TEAM-SELECTS-full-OR-event-local",
   "regime_days": 7,
+  "pre_event_buffer_days": 0,
+  "post_event_grace_days": 7,
   "training_window": {"start": "2018-01-01", "end_exclusive": "2020-01-01"},
   "minimum_complete_24h_windows": null,
   "rolling_boundary": "TEAM-SELECTS-within_regime-OR-ending_regime",
@@ -165,8 +167,9 @@ Every stream's configuration set must match the explicitly selected set.
 ```bash
 python experiments/uncertainty/generate_t5_uncertainty_table.py \
   --run-dir results/tables/adaptation/revised/pgs242_128_five_seed_final \
-  --protocol path/to/agreed_t5_protocol.json \
-  --output-dir results/tables/uncertainty/t5_verified \
+  --protocol results/tables/uncertainty/t5_aemo_post_event_grace/protocol.json \
+  --training-data-dir data/raw \
+  --output-dir results/tables/uncertainty/t5_aemo_post_event_grace/tables \
   --runs results/runs.csv
 ```
 
@@ -199,7 +202,14 @@ same six-column table and complete-window counts/status for every seed/regime.
 The CSV schema remains exactly six columns. t5_manifest.json records protocol, source hashes, upstream identities,
 scale provenance, catalogue hash and log hash. The evaluation config_hash
 incorporates source, UQ configuration, catalogue and protocol.
-wall_clock_s=0 documents that T5 does not record a new training run.
+The timed generator measures wall_clock_s using time.perf_counter() around
+metric evaluation for one seed/region/configuration/UQ method. The same measured
+duration is repeated across its metric/regime rows: these are not additive costs.
+It excludes input loading, table export and upstream model training. n_retrains
+and train_samples retain upstream experiment metadata; their scope differs from
+the evaluation duration. The shared log_run harness writes the log automatically.
+The reported timed run contains 4080 positive durations, approximately
+0.389472–0.563554 seconds. The previous zero-duration log is historical.
 
 Tests use synthetic fixtures only; their tables are never real project results.
 
