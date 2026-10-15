@@ -113,23 +113,26 @@ T3 is generated from saved timestamp-level forecasts for seeds 1–5.
 
 ### Main T3: full-stream evaluation
 
-For each region, use applicable NEM and region-specific events whose drift windows overlap the evaluated forecast period.
+For each region, use applicable NEM and region-specific events whose
+buffered windows overlap the evaluated forecast period.
 
-For an event with start date s and inclusive end date e, its drift window, including the seven-day post-event grace period, is:
+For an event with start date s and inclusive end date e, its buffered
+drift window is:
 
-[s, e + 1 day + 7 days)
+[s - 7 days, e + 1 day + 7 days)
 
-No pre-event buffer is applied.
-
-All boundaries use fixed AEST (UTC+10), with left-inclusive, right-exclusive windows.
+All boundaries use fixed AEST (UTC+10), with left-inclusive,
+right-exclusive windows.
 
 Assign every forecast timestamp exactly once:
 
-- pre-drift: before the first applicable drift window;
-- drift: inside any applicable drift window;
-- post-drift: outside the drift windows, after the first drift window begins.
+- pre-drift: before the first applicable buffered drift window;
+- drift: inside any applicable buffered drift window;
+- post-drift: outside the buffered drift windows, after the first
+  buffered window begins.
 
-Overlapping drift windows are treated as a union. No timestamp is double-counted or labelled unassigned.
+Overlapping buffered windows are treated as a union. No timestamp is
+double-counted or labelled unassigned.
 
 ### Secondary T3-local: event-local evaluation
 
@@ -138,23 +141,19 @@ Overlapping drift windows are treated as a union. No timestamp is double-counted
 - post-drift: seven days after the documented event;
 - timestamps outside these windows are excluded from local metrics.
 
-Local overlap priority remains: drift > pre-drift > post-drift.
+Local overlap priority remains:
+drift > pre-drift > post-drift.
 
 ### Metrics
 
-Calculate metrics separately for each configuration, region, and seed, then report mean and sample standard deviation across seeds 1–5.
+Calculate metrics separately for each configuration, region, and seed,
+then report mean and sample standard deviation across seeds 1–5.
 
-Main T3 pinball loss uses all test timestamps. T3-local pinball loss uses only timestamps included in local windows.
+Main T3 pinball loss uses all test timestamps.
+T3-local pinball loss uses only timestamps included in local windows.
 
-The forecast and uncertainty methods remain unchanged. This update changes evaluation labels, not adaptation triggers.
-
-## T5: Coverage and interval width by regime
-
-- Use the full-stream regime definition above, with no pre-event buffer and a seven-day post-event grace period.
-- Report: UQ method, regime, coverage, mean width, normalised width, worst 24h coverage.
-- Use complete (t-24h, t] windows with 48 half-hour observations within the same regime; exclude incomplete and boundary-crossing windows.
-- Calculate metrics per seed and report mean ± sample SD across seeds 1–5.
-- Automatically write metrics to results/runs.csv through the shared harness. For T5, wall_clock_s records metric evaluation time, excluding upstream training; repeated durations across metric/regime rows must not be summed.
+The forecast and uncertainty methods remain unchanged.
+This update changes evaluation labels, not adaptation triggers.
 
 ## Shared Comparison Principle
 
