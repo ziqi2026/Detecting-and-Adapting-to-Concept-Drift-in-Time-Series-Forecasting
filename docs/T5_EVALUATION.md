@@ -11,15 +11,36 @@ with 67,249 consecutive half-hour observations per configuration, from
 Input checks passed for manifest seed/run/split identities, finite ordered
 bounds, continuous unique timestamps, identical truth/grid across seeds and
 configurations, stored coverage flags and widths, and recomputed full-test
-coverage/mean width versus upstream summaries. This is an input audit, not
-validation of a formal regime-level T5. The target is TOTALDEMAND in MW.
+coverage/mean width versus upstream summaries. The target is TOTALDEMAND in MW. A complete real AEMO T5 run has now been
+uploaded; the input audit remains separate from the scope of numerical review.
 
-A generated synthetic demonstration is now stored in
-[the T5 simulation directory](../results/tables/uncertainty/t5_simulation/README.md).
-Its README declares the current denominator, regime scope and rolling boundary
-policy. These are explicitly changeable simulation conventions, not team-approved
-AEMO methodology. No formal AEMO T5 or new canonical results/runs.csv entries
-have been generated. No models were retrained.
+## Current real AEMO run
+
+[Results README](../results/tables/uncertainty/t5_aemo/README.md) ·
+[Tables and captions](../results/tables/uncertainty/t5_aemo/tables/) ·
+[Protocol](../results/tables/uncertainty/t5_aemo/protocol.json) ·
+[Evaluation log](../results/tables/uncertainty/t5_aemo/runs.csv)
+
+The user reports successful local completion (exit code 0), without retraining.
+The uploaded outputs contain 34 CSV and 34 Markdown tables; the manifest records
+4,080 metric rows. The 1,020-row window audit was checked and all statuses are
+sufficient under the selected threshold of 10. Counts per seed/configuration/method:
+
+| Region | Pre-drift | Drift | Post-drift |
+| --- | ---: | ---: | ---: |
+| SA1 | 337 | 22099 | 43121 |
+| NSW1 | 337 | 18639 | 46816 |
+
+The run uses full regime scope and within_regime rolling windows, reported by the
+user as supervisor-approved. The minimum count of 10 is an adjustable implementation
+choice, not a supervisor-specified threshold. Overlapping windows are not
+independent observations. These counts must not be added across seeds as extra
+temporal support. Full interpretation of all 17 configurations remains outstanding.
+
+The [synthetic demonstration](../results/tables/uncertainty/t5_simulation/README.md)
+remains separate. Real evaluation metrics are stored in the run-specific runs.csv
+linked above; this update does not claim they have been consolidated into the
+canonical results/runs.csv.
 
 ## Methodology: established versus unresolved
 
@@ -44,10 +65,11 @@ Current T3 supports two explicitly different scopes:
   from T5 regimes, but retained in time order for rolling evaluation.
 
 Both reuse the existing shared implementations without changing the catalogue.
-Selecting which scope is the official T5 scope remains a team decision.
+The current AEMO run selects full; event-local is an alternative supported by code,
+not the scope used for these uploaded results.
 
-The generator requires a supplied protocol JSON. It makes no claim that the
-following choices have already been agreed:
+The generator requires an explicit protocol JSON. The current AEMO run uses
+full/within_regime and threshold 10; the following describes supported controls:
 
 - normalisation: `training_mean_actual_demand`, one positive TRAIN mean per
   region, automatically calculated from the regional TRAIN CSVs. No manual
