@@ -294,11 +294,12 @@
     }
   ],
   "events_sha256": "7f8981ef7495d8374a01ef2fae5e3fb58f228de6973a4dcecc948f6103f49225",
-  "runs_path": "/Users/fangziqi/Downloads/drift-t5-mean-run/results/tables/uncertainty/t5_aemo/runs.csv",
+  "runs_path": "results/runs.csv",
   "runs_sha256": "dde2f4c575baa32698e0dc8a2cd5a14796866d204618906459d98146df308f4b",
   "metric_count": 4080,
   "sd_ddof": 1,
   "units": "coverage fractions; mean width MW; normalised width dimensionless",
   "undefined": "N/A if any seed lacks observations or a qualifying full 24h window",
-  "logging": "wall_clock_s=0: T5 evaluation does not rerun model training"
+  "logging": "wall_clock_s=0: T5 evaluation does not rerun model training",
+  "local_reconciliation": "Identical existing T5 records copied to required canonical path; metrics and source evaluation hashes unchanged."
 }

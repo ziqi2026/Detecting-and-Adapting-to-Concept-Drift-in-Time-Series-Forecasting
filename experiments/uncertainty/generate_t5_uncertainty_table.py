@@ -39,20 +39,20 @@ T5_COLUMNS = ("UQ method", "regime", "coverage", "mean width",
 GROUP = "t5_uncertainty"
 
 
-def is_simulation(protocol):
+def is_simulation_protocol(protocol):
     """Recognise the existing synthetic arithmetic fixture only."""
     return protocol["protocol_id"] == "synthetic-test-only"
 
 
-def minimum_windows(protocol):
+def get_minimum_complete_windows(protocol):
     """AEMO requires an explicit reporting threshold; the fixture keeps one."""
-    value = protocol.get("minimum_complete_24h_windows", 1 if is_simulation(protocol) else None)
+    value = protocol.get("minimum_complete_24h_windows", 1 if is_simulation_protocol(protocol) else None)
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise ValueError("Set minimum_complete_24h_windows to an agreed positive integer.")
     return value
 
 
-def training_source_files(source):
+def find_training_source_files(source):
     """Accept a regional CSV or the 24 original monthly TRAIN source files."""
     source = Path(source)
     if source.is_file():
@@ -64,19 +64,19 @@ def training_source_files(source):
     return files
 
 
-def training_source_digest(source):
-    files = training_source_files(source)
+def calculate_training_source_sha256(source):
+    files = find_training_source_files(source)
     if Path(source).is_file():
-        return digest(source)
+        return calculate_file_sha256(source)
     # Canonical text hashes are stable across Git's CRLF/LF checkout conversion.
-    return json_hash({path.name: hashlib.sha256(path.read_text().encode()).hexdigest()
+    return calculate_json_sha256({path.name: hashlib.sha256(path.read_text().encode()).hexdigest()
                       for path in files})
 
 
-def training_demand_mean(source, start, end_exclusive):
+def calculate_training_mean_demand(source, start, end_exclusive):
     """Calculate mean actual demand from a regional source within TRAIN only."""
     frame = pd.concat([pd.read_csv(path, usecols=["SETTLEMENTDATE", "TOTALDEMAND"])
-                       for path in training_source_files(source)], ignore_index=True)
+                       for path in find_training_source_files(source)], ignore_index=True)
     timestamps = frame.SETTLEMENTDATE.map(aemo_timestamp)
     if timestamps.isna().any() or timestamps.duplicated().any():
         raise ValueError("Training source has missing or duplicate timestamps.")
@@ -95,7 +95,7 @@ def training_demand_mean(source, start, end_exclusive):
 def resolve_aemo_normalisation(protocol, training_data_dir=None):
     """Derive both regional denominators automatically; never request manual means."""
     resolved = copy.deepcopy(protocol)
-    if is_simulation(resolved):
+    if is_simulation_protocol(resolved):
         return resolved
     window = resolved.setdefault("training_window", {
         "start": "2018-01-01", "end_exclusive": "2020-01-01"})
@@ -104,16 +104,16 @@ def resolve_aemo_normalisation(protocol, training_data_dir=None):
     for region in REGIONS:
         source = root / region if training_data_dir else Path(
             scales.get(region, {}).get("source", root / region))
-        value, count = training_demand_mean(source, **window)
+        value, count = calculate_training_mean_demand(source, **window)
         scales[region] = dict(value=value, statistic="training_mean_actual_demand",
-            source=str(source), source_sha256=training_source_digest(source),
+            source=str(source), source_sha256=calculate_training_source_sha256(source),
             n_training_observations=count)
     return resolved
 
 
 def verify_aemo_normalisation(protocol):
     """Verify fixed regional TRAIN means and their source hashes before logging."""
-    if is_simulation(protocol):
+    if is_simulation_protocol(protocol):
         return
     window = protocol.get("training_window", {})
     if not {"start", "end_exclusive"} <= window.keys():
@@ -125,26 +125,28 @@ def verify_aemo_normalisation(protocol):
         scale = protocol["normalisation"][region]
         if scale["statistic"] != "training_mean_actual_demand":
             raise ValueError("AEMO denominator must be training_mean_actual_demand.")
-        if training_source_digest(scale["source"]) != scale["source_sha256"]:
+        if calculate_training_source_sha256(scale["source"]) != scale["source_sha256"]:
             raise ValueError(f"Training source hash mismatch for {region}.")
-        actual_mean, _ = training_demand_mean(scale["source"], **window)
+        actual_mean, _ = calculate_training_mean_demand(scale["source"], **window)
         if not np.isclose(scale["value"], actual_mean, rtol=1e-12, atol=1e-12):
             raise ValueError(f"Denominator differs from TRAIN mean actual demand for {region}.")
 
 
-def digest(path):
+def calculate_file_sha256(path):
+    """Hash file bytes without loading the entire interval stream into memory."""
     with Path(path).open("rb") as stream:
         result = hashlib.file_digest(stream, "sha256") if hasattr(hashlib, "file_digest") else None
         if result is not None:
             return result.hexdigest()
         stream.seek(0)
-        h = hashlib.sha256()
+        hasher = hashlib.sha256()
         for block in iter(lambda: stream.read(1024 * 1024), b""):
-            h.update(block)
-        return h.hexdigest()
+            hasher.update(block)
+        return hasher.hexdigest()
 
 
-def json_hash(value):
+def calculate_json_sha256(value):
+    """Hash a stable, key-sorted JSON representation of evaluation provenance."""
     return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
 
 
@@ -157,7 +159,7 @@ def validate_protocol(protocol):
         raise ValueError(f"Missing explicit protocol fields: {sorted(required - protocol.keys())}")
     if not protocol["protocol_id"]:
         raise ValueError("protocol_id is required.")
-    minimum_windows(protocol)
+    get_minimum_complete_windows(protocol)
     if protocol["regime_scope"] not in {"full", "event-local"}:
         raise ValueError("regime_scope must be full or event-local.")
     if protocol["regime_days"] != 7:
@@ -190,7 +192,7 @@ def validate_protocol(protocol):
     return protocol
 
 
-def required_paths(run_dir):
+def list_required_input_paths(run_dir):
     paths = []
     for seed in SEEDS:
         base = Path(run_dir) / f"seed_{seed}"
@@ -202,13 +204,13 @@ def required_paths(run_dir):
     return paths
 
 
-def preflight(run_dir):
-    missing = [str(p) for p in required_paths(run_dir) if not p.is_file()]
+def validate_required_input_files(run_dir):
+    missing = [str(p) for p in list_required_input_paths(run_dir) if not p.is_file()]
     if missing:
         raise FileNotFoundError("Missing PGS242-160 inputs (no T5 generated):\n" + "\n".join(missing))
 
 
-def evaluate_stream(frame, labels, *, scale, protocol):
+def evaluate_interval_stream_by_regime(frame, labels, *, scale, protocol):
     """Compute each metric by regime for one seed/configuration/UQ method."""
     rolling = calculate_rolling_24h_coverage(
         frame.SETTLEMENTDATE, frame.y_true, frame.lower, frame.upper,
@@ -216,7 +218,7 @@ def evaluate_stream(frame, labels, *, scale, protocol):
         boundary_policy=protocol["rolling_boundary"],
     ).to_numpy()
     rows = []
-    required_windows = minimum_windows(protocol)
+    required_windows = get_minimum_complete_windows(protocol)
     for regime in REGIMES:
         mask = np.asarray(labels) == regime
         subset = frame.loc[mask]
@@ -240,7 +242,7 @@ def evaluate_stream(frame, labels, *, scale, protocol):
     return rows
 
 
-def aggregate(logs):
+def aggregate_seed_metrics(logs):
     """Aggregate only complete five-seed metrics; undefined metrics stay N/A."""
     rows = []
     for (method, regime), group in logs.groupby(["method", "regime"], sort=True):
@@ -269,7 +271,7 @@ def write_table_report(output_dir, region, configuration, table, audit, protocol
         raise ValueError("Static/adaptive complete-window counts differ.")
     caption = (f"T5 — {region}, {configuration}. Normalised width denominator: "
                f"{scale['value']:.17g} ({scale['statistic']}); fixed across all methods, seeds and regimes.")
-    if not is_simulation(protocol):
+    if not is_simulation_protocol(protocol):
         window = protocol["training_window"]
         caption += f" TRAIN actual demand in MW, [{window['start']}, {window['end_exclusive']}) in fixed AEST."
     else:
@@ -279,7 +281,7 @@ def write_table_report(output_dir, region, configuration, table, audit, protocol
              "| " + " | ".join(["---"] * len(T5_COLUMNS)) + " |"]
     lines += ["| " + " | ".join(map(str, row)) + " |" for row in table.itertuples(index=False, name=None)]
     lines += ["", "## Complete 24-hour windows", "",
-              f"Minimum required per seed/regime: {minimum_windows(protocol)}. "
+              f"Minimum required per seed/regime: {get_minimum_complete_windows(protocol)}. "
               "Worst coverage is N/A if any seed has too few windows. "
               "Counts are identical for static and adaptive intervals. "
               "These overlapping rolling windows are not independent samples.", "",
@@ -290,7 +292,7 @@ def write_table_report(output_dir, region, configuration, table, audit, protocol
     (output_dir / f"T5_{region}_{configuration}.md").write_text("\n".join(lines) + "\n")
 
 
-def append_logs_safely(rows, runs_path):
+def append_run_metrics_safely(rows, runs_path):
     """Use shared harness; preserve historical bytes and reject collisions.
 
     Single writer required, like the existing shared logger. Identical reruns
@@ -333,11 +335,12 @@ def append_logs_safely(rows, runs_path):
     return recorded
 
 
-def generate(run_dir, events_path, output_dir, runs_path, protocol, training_data_dir=None):
+def generate_uncertainty_tables(run_dir, events_path, output_dir, runs_path, protocol, training_data_dir=None):
+    """Validate stored interval streams, record metrics and export T5 tables."""
     protocol = resolve_aemo_normalisation(protocol, training_data_dir)
     validate_protocol(protocol)
     verify_aemo_normalisation(protocol)
-    preflight(run_dir)
+    validate_required_input_files(run_dir)
     output_dir = Path(output_dir)
     if output_dir.exists():
         raise FileExistsError("Choose a new output directory; existing results are preserved.")
@@ -383,7 +386,7 @@ def generate(run_dir, events_path, output_dir, runs_path, protocol, training_dat
                       else assign_forecast_regimes)
             labels = assign(expected, windows).regime.to_numpy()
             source = {"seed": seed, "region": region, "path": str(path.resolve()),
-                      "sha256": digest(path), "summary_sha256": digest(summary_path),
+                      "sha256": calculate_file_sha256(path), "summary_sha256": calculate_file_sha256(summary_path),
                       "upstream_run_id": manifest["run_id"], "uq_manifest": uq}
             sources.append(source)
             for config in protocol["configurations"]:
@@ -414,16 +417,16 @@ def generate(run_dir, events_path, output_dir, runs_path, protocol, training_dat
                     ):
                         if not np.isclose(value, meta[metric], rtol=1e-10, atol=1e-10):
                             raise ValueError("Stream metrics disagree with PGS242-160 summary.")
-                    evaluation_hash = json_hash({
+                    evaluation_hash = calculate_json_sha256({
                         "protocol": protocol, "source": source, "configuration": config,
                         "method": method, "uq_config_hash": meta.uq_config_hash,
-                        "events_sha256": digest(events_path),
+                        "events_sha256": calculate_file_sha256(events_path),
                     })
                     identity = dict(group=GROUP, method=f"{config}|{method}",
                                     dataset="AEMO_TOTALDEMAND", region=region, seed=seed,
                                     config_hash=evaluation_hash, split_id=split_id)
                     identities.append(identity)
-                    for evaluated in evaluate_stream(bounds, labels,
+                    for evaluated in evaluate_interval_stream_by_regime(bounds, labels,
                             scale=protocol["normalisation"][region]["value"], protocol=protocol):
                         audit.append({**identity, **evaluated})
                         for metric in METRICS:
@@ -433,11 +436,11 @@ def generate(run_dir, events_path, output_dir, runs_path, protocol, training_dat
                                          "train_samples": int(meta.train_samples_total),
                                          "wall_clock_s": 0.0})
     # Data validation is complete before any writes.
-    recorded = append_logs_safely(rows, runs_path)
+    recorded = append_run_metrics_safely(rows, runs_path)
     selected = recorded.merge(pd.DataFrame(identities).drop_duplicates(),
                               on=list(identities[0]), how="inner", validate="many_to_one")
     output_dir.mkdir(parents=True)
-    if not is_simulation(protocol):
+    if not is_simulation_protocol(protocol):
         (output_dir / "t5_normalisation.json").write_text(json.dumps({
             "training_window": protocol["training_window"],
             "normalisation": protocol["normalisation"],
@@ -449,12 +452,12 @@ def generate(run_dir, events_path, output_dir, runs_path, protocol, training_dat
         for config in protocol["configurations"]:
             subset = selected[(selected.region == region) &
                               selected.method.str.startswith(config + "|")]
-            table = aggregate(subset)
+            table = aggregate_seed_metrics(subset)
             table.to_csv(output_dir / f"T5_{region}_{config}.csv", index=False)
             write_table_report(output_dir, region, config, table, audit_frame, protocol)
     (output_dir / "t5_manifest.json").write_text(json.dumps({
-        "protocol": protocol, "sources": sources, "events_sha256": digest(events_path),
-        "runs_path": str(Path(runs_path).resolve()), "runs_sha256": digest(runs_path),
+        "protocol": protocol, "sources": sources, "events_sha256": calculate_file_sha256(events_path),
+        "runs_path": str(Path(runs_path).resolve()), "runs_sha256": calculate_file_sha256(runs_path),
         "metric_count": len(rows), "sd_ddof": 1,
         "units": "coverage fractions; mean width MW; normalised width dimensionless",
         "undefined": "N/A if any seed lacks observations or a qualifying full 24h window",
@@ -473,7 +476,7 @@ def main():
     parser.add_argument("--training-data-dir", type=Path,
                         help="AEMO raw-data root containing SA1/NSW1 monthly TRAIN CSVs.")
     args = parser.parse_args()
-    generate(args.run_dir, args.events, args.output_dir, args.runs,
+    generate_uncertainty_tables(args.run_dir, args.events, args.output_dir, args.runs,
              json.loads(args.protocol.read_text()), args.training_data_dir)
 
 

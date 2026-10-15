@@ -2,8 +2,6 @@
 
 T5 — NSW1, D_180d_adwin. Normalised width denominator: 7982.2516647164603 (training_mean_actual_demand); fixed across all methods, seeds and regimes. TRAIN actual demand in MW, [2018-01-01, 2020-01-01) in fixed AEST.
 
-Values are mean ± sample standard deviation across seeds 1–5 (ddof=1), not confidence intervals. Worst 24h coverage is computed per seed before aggregation. The minimum of 10 complete overlapping windows is an adjustable reporting threshold, not a statistical reliability guarantee.
-
 | UQ method | regime | coverage | mean width | normalised width | worst 24h coverage |
 | --- | --- | --- | --- | --- | --- |
 | adaptive_conformal | drift | 0.89827337 ± 0.00025431 | 2551.65230845 ± 4.15432384 | 0.31966573 ± 0.00052045 | 0.44583333 ± 0.01863390 |

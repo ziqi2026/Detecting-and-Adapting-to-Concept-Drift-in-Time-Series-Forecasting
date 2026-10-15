@@ -1,0 +1,9 @@
+{
+  "status": "passed",
+  "tables": 34,
+  "metric_records": 4080,
+  "window_audit_rows": 1020,
+  "summary_cells": 816,
+  "function_definitions_checked": 82,
+  "byte_identical_file_groups": []
+}
