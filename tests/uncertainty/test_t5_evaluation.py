@@ -105,7 +105,6 @@ def test_aware_time_converts_without_local_dst():
 
 def make_simulation_protocol(index):
     return dict(protocol_id="synthetic-test-only", regime_scope="full", regime_days=7,
-        pre_event_buffer_days=0, post_event_grace_days=7,
         rolling_boundary="within_regime", rolling_closed="right", incomplete_windows="exclude",
         cadence="30min", granularity="region_configuration", configurations=["A"],
         test_start=str(index[0]), test_end=str(index[-1]),
@@ -215,8 +214,7 @@ def test_log_preserves_history_and_rejects_conflicting_rerun(tmp_path):
 def test_full_regime_union_and_half_open_boundaries():
     from drift_lab.evaluation import assign_full_stream_forecast_regimes
     windows = pd.DataFrame(dict(event_id=["x", "y"],
-        pre_drift_start=["2020-02-24", "2020-02-25"],
-        drift_start=["2020-03-02", "2020-03-03"],
+        pre_drift_start=["2020-03-02", "2020-03-03"],
         post_drift_end=["2020-03-04", "2020-03-05"]))
     stamps = ["2020-03-01", "2020-03-02", "2020-03-04", "2020-03-05"]
     assigned = assign_full_stream_forecast_regimes(stamps, windows)
@@ -321,51 +319,3 @@ def test_monthly_training_sources_and_hash_are_cross_platform(tmp_path):
     next(tmp_path.glob("*.csv")).unlink()
     with pytest.raises(ValueError, match="24 monthly"):
         uncertainty_table_generator.find_training_source_files(tmp_path)
-
-
-def test_full_regime_excludes_pre_event_buffer_and_keeps_post_event_grace():
-    from drift_lab.evaluation import assign_full_stream_forecast_regimes
-    windows = pd.DataFrame(dict(
-        event_id=["event"],
-        pre_drift_start=["2020-03-03"],
-        drift_start=["2020-03-10"],
-        drift_end=["2020-03-13"],
-        post_drift_end=["2020-03-20"],
-    ))
-    stamps = pd.DatetimeIndex([
-        pd.Timestamp(value) for value in [
-            "2020-03-03", "2020-03-09 23:30", "2020-03-10",
-            "2020-03-13", "2020-03-19 23:30", "2020-03-20",
-        ]
-    ])
-    assigned = assign_full_stream_forecast_regimes(stamps, windows)
-    assert assigned.regime.tolist() == [
-        "pre-drift", "pre-drift", "drift", "drift", "drift", "post-drift"
-    ]
-    assert assigned.event_id.tolist() == ["", "", "event", "event", "event", ""]
-
-
-def test_complete_windows_respect_corrected_event_and_grace_boundaries():
-    from drift_lab.evaluation import assign_full_stream_forecast_regimes
-    stamps = pd.date_range("2020-03-09", "2020-03-21", freq="30min")
-    windows = pd.DataFrame(dict(
-        event_id=["event"], drift_start=["2020-03-10"],
-        post_drift_end=["2020-03-20"],
-    ))
-    labels = assign_full_stream_forecast_regimes(stamps, windows).regime
-    coverage = calculate_fixture_rolling_coverage(stamps, regimes=labels, policy="within_regime")
-    # Each new regime needs 48 observations before its first eligible window.
-    for boundary in ("2020-03-10", "2020-03-20"):
-        offset = stamps.get_loc(pd.Timestamp(boundary))
-        assert coverage.iloc[offset:offset + 47].isna().all()
-        assert coverage.iloc[offset + 47] == 1
-    assert coverage[labels.to_numpy() == "pre-drift"].notna().sum() == 1
-    assert coverage[labels.to_numpy() == "drift"].notna().sum() == 433
-    assert coverage[labels.to_numpy() == "post-drift"].notna().sum() == 2
-
-
-def test_full_protocol_rejects_pre_event_buffer():
-    protocol = make_simulation_protocol(pd.date_range("2020-03-01", periods=96, freq="30min"))
-    protocol["pre_event_buffer_days"] = 7
-    with pytest.raises(ValueError, match="pre_event_buffer_days=0"):
-        uncertainty_table_generator.validate_protocol(protocol)

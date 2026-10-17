@@ -1,5 +1,5 @@
 {
-  "protocol_id": "aemo-t5-full-within-regime-post-event-grace-v2",
+  "protocol_id": "aemo-t5-full-within-regime-v1",
   "regime_scope": "full",
   "regime_days": 7,
   "rolling_boundary": "within_regime",
@@ -48,7 +48,5 @@
       "source_sha256": "3fd4fe740ffa8a810993e5963d07a25d25b8cd86ed70b0d3356bba67a0a4e093",
       "n_training_observations": 35039
     }
-  },
-  "pre_event_buffer_days": 0,
-  "post_event_grace_days": 7
+  }
 }
