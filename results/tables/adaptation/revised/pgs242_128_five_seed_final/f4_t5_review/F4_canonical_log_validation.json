@@ -1,0 +1,22 @@
+{
+  "status": "passed",
+  "reference_commit": "b3beabc72b01e1a497e2764ec967a34080c45425",
+  "canonical_archive": "T5_Canonical_Log.zip",
+  "canonical_entry": "results/runs.csv",
+  "canonical_archive_sha256": "45a751f31a80066a6d89dbd97745c2cbcd9b7a97a0cea85f0ffa77c7d96b7946",
+  "canonical_raw_sha256": "72df72329f93a08d7d399fec88e46f549caf1272f93befad7cfb1c5ff732ba07",
+  "canonical_lf_sha256": "dde2f4c575baa32698e0dc8a2cd5a14796866d204618906459d98146df308f4b",
+  "t5_manifest_expected_sha256": "dde2f4c575baa32698e0dc8a2cd5a14796866d204618906459d98146df308f4b",
+  "newline_note": "CRLF/LF normalisation only; parsed T5 records identical.",
+  "t5_records_matched": 4080,
+  "f4_metrics_matched": 960,
+  "t5_review_status": "provisional; no claim of final regime approval",
+  "sources": {
+    "D:\\University\\Capstone\\Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting\\experiments\\uncertainty\\validate_f4_canonical_log.py": "a5d6a5cdcdd0c4cff284be2ae8cb7938a03679b7a4dc6034299543f8c0069332",
+    "T5_PR38_Review\\results\\tables\\uncertainty\\t5_aemo\\tables\\t5_manifest.json": "64d6e538f0d2a5df62b574eae2dfc6c89514c505bf111955e05d2e8b0c3113d9",
+    "T5_PR38_Review\\results\\tables\\uncertainty\\t5_aemo\\tables\\t5_seed_metrics.csv": "85b5a62826cd51c95ad10a7b483ac34f09599912c58c100fd53fa2dac3614ca9",
+    "results\\tables\\adaptation\\revised\\pgs242_128_five_seed_final\\f4_t5_review\\F4_t5_seed_validation.csv": "27897b717c30701866f00f62906134a580e67956e44fd7602014ea95b0de5501",
+    "results\\tables\\adaptation\\revised\\pgs242_128_five_seed_final\\f4_t5_review\\F4_t5_recomputed_metrics.csv": "7424730537c1f8a9e6df9f8e8265f4e154f63aaa49d0d0455e58f9757fc6ec3f"
+  },
+  "validation_csv_sha256": "577ad0bcf7941fdb9a52f8824f4f6b7ed9911148c9f1bddd029626924da7e634"
+}
