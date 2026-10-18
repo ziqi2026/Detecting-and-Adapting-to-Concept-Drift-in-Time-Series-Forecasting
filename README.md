@@ -1,54 +1,28 @@
 # Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting
-An adaptive forecasting system for detecting concept drift, updating models, and improving prediction reliability in changing environments.
 
-## PGS242-128 — Four-arm adaptive forecasting on SA1 and NSW1
+An adaptive forecasting system for detecting concept drift, updating models,
+and improving prediction reliability in changing environments.
 
-**Completed local run:** the runner consumes the PR #29
-provenance-complete changepoint artifact as three frozen detector scenarios.
-It runs A/B once per region and C plus D-30/D-60/D-120/D-180 for each of
-ADWIN, Page-Hinkley and KSWIN. It validates the recorded train-only
-preprocessing, Calibration warm-up metadata and 14-day refractory setting;
-it never reruns, filters or retunes a detector.
+## Project Navigation
 
-- [128 navigation and run instructions](docs/PGS242-128_README.md)
-- [Current implementation details](docs/PGS242-128_REVISION.md)
-- [Chronological experiment runner](experiments/adaptation/run_four_arm_adaptation.py)
-- [Automated tests](tests/adaptation/test_four_arm_adaptation.py)
-- [34-configuration result summary](results/tables/adaptation/revised/pr29_detector_sensitivity_20260920_retry1/summary.csv)
-- [Detector comparison](results/tables/adaptation/revised/pr29_detector_sensitivity_20260920_retry1/detector_comparison.csv)
-- [D-window sensitivity](results/tables/adaptation/revised/pr29_detector_sensitivity_20260920_retry1/window_sensitivity.csv)
-- [Completed run manifest](results/tables/adaptation/revised/pr29_detector_sensitivity_20260920_retry1/manifest.json)
+| Work area | Main Entry Point | Outputs and Supporting Files |
+| --- | --- | --- |
+| AEMO data preparation | [Preparation notebook](notebooks/01_AEMO_Data_Preparation.ipynb) · [Shared decisions](docs/decisions.md) | [Processed SA1 data](data/processed/SA1.csv) · [Processed NSW1 data](data/processed/NSW1.csv) |
+| Event catalogue | [Tiering criteria](docs/event_tiering_criteria.md) | [Event catalogue](data/events.csv) |
+| Seasonal-naive baseline | [Baseline notebook](notebooks/03.1_Seasonal_Naive_Baseline.ipynb) | [F1 rolling-MAE data](results/tables/degradation/F1_rolling_mae_baseline.csv) |
+| SARIMAX baseline | [Baseline notebook](notebooks/03.2_Classical_Baselines_SARIMAX.ipynb) · [Leakage tests](tests/degradation/test_sarimax_leakage.py) | [F1 rolling-MAE data](results/tables/degradation/F1_rolling_mae_baseline.csv) |
+| F1 — Baseline degradation | [Analysis notebook](notebooks/03.3_F1_Baseline_Degradation.ipynb) · [Evaluation runner](experiments/degradation/run_baseline_degradation_evaluation.py) · [Figure generator](experiments/degradation/generate_f1_degradation_figure.py) | [Rolling-MAE data](results/tables/degradation/F1_rolling_mae_baseline.csv) · [SA1 figure](results/figures/degradation/F1_SA1_baseline_degradation.png) · [NSW1 figure](results/figures/degradation/F1_NSW1_baseline_degradation.png) |
+| T1 — Synthetic detection | [Table generator](experiments/detection/generate_t1_detection_table.py) · [Tuning notebook](notebooks/04.1_Synthetic_Drift_Detector_Tuning_and_Evaluation.ipynb) | [Synthetic detection table](results/tables/detection/T1_detection_on_synthetic.csv) |
+| T2 — AEMO detection vs documented events | [Matching protocol](docs/aemo_matching_protocol.md) · [Evaluation runner](experiments/detection/run_aemo_t2_evaluation.py) · [Tests](tests/detection/test_aemo_t2_evaluation.py) | [Table](results/tables/detection/T2_aemo_detection.md) · [CSV](results/tables/detection/T2_aemo_detection.csv) · [Matches](results/tables/detection/T2_detection_matches.csv) · [Summary](results/tables/detection/T2_detection_summary.csv) · [Manifest](results/tables/detection/T2_manifest.json) |
+| PGS242-128 — Four-arm adaptation | [Adaptation README](docs/PGS242-128_README.md) · [Implementation details](docs/PGS242-128_REVISION.md) · [Experiment runner](experiments/adaptation/run_four_arm_adaptation.py) · [Tests](tests/adaptation/test_four_arm_adaptation.py) | [Five-seed summary](results/tables/adaptation/revised/pgs242_128_five_seed_final/summary_all_seeds.csv) · [Five-seed run artifacts](results/tables/adaptation/revised/pgs242_128_five_seed_final/) · [Historical single-seed summary](results/tables/adaptation/revised/pr29_detector_sensitivity_20260920_retry1/summary.csv) |
+| T3 — Forecast accuracy by regime | [Table generator](experiments/adaptation/generate_t3_forecast_accuracy.py) · [Tests](tests/test_t3_evaluation.py) | [Stored regime table](results/tables/adaptation/T3_forecast_accuracy_by_regime.md) · [Five-seed full-test summary](results/tables/adaptation/revised/pgs242_128_five_seed_final/summary_all_seeds.csv) |
+| T4 — Adaptation cost | [Cost-summary generator](experiments/adaptation/generate_t4_cost_summary.py) · [Adaptation-cost generator](experiments/adaptation/generate_t4_adaptation_cost.py) | [Stored cost summary](results/tables/adaptation/T4_adaptation_cost_summary.csv) · [Cost-versus-accuracy figure](results/figures/adaptation/T4_cost_vs_accuracy.png) |
+| F3 — Four-arm comparison | [Figure generator](experiments/adaptation/generate_f3_four_arm_comparison.py) | [Comparison figures](results/figures/adaptation/F3_four_arms/) |
+| T5 — Coverage and interval width by regime | [AEMO results README](results/tables/uncertainty/t5_aemo/README.md) · [Methodology](docs/T5_EVALUATION.md) · [Simulation README and changeable conventions](results/tables/uncertainty/t5_simulation/README.md) · [Table generator](experiments/uncertainty/generate_t5_uncertainty_table.py) · [Shared metrics](src/drift_lab/evaluation.py) · [Tests](tests/uncertainty/test_t5_evaluation.py) | [Real AEMO tables and captions](results/tables/uncertainty/t5_aemo/tables/) · [AEMO protocol](results/tables/uncertainty/t5_aemo/protocol.json) · [AEMO evaluation log](results/tables/uncertainty/t5_aemo/runs.csv) · [Window-count audit](results/tables/uncertainty/t5_aemo/tables/t5_window_audit.csv) · [Run manifest](results/tables/uncertainty/t5_aemo/tables/t5_manifest.json) · [SA1 simulation table](results/tables/uncertainty/t5_simulation/tables/T5_SA1_A.csv) · [NSW1 simulation table](results/tables/uncertainty/t5_simulation/tables/T5_NSW1_A.csv) · [Simulation protocol](results/tables/uncertainty/t5_simulation/protocol.json) · [Separate simulation log](results/tables/uncertainty/t5_simulation/runs.csv) · [AEMO TRAIN means](results/tables/uncertainty/t5_training_mean_demand.json) |
 
-The completed run contains 34 configurations and finished in 458.157 seconds.
-Arm C improved on Arm A in both regions for every detector. KSWIN produced the
-lowest MAE (SA1 136.381 MW; NSW1 341.527 MW), while ADWIN achieved very similar
-accuracy with fewer retrains and is the preferred accuracy-cost compromise.
-Every tested Arm D recent window underperformed Arm A and Arm C. These findings
-remain conditional on the PR #29 Calibration warm-up protocol recorded in
-`docs/decisions.md`.
-
-## T2 — Detection on AEMO vs documented events
-
-The current T2 evaluates the stored Task 120 SA1/NSW1 detections using T1's
-seven-day, inclusive, first-unused one-to-one matching rule. All five frozen
-Tier 1 events are represented, and remaining detections are checked against
-Tier 2 before being reported as unmatched. Historical events are contextual
-references, not ground-truth changepoints.
-
-- [Current T2 table](results/tables/detection/T2_aemo_detection.md)
-- [Current T2 CSV](results/tables/detection/T2_aemo_detection.csv)
-- [Matching protocol](docs/aemo_matching_protocol.md)
-- [Input and implementation manifest](results/tables/detection/T2_manifest.json)
-
-From the repository root:
-
-```sh
-python3 experiments/detection/run_aemo_t2_evaluation.py
-python3 experiments/detection/run_aemo_t2_evaluation.py --from-logs
-```
-
-Metrics are recorded through `run_logger.py` in `results/runs.csv`.
-The current table selects the manifest's configuration hashes and split ID
-`aemo_fixed_train2018_2019_test202003_task120_t2_t1rule_v2`.
-Earlier results in `results/tables/detection/archive/aemo_context_v1/` are
-superseded historical records and must not be pooled with the current T2.
+Real AEMO T5 results are available for SA1/NSW1, 17 configurations and seeds 1–5.
+Simulation outputs are separately labelled. The AEMO run uses full/within_regime;
+its minimum support threshold of 10 complete windows is an adjustable implementation
+choice, not a supervisor-specified value. Stored tables and figures
+may come from different experiment versions; follow their documentation and
+manifests before comparing results.

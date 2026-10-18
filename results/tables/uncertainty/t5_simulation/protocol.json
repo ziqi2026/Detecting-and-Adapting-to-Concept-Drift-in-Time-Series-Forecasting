@@ -1,0 +1,29 @@
+{
+  "protocol_id": "synthetic-test-only",
+  "regime_scope": "full",
+  "regime_days": 7,
+  "rolling_boundary": "within_regime",
+  "rolling_closed": "right",
+  "incomplete_windows": "exclude",
+  "cadence": "30min",
+  "granularity": "region_configuration",
+  "configurations": [
+    "A"
+  ],
+  "test_start": "2020-03-01 00:00:00",
+  "test_end": "2020-06-01 00:00:00",
+  "normalisation": {
+    "SA1": {
+      "value": 10,
+      "statistic": "synthetic fixed scale",
+      "source": "synthetic fixture",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "NSW1": {
+      "value": 10,
+      "statistic": "synthetic fixed scale",
+      "source": "synthetic fixture",
+      "source_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  }
+}
