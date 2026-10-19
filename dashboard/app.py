@@ -53,14 +53,10 @@ def number_chart(df, x, y, title, color=None):
     fig.update_layout(height=440, xaxis_tickangle=-30)
     st.plotly_chart(fig, use_container_width=True)
 
-# Academic dashboard theme: an uninterrupted main panel (not a block-container frame).
-# Streamlit renders some page elements in separate wrappers, so the frame belongs
-# to the scrolling main viewport itself, never to a content-sized nested div.
 st.markdown("""<style>
-:root { --academic-navy: #244766; --academic-blue: #668fb4; --academic-teal: #6eafad; }
+:root { --navy: #244766; --blue: #668fb4; --teal: #6eafad; }
 html, body, [data-testid="stApp"], .stApp,
 [data-testid="stAppViewContainer"] { background: #f4f7fa !important; }
-/* Keep the whole main page white and frame its outer viewport, at any scroll depth. */
 [data-testid="stMain"], section.main {
   background: #ffffff !important;
   box-sizing: border-box !important;
@@ -70,7 +66,6 @@ html, body, [data-testid="stApp"], .stApp,
   box-shadow: 0 5px 22px rgba(32,67,98,.09) !important;
   min-width: 0 !important;
 }
-/* Reset the previous per-section border: no panels ending mid-figure. */
 [data-testid="stMainBlockContainer"],
 [data-testid="stMain"] .block-container,
 section.main .block-container,
@@ -85,7 +80,6 @@ section.main .block-container,
   min-height: 0 !important;
   padding: 44px 42px 68px !important;
 }
-/* Clean, one-piece sidebar like an academic research console. */
 [data-testid="stSidebar"],
 [data-testid="stSidebar"] > div,
 [data-testid="stSidebarContent"],
@@ -125,6 +119,16 @@ section[data-testid="stSidebar"] { background: #eef3f7 !important; }
 }
 [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p {
   color: #153b5b !important; font-weight: 720 !important;
+}
+[data-testid="stMultiSelect"] [data-baseweb="tag"] {
+    background-color: #347e7b !important;
+    border-radius: 8px !important;
+}
+
+[data-testid="stMultiSelect"] [data-baseweb="tag"] span,
+[data-testid="stMultiSelect"] [data-baseweb="tag"] svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
 }
 @media (max-width: 800px) {
   [data-testid="stMain"], section.main { margin: 7px !important; border-width: 6px !important; border-radius: 17px !important; }
@@ -267,27 +271,82 @@ def render_6():
         st.warning('Forecast file is unavailable.')
 
 def render_7():
-    st.header('Uncertainty · Static vs adaptive conformal')
-    region = region_control('uq_region')
-    df = filter_region(load(FINAL / 'aemo_conformal_comparison_all_seeds.csv'), region)
-    if not df.empty:
-        seed = st.selectbox('Seed', ['All seeds',1,2,3,4,5], key='uq_seed')
-        if seed != 'All seeds':
-            df = df[df['seed']==seed]
-        configuration = choice(df, 'configuration', 'Adaptation configuration', 'uq_config')
-        if configuration:
-            df = df[df['configuration'].astype(str)==configuration]
-        if not df.empty:
-            a,b = st.columns(2)
-            a.metric('Average empirical coverage', f"{df['empirical_coverage'].mean():.2%}")
-            b.metric('Average interval width', f"{df['mean_interval_width'].mean():.1f} MW")
-            number_chart(df, 'method', 'empirical_coverage', 'Empirical coverage (target 90%)', 'seed' if seed=='All seeds' else None)
-            number_chart(df, 'method', 'mean_interval_width', 'Mean prediction interval width', 'seed' if seed=='All seeds' else None)
-            table(df, 'uncertainty_'+region+'_'+str(seed))
-    st.caption('Coverage target is 90%; values are observed empirical coverage, not guaranteed performance on future data.')
+    region = region_control('t5_region')
+    t5_dir = RESULTS / 'tables/uncertainty/t5_aemo/tables'
+    files = sorted(t5_dir.glob(f'T5_{region}_*.csv')) if t5_dir.exists() else []
+    if not files:
+        st.info('T5 results are not available for this region.')
+        return
+
+    configurations = {p.stem.removeprefix(f'T5_{region}_'): p for p in files}
+    config = st.selectbox('Adaptation configuration', list(configurations), key='t5_configuration')
+    df = load(configurations[config])
+    required = ['UQ method', 'regime', 'coverage', 'mean width', 'normalised width', 'worst 24h coverage']
+    if df.empty or not all(col in df.columns for col in required):
+        st.warning('The selected T5 table does not have the expected evaluation columns.')
+        return
+
+    def split_mean_sd(series):
+        parts = series.astype(str).str.split('±', n=1, expand=True)
+        mean = pd.to_numeric(parts[0].str.strip(), errors='coerce')
+        sd = pd.to_numeric(parts[1].str.strip(), errors='coerce') if parts.shape[1] > 1 else pd.Series(0.0, index=series.index)
+        return mean, sd.fillna(0)
+
+    numeric = df.copy()
+    metrics = ['coverage', 'mean width', 'normalised width', 'worst 24h coverage']
+    for metric in metrics:
+        numeric[metric], numeric[metric + '_sd'] = split_mean_sd(df[metric])
+    regimes = ['pre-drift', 'drift', 'post-drift']
+    numeric['regime'] = pd.Categorical(numeric['regime'], categories=regimes, ordered=True)
+    numeric = numeric.sort_values(['regime', 'UQ method'])
+
+    methods = numeric['UQ method'].dropna().unique().tolist()
+    selected_methods = st.multiselect('Uncertainty method', methods, default=methods, key='t5_methods')
+    plot_data = numeric[numeric['UQ method'].isin(selected_methods)].copy()
+    if plot_data.empty:
+        st.info('Select an uncertainty method to view the results.')
+        return
+
+    drift_data = plot_data[plot_data['regime'] == 'drift']
+    metric_cols = st.columns(3)
+    metric_cols[0].metric('Drift coverage', f"{drift_data['coverage'].mean():.2%}" if len(drift_data) else '—')
+    metric_cols[1].metric('Drift mean interval width', f"{drift_data['mean width'].mean():.1f} MW" if len(drift_data) else '—')
+    metric_cols[2].metric('Worst 24h coverage in drift', f"{drift_data['worst 24h coverage'].min():.2%}" if len(drift_data) else '—')
+
+    colors = ['#244766', '#6eafad', '#668fb4', '#8c9fae']
+
+    def t5_chart(metric, title, percent=False, target=False):
+        fig = go.Figure()
+        for i, method in enumerate(selected_methods):
+            rows = plot_data[plot_data['UQ method'] == method]
+            fig.add_trace(go.Bar(
+                name=method.replace('_', ' ').title(),
+                x=rows['regime'].astype(str),
+                y=rows[metric] * (100 if percent else 1),
+                error_y=dict(type='data', array=rows[metric + '_sd'] * (100 if percent else 1), visible=True),
+                marker_color=colors[i % len(colors)],
+                hovertemplate='%{x}<br>%{y:.2f}' + ('%' if percent else '') + '<extra>%{fullData.name}</extra>',
+            ))
+        if target:
+            fig.add_hline(y=90, line_dash='dash', line_color='#9b6470', annotation_text='90% target', annotation_position='top left')
+        fig.update_layout(title=title, barmode='group', height=410, plot_bgcolor='white',
+                          paper_bgcolor='white', font_color='#244766',
+                          xaxis_title='Evaluation regime', yaxis_title='Coverage (%)' if percent else title,
+                          legend_title_text='Method', margin=dict(t=75, b=45))
+        fig.update_xaxes(categoryorder='array', categoryarray=regimes)
+        st.plotly_chart(fig, use_container_width=True)
+
+    t5_chart('coverage', 'Empirical coverage', percent=True, target=True)
+    t5_chart('worst 24h coverage', 'Worst rolling 24-hour coverage', percent=True)
+    t5_chart('mean width', 'Mean prediction interval width (MW)')
+    t5_chart('normalised width', 'Normalised prediction interval width')
+    st.caption('Bars show five-seed means with ±1 standard deviation. The 90% line is the nominal coverage target; worst-window results describe observed short-period reliability.')
+    st.subheader('T5 · Regime-level results')
+    st.dataframe(df[df['UQ method'].isin(selected_methods)], use_container_width=True, hide_index=True)
+    st.download_button('Download T5 table (CSV)', df.to_csv(index=False).encode(),
+                       file_name=f'T5_{region}_{config}.csv', mime='text/csv', key='t5_download')
 
 def render_8():
-    """A single figure selector also works safely inside a Streamlit expander."""
     region = region_control('gallery_region')
     paths = sorted((RESULTS / 'figures').rglob('*.png'))
     paths = [p for p in paths if 'archive' not in p.parts and (region in p.name or not any(r in p.name for r in ['SA1','NSW1']))]
@@ -303,7 +362,6 @@ def render_8():
         st.info('No figures are available for this selection.')
 
 
-# === Presentation helpers: consistent headers, interpretations and experiment provenance ===
 STAGES = [
     '01 · Project Overview',
     '02 · Forecast Degradation',
@@ -318,7 +376,6 @@ STAGES = [
 
 st.markdown("""<style>
 :root { --ink:#244766; --muted:#58718a; --blue:#668fb4; --teal:#6eafad; --border:#d7e4ed; }
-/* Unified page heading, research narrative and controls: all nine stages. */
 .research-head {background:linear-gradient(112deg,#eef5fb,#ffffff 68%,#eef8f6);border:1px solid #b9d2e3;border-left:5px solid #668fb4;border-radius:18px;padding:24px 28px;margin:10px 0 19px;}
 .research-head .eyebrow{font-size:.78rem;font-weight:800;letter-spacing:.09em;color:#4276a0;margin-bottom:8px;}
 .research-head h2{font-size:1.75rem;color:#1b394f;margin:0 0 10px;font-weight:780;line-height:1.25;}
@@ -346,7 +403,6 @@ def note(body):
     st.markdown(f'<div class="research-step">{body}</div>', unsafe_allow_html=True)
 
 def future_output(code, title, description, pattern=None):
-    """Search strictly prefix-matched named artefacts, never substitute invented values."""
     section(f'{code} · {title}')
     st.write(description)
     if pattern:
@@ -401,7 +457,6 @@ st.markdown("""<style>
 </style>""", unsafe_allow_html=True)
 
 
-# Keep presentation navigation a single connected list, expanded on arrival.
 st.sidebar.markdown('**CONCEPT DRIFT LAB**')
 st.sidebar.caption('TEAM 42 · RESEARCH DEMONSTRATION')
 page = st.sidebar.radio('Explore the research', STAGES, label_visibility='collapsed')
@@ -532,11 +587,9 @@ elif page == STAGES[3]:
 elif page == STAGES[4]:
     stage_header('STAGE 05 · T5 · F4', 'Do prediction intervals remain reliable during drift?',
                  'Study static and adaptive conformal uncertainty, including interval coverage, width and how calibration changes over time.')
-    section('Current five-seed conformal evidence')
+    section('T5 · Five-seed evaluation by regime')
     render_7()
     insight('Research significance:', 'Coverage measures how often observed demand falls inside prediction intervals; width captures their precision. Rolling and worst-window coverage reveal failures that may be hidden by full-period averages.')
-    future_output('T5','Coverage and interval width by regime',
-        'Regime-level interval coverage, mean width, normalised width and worst 24-hour coverage.', 'T5*.csv')
     future_output('F4','Rolling coverage trajectory',
         'Rolling empirical coverage against the 90% target, with documented shifts annotated.', 'F4*.png')
 
@@ -588,6 +641,4 @@ elif page == STAGES[8]:
     st.write('Event annotations are incomplete reference data, not exhaustive changepoint truth. The generality of results beyond SA1 and NSW1 has not been established. Upcoming required outputs **T5–T7 and F4–F6** will strengthen regime-level reliability, escalation and cross-team comparison.')
     with st.expander('Supporting experiment outputs and figure gallery'):
         render_8()
-    section('Client feedback')
-    st.write('This research prototype presents the evidence behind detector and adaptation decisions, uncertainty estimates, and the potential workload of human review.')
     insight('Overall conclusion:', 'Useful adaptation cannot be determined from detection counts alone. Forecast accuracy, retraining effort, interval reliability and human-review requirements together determine the practical value of the approach.')
