@@ -1,0 +1,203 @@
+{
+  "task": "PGS242-163",
+  "protocol": "pgs242-163-escalation-sweep-v1",
+  "split_id": "aemo_train2018_2019_cal202001_202002_test202003_pr29",
+  "score": {
+    "name": "interval_width",
+    "definition": "upper - lower",
+    "decimals": 6
+  },
+  "rule": "escalate when score > tau; score == tau is retained",
+  "tau_grid": {
+    "definition": "tau = k * calibration_width",
+    "calibration_width": "2 * PGS242-160 static conformal_radius (calibration window 2020-01-01 to 2020-02-29)",
+    "multipliers": [
+      0.5,
+      0.55,
+      0.6,
+      0.65,
+      0.7,
+      0.75,
+      0.8,
+      0.85,
+      0.9,
+      0.95,
+      1.0,
+      1.05,
+      1.1,
+      1.15,
+      1.2,
+      1.25,
+      1.3,
+      1.35,
+      1.4,
+      1.45,
+      1.5,
+      1.55,
+      1.6,
+      1.65,
+      1.7,
+      1.75,
+      1.8,
+      1.85,
+      1.9,
+      1.95,
+      2.0,
+      2.05,
+      2.1,
+      2.15,
+      2.2,
+      2.25,
+      2.3,
+      2.35,
+      2.4,
+      2.45,
+      2.5,
+      2.55,
+      2.6,
+      2.65,
+      2.7,
+      2.75,
+      2.8,
+      2.85,
+      2.9,
+      2.95,
+      3.0
+    ],
+    "endpoints": [
+      "-inf",
+      "+inf"
+    ],
+    "order": "strict -> loose (tau ascending)"
+  },
+  "regimes": {
+    "scope": "full",
+    "regime_days": 7,
+    "labels": [
+      "pre-drift",
+      "drift",
+      "post-drift",
+      "all"
+    ],
+    "source": "T5 full-scope assignment"
+  },
+  "review_targets": [
+    0.05,
+    0.1,
+    0.2
+  ],
+  "coverage_target": 0.9,
+  "events": {
+    "path": "data/events.csv",
+    "sha256": "7f8981ef7495d8374a01ef2fae5e3fb58f228de6973a4dcecc948f6103f49225"
+  },
+  "inputs": [
+    {
+      "seed": 1,
+      "region": "SA1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_1/uncertainty/aemo_conformal_intervals_SA1.csv.gz",
+      "sha256": "4f0e56d4d730ca158dcfe1c852e8ca49fccb249a76055ef9203eb1adde81aca7",
+      "t5_manifest_sha256": "4f0e56d4d730ca158dcfe1c852e8ca49fccb249a76055ef9203eb1adde81aca7",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "3694edc80fa64893a38e44aa5069c3085e05feeff11b1ad1b671abe4ec4d51ca"
+    },
+    {
+      "seed": 1,
+      "region": "NSW1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_1/uncertainty/aemo_conformal_intervals_NSW1.csv.gz",
+      "sha256": "cf270d06d1b16e479eb7461657375c7736da6124f7fcbe0cab5b38f0724baa47",
+      "t5_manifest_sha256": "cf270d06d1b16e479eb7461657375c7736da6124f7fcbe0cab5b38f0724baa47",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "3694edc80fa64893a38e44aa5069c3085e05feeff11b1ad1b671abe4ec4d51ca"
+    },
+    {
+      "seed": 2,
+      "region": "SA1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_2/uncertainty/aemo_conformal_intervals_SA1.csv.gz",
+      "sha256": "02b4a4a52fa1821d16da1365e10e9658435664d49ed7fa87e7f35479cca76f34",
+      "t5_manifest_sha256": "02b4a4a52fa1821d16da1365e10e9658435664d49ed7fa87e7f35479cca76f34",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "6d3e4d860bc4ce12bf168f3d174d2fc9004406fa036e09edbe090cf80060d55c"
+    },
+    {
+      "seed": 2,
+      "region": "NSW1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_2/uncertainty/aemo_conformal_intervals_NSW1.csv.gz",
+      "sha256": "254c59312828d49147740c495ea1728bdf603d229622911da742d380c905100b",
+      "t5_manifest_sha256": "254c59312828d49147740c495ea1728bdf603d229622911da742d380c905100b",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "6d3e4d860bc4ce12bf168f3d174d2fc9004406fa036e09edbe090cf80060d55c"
+    },
+    {
+      "seed": 3,
+      "region": "SA1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_3/uncertainty/aemo_conformal_intervals_SA1.csv.gz",
+      "sha256": "f93ed93a4ab1771286f41f8489726d5527acf836d744bd689e16c89c234caef9",
+      "t5_manifest_sha256": "f93ed93a4ab1771286f41f8489726d5527acf836d744bd689e16c89c234caef9",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "fd9c34709a493a69560d59e2766a8249bd7c54295ad2a9261a5ea44558f1ba13"
+    },
+    {
+      "seed": 3,
+      "region": "NSW1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_3/uncertainty/aemo_conformal_intervals_NSW1.csv.gz",
+      "sha256": "03250e9efb77516cf9924c2b94df0db99e2da77700e04d694cff30366f281201",
+      "t5_manifest_sha256": "03250e9efb77516cf9924c2b94df0db99e2da77700e04d694cff30366f281201",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "fd9c34709a493a69560d59e2766a8249bd7c54295ad2a9261a5ea44558f1ba13"
+    },
+    {
+      "seed": 4,
+      "region": "SA1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_4/uncertainty/aemo_conformal_intervals_SA1.csv.gz",
+      "sha256": "c3f0dc311f498bae95a19f6ad33475ec92fa84340249f3e3aaa5119758904fb5",
+      "t5_manifest_sha256": "c3f0dc311f498bae95a19f6ad33475ec92fa84340249f3e3aaa5119758904fb5",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "5a3e0585d459b08b1c5258a8ca83ace72ea21f48d8c35dfcc3fdc69ed87ac7eb"
+    },
+    {
+      "seed": 4,
+      "region": "NSW1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_4/uncertainty/aemo_conformal_intervals_NSW1.csv.gz",
+      "sha256": "f2d7df9af95f95ea6b69cb52b755598828e69f4a9c863f7a38ee8af7c76cf063",
+      "t5_manifest_sha256": "f2d7df9af95f95ea6b69cb52b755598828e69f4a9c863f7a38ee8af7c76cf063",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "5a3e0585d459b08b1c5258a8ca83ace72ea21f48d8c35dfcc3fdc69ed87ac7eb"
+    },
+    {
+      "seed": 5,
+      "region": "SA1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_5/uncertainty/aemo_conformal_intervals_SA1.csv.gz",
+      "sha256": "f148aa1ac6aae672b3b8752eaf19ef8dd71ad93f1be01ae718fdb23552417c72",
+      "t5_manifest_sha256": "f148aa1ac6aae672b3b8752eaf19ef8dd71ad93f1be01ae718fdb23552417c72",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "b1ea379b011db6b75d78ba8917ff3b9ce418310bac20cf5672311db359123433"
+    },
+    {
+      "seed": 5,
+      "region": "NSW1",
+      "path": "results/tables/adaptation/revised/pgs242_128_five_seed_final/seed_5/uncertainty/aemo_conformal_intervals_NSW1.csv.gz",
+      "sha256": "18bd9c7c73618f1b471c2672356ad2018eaf401321cf51d81fc70529615a8375",
+      "t5_manifest_sha256": "18bd9c7c73618f1b471c2672356ad2018eaf401321cf51d81fc70529615a8375",
+      "verified_against_t5_manifest": true,
+      "summary_sha256": "b1ea379b011db6b75d78ba8917ff3b9ce418310bac20cf5672311db359123433"
+    }
+  ],
+  "skipped": [],
+  "runs": {
+    "path": "results/runs.csv",
+    "group": "escalation_sweep",
+    "written": true,
+    "metrics": [
+      "retained_coverage_at_review_05pct",
+      "retained_coverage_at_review_10pct",
+      "retained_coverage_at_review_20pct",
+      "review_rate_for_retained_coverage_90pct"
+    ],
+    "n_rows": 5440
+  },
+  "outputs": {
+    "escalation_sweep.csv": "1ca2c85af4ce55c19e586d5640c0f7db0048a79face9f927e76db0079299b332",
+    "escalation_by_regime.csv": "cd119965c6d8c5b0e45bbc817d36a5578719b8576690a3e98664253bdf37fbdf"
+  }
+}
