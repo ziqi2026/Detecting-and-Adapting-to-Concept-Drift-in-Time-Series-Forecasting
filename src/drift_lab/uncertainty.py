@@ -292,6 +292,12 @@ SWEEP_METRIC_COLUMNS = (
     "retained_mean_width",
 )
 
+# Evaluation-only point-forecast error columns; never used to escalate.
+SWEEP_MAE_COLUMNS = (
+    "retained_mae",
+    "escalated_mae",
+)
+
 
 def _as_1d_float(values, name):
     array = np.asarray(values, dtype=float)
@@ -443,6 +449,36 @@ def retained_coverage(
     return _mean_where(covered.astype(float), ~flags)
 
 
+def retained_mae(
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    flags: ArrayLike,
+) -> float:
+    """Return the point-forecast MAE ``mean(|y_true - y_pred|)`` on retained steps.
+
+    Retained steps are those with ``flags == False``; pass ``~flags`` for the
+    escalated-step MAE. This is an evaluation metric only: y_true is known
+    after the fact and plays no part in the escalation decision. NaN is
+    returned when no steps are selected.
+
+    Raises
+    ------
+    ValueError
+        If lengths differ, values are non-finite, or flags are not boolean.
+    """
+    y_true = _as_1d_float(y_true, "y_true")
+    y_pred = _as_1d_float(y_pred, "y_pred")
+    flags = _validate_flags(flags)
+
+    if not (len(y_true) == len(y_pred) == len(flags)):
+        raise ValueError("y_true, y_pred and flags must have equal length.")
+
+    if not (np.isfinite(y_true).all() and np.isfinite(y_pred).all()):
+        raise ValueError("y_true and y_pred must contain only finite values.")
+
+    return _mean_where(np.abs(y_true - y_pred), ~flags)
+
+
 def _with_endpoints(taus, labels, extra=None):
     """Add -inf/+inf endpoints and order the grid strict -> loose."""
     extra = extra or {}
@@ -572,6 +608,7 @@ def escalation_sweep(
     y_true_col: str = "y_true",
     lower_col: str = "lower",
     upper_col: str = "upper",
+    y_pred_col: str | None = None,
 ) -> pd.DataFrame:
     """Evaluate the escalation rule for every group and every tau.
 
@@ -585,14 +622,19 @@ def escalation_sweep(
         columns (for example ``tau_quantile``) are copied to the output.
     group_cols : sequence of str
         Columns that define independent groups (may be empty).
+    y_pred_col : str, optional
+        Point-forecast column. When given, retained_mae and escalated_mae
+        are added. The forecast is used for evaluation only; escalation
+        depends on the score alone.
 
     Returns
     -------
     pd.DataFrame
         One row per (group, tau): group columns, tau columns, then
         n_total, n_escalated, n_retained, review_rate, retained_coverage,
-        escalated_coverage and retained_mean_width. Groups are sorted and
-        taus run strict -> loose. Coverage/width on an empty subset is NaN.
+        escalated_coverage, retained_mean_width and, with y_pred_col,
+        retained_mae and escalated_mae. Groups are sorted and taus run
+        strict -> loose. Metrics on an empty subset are NaN.
 
     Raises
     ------
@@ -604,6 +646,7 @@ def escalation_sweep(
 
     group_cols = list(group_cols)
     value_cols = [score_col, y_true_col, lower_col, upper_col]
+    value_cols += [y_pred_col] if y_pred_col is not None else []
     missing = set(group_cols + value_cols) - set(df.columns)
 
     if missing:
@@ -637,6 +680,17 @@ def escalation_sweep(
 
     covered = ((y_true >= lower) & (y_true <= upper)).astype(float)
     width = upper - lower
+    abs_error = None
+    metric_columns = list(SWEEP_METRIC_COLUMNS)
+
+    if y_pred_col is not None:
+        y_pred = _as_1d_float(df[y_pred_col], "y_pred")
+
+        if not np.isfinite(y_pred).all():
+            raise ValueError("y_pred must contain only finite values.")
+
+        abs_error = np.abs(y_true - y_pred)
+        metric_columns += SWEEP_MAE_COLUMNS
 
     if group_cols:
         groups = df.groupby(group_cols, sort=True, observed=True).indices
@@ -656,33 +710,33 @@ def escalation_sweep(
         group_scores = scores[positions]
         group_covered = covered[positions]
         group_width = width[positions]
+        group_error = (
+            abs_error[positions] if abs_error is not None else None
+        )
 
         for tau_row in grid_records:
             flags = group_scores > tau_row["tau"]
             retained = ~flags
             n_escalated = int(flags.sum())
+            row = {
+                **group_values,
+                **tau_row,
+                "n_total": len(flags),
+                "n_escalated": n_escalated,
+                "n_retained": len(flags) - n_escalated,
+                "review_rate": review_rate(flags),
+                "retained_coverage": _mean_where(group_covered, retained),
+                "escalated_coverage": _mean_where(group_covered, flags),
+                "retained_mean_width": _mean_where(group_width, retained),
+            }
 
-            rows.append(
-                {
-                    **group_values,
-                    **tau_row,
-                    "n_total": len(flags),
-                    "n_escalated": n_escalated,
-                    "n_retained": len(flags) - n_escalated,
-                    "review_rate": review_rate(flags),
-                    "retained_coverage": _mean_where(
-                        group_covered, retained
-                    ),
-                    "escalated_coverage": _mean_where(
-                        group_covered, flags
-                    ),
-                    "retained_mean_width": _mean_where(
-                        group_width, retained
-                    ),
-                }
-            )
+            if group_error is not None:
+                row["retained_mae"] = _mean_where(group_error, retained)
+                row["escalated_mae"] = _mean_where(group_error, flags)
+
+            rows.append(row)
 
     return pd.DataFrame(
         rows,
-        columns=[*group_cols, *grid.columns, *SWEEP_METRIC_COLUMNS],
+        columns=[*group_cols, *grid.columns, *metric_columns],
     )

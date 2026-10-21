@@ -1,6 +1,7 @@
 {
   "task": "PGS242-163",
   "protocol": "pgs242-163-escalation-sweep-v1",
+  "schema_version": 2,
   "split_id": "aemo_train2018_2019_cal202001_202002_test202003_pr29",
   "score": {
     "name": "interval_width",
@@ -87,6 +88,14 @@
     0.2
   ],
   "coverage_target": 0.9,
+  "evaluation_only": {
+    "columns": [
+      "retained_mae",
+      "escalated_mae"
+    ],
+    "definition": "mean |y_true - point_forecast| over retained or escalated steps; NaN when empty",
+    "affects_escalation": false
+  },
   "events": {
     "path": "data/events.csv",
     "sha256": "7f8981ef7495d8374a01ef2fae5e3fb58f228de6973a4dcecc948f6103f49225"
@@ -192,12 +201,14 @@
       "retained_coverage_at_review_05pct",
       "retained_coverage_at_review_10pct",
       "retained_coverage_at_review_20pct",
-      "review_rate_for_retained_coverage_90pct"
+      "review_rate_for_retained_coverage_90pct",
+      "retained_mae_at_review_10pct",
+      "escalated_mae_at_review_10pct"
     ],
-    "n_rows": 5440
+    "n_rows": 8160
   },
   "outputs": {
-    "escalation_sweep.csv": "1ca2c85af4ce55c19e586d5640c0f7db0048a79face9f927e76db0079299b332",
-    "escalation_by_regime.csv": "cd119965c6d8c5b0e45bbc817d36a5578719b8576690a3e98664253bdf37fbdf"
+    "escalation_sweep.csv": "21dfdfce77b3c457d01470ed487621557ebb400abffe18e15a041daa38e2e3fa",
+    "escalation_by_regime.csv": "9307a256d70122e87b678ec105fb070e605312478b0273407545970a0c4fdcec"
   }
 }

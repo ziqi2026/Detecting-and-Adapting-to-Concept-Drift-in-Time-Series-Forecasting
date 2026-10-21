@@ -19,6 +19,7 @@ from drift_lab.uncertainty import (
     interval_width,
     prediction_intervals,
     retained_coverage,
+    retained_mae,
     review_rate,
 )
 
@@ -63,6 +64,60 @@ def test_retained_coverage_uses_inclusive_bounds():
 
 def test_interval_width():
     np.testing.assert_allclose(interval_width([0.0, -3.0], [2.0, 1.0]), [2.0, 4.0])
+
+
+# Evaluation-only MAE
+
+def mae_example():
+    """Large point errors coincide with the widest intervals."""
+    y_true = np.array([10.0, 10.0, 10.0, 10.0, 10.0])
+    y_pred = np.array([10.0, 11.0, 9.0, 20.0, 30.0])  # |errors| 0, 1, 1, 10, 20
+    half_width = np.array([0.5, 0.5, 1.0, 4.0, 6.0])   # widths 1, 1, 2, 8, 12
+    return y_true, y_pred, y_pred - half_width, y_pred + half_width
+
+
+def test_escalated_mae_exceeds_retained_mae_when_errors_track_width():
+    y_true, y_pred, lower, upper = mae_example()
+    flags = escalation_flags(interval_width(lower, upper), 2.0)
+    np.testing.assert_array_equal(flags, [False, False, False, True, True])
+    assert retained_mae(y_true, y_pred, flags) == pytest.approx(2 / 3)
+    assert retained_mae(y_true, y_pred, ~flags) == pytest.approx(15.0)
+
+    frame = sweep_frame(interval_width(lower, upper), y_true, lower, upper).assign(y_pred=y_pred)
+    sweep = escalation_sweep(frame, [2.0], ["group"], y_pred_col="y_pred")
+    row = sweep.iloc[0]
+    assert row.escalated_mae > row.retained_mae
+    assert row.retained_mae == pytest.approx(2 / 3)
+    assert row.escalated_mae == pytest.approx(15.0)
+
+
+def test_mae_is_nan_on_empty_sets_and_matches_overall_mae():
+    y_true, y_pred, lower, upper = mae_example()
+    frame = sweep_frame(interval_width(lower, upper), y_true, lower, upper).assign(y_pred=y_pred)
+    sweep = escalation_sweep(frame, [-np.inf, np.inf], ["group"], y_pred_col="y_pred")
+    strict, loose = sweep.iloc[0], sweep.iloc[1]
+    assert np.isnan(strict.retained_mae) and strict.escalated_mae == pytest.approx(6.4)
+    assert np.isnan(loose.escalated_mae) and loose.retained_mae == pytest.approx(6.4)
+    assert np.isnan(retained_mae(y_true, y_pred, np.ones(5, dtype=bool)))
+
+
+def test_point_forecast_does_not_change_escalation():
+    y_true, y_pred, lower, upper = mae_example()
+    scores = interval_width(lower, upper)
+    grid = calibration_tau_grid(scores)
+    sweeps = [escalation_sweep(sweep_frame(scores, y_true, lower, upper).assign(y_pred=pred),
+                               grid, ["group"], y_pred_col="y_pred")
+              for pred in (y_pred, y_pred + 100.0)]
+    decision_columns = ["tau", "n_escalated", "review_rate", "retained_coverage"]
+    pd.testing.assert_frame_equal(sweeps[0][decision_columns], sweeps[1][decision_columns])
+    assert not np.allclose(sweeps[0].retained_mae.dropna(), sweeps[1].retained_mae.dropna())
+
+
+def test_sweep_omits_mae_columns_without_point_forecast():
+    y_true, _, lower, upper = mae_example()
+    sweep = escalation_sweep(sweep_frame(interval_width(lower, upper), y_true, lower, upper),
+                             [1.0], ["group"])
+    assert "retained_mae" not in sweep and "escalated_mae" not in sweep
 
 
 # Monotonicity and extremes
@@ -121,9 +176,11 @@ def test_sweep_matches_primitive_functions():
     lower = rng.normal(size=n)
     upper = lower + rng.gamma(2.0, 1.0, size=n)
     y_true = rng.normal(size=n)
+    y_pred = (lower + upper) / 2
     scores = interval_width(lower, upper)
     grid = calibration_tau_grid(scores[:40])
-    sweep = escalation_sweep(sweep_frame(scores, y_true, lower, upper), grid, ["group"])
+    frame = sweep_frame(scores, y_true, lower, upper).assign(y_pred=y_pred)
+    sweep = escalation_sweep(frame, grid, ["group"], y_pred_col="y_pred")
     assert list(sweep.tau_quantile) == list(grid.tau_quantile)
     for row in sweep.itertuples():
         flags = escalation_flags(scores, row.tau)
@@ -133,6 +190,8 @@ def test_sweep_matches_primitive_functions():
                                 retained_coverage(y_true, lower, upper, flags))
         np.testing.assert_equal(row.escalated_coverage,
                                 retained_coverage(y_true, lower, upper, ~flags))
+        np.testing.assert_equal(row.retained_mae, retained_mae(y_true, y_pred, flags))
+        np.testing.assert_equal(row.escalated_mae, retained_mae(y_true, y_pred, ~flags))
 
 
 # Tau grids
@@ -238,6 +297,13 @@ def test_calibration_tau_grid_ignores_test_truth():
     lambda: retained_coverage([1.0, 2.0], [0.0, 0.0], [1.0, 1.0], np.array([False])),
     lambda: retained_coverage([np.nan], [0.0], [1.0], np.array([False])),
     lambda: retained_coverage([1.0], [0.0], [1.0], np.array([0])),
+    lambda: retained_mae([1.0, 2.0], [1.0], np.array([False, False])),
+    lambda: retained_mae([1.0], [np.nan], np.array([False])),
+    lambda: retained_mae([1.0], [1.0], np.array([1])),
+    lambda: escalation_sweep(sweep_frame([1.0], [1.0], [0.0], [2.0]), [1.0], ["group"],
+                             y_pred_col="y_pred"),
+    lambda: escalation_sweep(sweep_frame([1.0], [1.0], [0.0], [2.0]).assign(y_pred=np.nan),
+                             [1.0], ["group"], y_pred_col="y_pred"),
     lambda: calibration_tau_grid([]),
     lambda: calibration_tau_grid([1.0, np.nan]),
     lambda: calibration_tau_grid([1.0], [0.5, 1.5]),
@@ -337,16 +403,30 @@ def test_runner_end_to_end_schema_and_static_collapse(tmp_path):
     assert all_rows.first().eq(TEST_SIZE).all()
 
     runs = pd.read_csv(tmp_path / "runs.csv")
-    assert len(runs) == 2 * 2 * 3 * 4
+    assert len(runs) == 2 * 2 * 3 * 6
+    assert set(runs.metric_name) == set(escalation_runner.metric_names())
+    assert {"retained_mae_at_review_10pct", "escalated_mae_at_review_10pct"} <= set(runs.metric_name)
     assert set(runs.group) == {"escalation_sweep"}
     assert set(runs.method) == {"A|static_conformal", "A|adaptive_conformal",
                                 "B|static_conformal", "B|adaptive_conformal"}
     assert set(runs.config_hash) <= set(sweep.config_hash)
     manifest = json.loads((tmp_path / "out/escalation_manifest.json").read_text())
     assert manifest["runs"]["n_rows"] == len(runs)
+    assert manifest["schema_version"] == 2
+    assert manifest["evaluation_only"]["affects_escalation"] is False
     summary = (tmp_path / "out/escalation_summary.md").read_text()
     assert "Distinct static review rates over all rows: [0.0, 1.0]." in summary
     assert "NSW1: missing" in summary
+    assert "Escalated/retained MAE" in summary
+
+    # +inf keeps every step, so retained MAE is the stream's overall MAE.
+    frame = pd.read_csv(run_dir / "seed_1/uncertainty/aemo_conformal_intervals_SA1.csv.gz")
+    loose = sweep[np.isposinf(sweep.tau) & (sweep.regime == "all")]
+    for row in loose.itertuples():
+        stream = frame[frame.configuration == row.configuration]
+        assert row.retained_mae == pytest.approx(
+            np.abs(stream.y_true - stream.point_forecast).mean())
+        assert np.isnan(row.escalated_mae)
 
 
 def test_runner_operating_point_selection(tmp_path):
@@ -378,6 +458,30 @@ def test_runner_is_deterministic_and_runs_log_idempotent(tmp_path):
     first = json.loads((tmp_path / "first/escalation_manifest.json").read_text())
     second = json.loads((tmp_path / "second/escalation_manifest.json").read_text())
     assert first == second
+
+
+def test_runner_appends_only_missing_metrics_on_schema_rerun(tmp_path):
+    run_dir = tmp_path / "run"
+    write_fixture(run_dir)
+    run_fixture(tmp_path, run_dir, "first", regions=("SA1",))
+    runs_path = tmp_path / "runs.csv"
+    full = pd.read_csv(runs_path)
+    new_metrics = {"retained_mae_at_review_10pct", "escalated_mae_at_review_10pct"}
+    # Simulate a log written before the MAE metrics existed.
+    lines = runs_path.read_text().splitlines(keepends=True)
+    keep = [lines[0]] + [line for line, metric in zip(lines[1:], full.metric_name)
+                         if metric not in new_metrics]
+    runs_path.write_text("".join(keep))
+    older = runs_path.read_bytes()
+
+    run_fixture(tmp_path, run_dir, "second", regions=("SA1",))
+    rerun = pd.read_csv(runs_path)
+    assert runs_path.read_bytes().startswith(older)
+    assert len(rerun) == len(full)
+    keys = ["method", "region", "seed", "config_hash", "metric_name", "regime"]
+    assert not rerun.duplicated(keys).any()
+    added = rerun.iloc[len(keep) - 1:]
+    assert set(added.metric_name) == new_metrics
 
 
 def test_runner_preserves_existing_runs_rows(tmp_path):

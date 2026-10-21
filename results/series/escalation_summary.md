@@ -18,39 +18,46 @@ Distinct static review rates over all rows: [0.0, 1.0].
 Static split-conformal widths are constant (2 × calibration radius), so every tau either escalates all steps or none. Width-based escalation is informative only for adaptive conformal.
 Adaptive groups with more than two distinct review rates: 680 of 680.
 
-## Retained coverage at the ~10% review operating point: A vs B vs C_*
+## Coverage and MAE at the ~10% review operating point: A vs B vs C_*
 
-Regime 'all'. Static conformal cannot reach 10%; its nearest grid point is 0%.
+Regime 'all'. Static conformal cannot reach 10%; its nearest grid point is 0%, so it has no escalated steps and its escalated MAE is N/A. MAE is mean |y_true - point_forecast| (evaluation only; it does not affect escalation).
 
 ### SA1
 
-| Configuration | UQ method | Achieved review rate | Retained coverage |
-| --- | --- | --- | --- |
-| A | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9404 ± 0.0039 (n=5) |
-| A | adaptive_conformal | 0.0950 ± 0.0056 (n=5) | 0.8992 ± 0.0000 (n=5) |
-| B | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9501 ± 0.0040 (n=5) |
-| B | adaptive_conformal | 0.1032 ± 0.0055 (n=5) | 0.8994 ± 0.0001 (n=5) |
-| C_adwin | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9502 ± 0.0038 (n=5) |
-| C_adwin | adaptive_conformal | 0.0968 ± 0.0086 (n=5) | 0.8994 ± 0.0001 (n=5) |
-| C_kswin | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9501 ± 0.0037 (n=5) |
-| C_kswin | adaptive_conformal | 0.1037 ± 0.0078 (n=5) | 0.8993 ± 0.0001 (n=5) |
-| C_page_hinkley | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9499 ± 0.0036 (n=5) |
-| C_page_hinkley | adaptive_conformal | 0.0994 ± 0.0070 (n=5) | 0.8994 ± 0.0001 (n=5) |
+| Configuration | UQ method | Achieved review rate | Retained coverage | Retained MAE (MW) | Escalated MAE (MW) | Escalated/retained MAE |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9404 ± 0.0039 (n=5) | 146.5 ± 0.3 (n=5) | N/A | N/A |
+| A | adaptive_conformal | 0.0950 ± 0.0056 (n=5) | 0.8992 ± 0.0000 (n=5) | 134.3 ± 0.6 (n=5) | 263.2 ± 4.8 (n=5) | 1.960 ± 0.032 (n=5) |
+| B | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9501 ± 0.0040 (n=5) | 136.4 ± 0.4 (n=5) | N/A | N/A |
+| B | adaptive_conformal | 0.1032 ± 0.0055 (n=5) | 0.8994 ± 0.0001 (n=5) | 123.5 ± 0.6 (n=5) | 248.2 ± 5.1 (n=5) | 2.010 ± 0.035 (n=5) |
+| C_adwin | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9502 ± 0.0038 (n=5) | 136.9 ± 0.2 (n=5) | N/A | N/A |
+| C_adwin | adaptive_conformal | 0.0968 ± 0.0086 (n=5) | 0.8994 ± 0.0001 (n=5) | 124.9 ± 0.8 (n=5) | 249.0 ± 4.6 (n=5) | 1.994 ± 0.028 (n=5) |
+| C_kswin | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9501 ± 0.0037 (n=5) | 136.6 ± 0.1 (n=5) | N/A | N/A |
+| C_kswin | adaptive_conformal | 0.1037 ± 0.0078 (n=5) | 0.8993 ± 0.0001 (n=5) | 124.4 ± 0.6 (n=5) | 242.6 ± 4.0 (n=5) | 1.951 ± 0.023 (n=5) |
+| C_page_hinkley | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9499 ± 0.0036 (n=5) | 137.3 ± 0.3 (n=5) | N/A | N/A |
+| C_page_hinkley | adaptive_conformal | 0.0994 ± 0.0070 (n=5) | 0.8994 ± 0.0001 (n=5) | 125.1 ± 0.8 (n=5) | 248.1 ± 3.4 (n=5) | 1.983 ± 0.015 (n=5) |
 
 ### NSW1
 
-| Configuration | UQ method | Achieved review rate | Retained coverage |
-| --- | --- | --- | --- |
-| A | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9690 ± 0.0019 (n=5) |
-| A | adaptive_conformal | 0.0939 ± 0.0077 (n=5) | 0.8993 ± 0.0001 (n=5) |
-| B | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9771 ± 0.0014 (n=5) |
-| B | adaptive_conformal | 0.0999 ± 0.0083 (n=5) | 0.8994 ± 0.0001 (n=5) |
-| C_adwin | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9769 ± 0.0015 (n=5) |
-| C_adwin | adaptive_conformal | 0.0958 ± 0.0089 (n=5) | 0.8994 ± 0.0000 (n=5) |
-| C_kswin | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9764 ± 0.0015 (n=5) |
-| C_kswin | adaptive_conformal | 0.1005 ± 0.0106 (n=5) | 0.8993 ± 0.0000 (n=5) |
-| C_page_hinkley | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9763 ± 0.0020 (n=5) |
-| C_page_hinkley | adaptive_conformal | 0.1028 ± 0.0093 (n=5) | 0.8994 ± 0.0000 (n=5) |
+| Configuration | UQ method | Achieved review rate | Retained coverage | Retained MAE (MW) | Escalated MAE (MW) | Escalated/retained MAE |
+| --- | --- | --- | --- | --- | --- | --- |
+| A | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9690 ± 0.0019 (n=5) | 369.7 ± 1.3 (n=5) | N/A | N/A |
+| A | adaptive_conformal | 0.0939 ± 0.0077 (n=5) | 0.8993 ± 0.0001 (n=5) | 347.5 ± 0.6 (n=5) | 584.7 ± 8.5 (n=5) | 1.682 ± 0.024 (n=5) |
+| B | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9771 ± 0.0014 (n=5) | 341.9 ± 0.1 (n=5) | N/A | N/A |
+| B | adaptive_conformal | 0.0999 ± 0.0083 (n=5) | 0.8994 ± 0.0001 (n=5) | 317.8 ± 1.5 (n=5) | 559.4 ± 7.8 (n=5) | 1.760 ± 0.019 (n=5) |
+| C_adwin | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9769 ± 0.0015 (n=5) | 343.1 ± 0.5 (n=5) | N/A | N/A |
+| C_adwin | adaptive_conformal | 0.0958 ± 0.0089 (n=5) | 0.8994 ± 0.0000 (n=5) | 320.0 ± 1.2 (n=5) | 562.0 ± 12.9 (n=5) | 1.756 ± 0.035 (n=5) |
+| C_kswin | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9764 ± 0.0015 (n=5) | 343.3 ± 0.5 (n=5) | N/A | N/A |
+| C_kswin | adaptive_conformal | 0.1005 ± 0.0106 (n=5) | 0.8993 ± 0.0000 (n=5) | 320.0 ± 1.9 (n=5) | 553.2 ± 12.0 (n=5) | 1.729 ± 0.029 (n=5) |
+| C_page_hinkley | static_conformal | 0.0000 ± 0.0000 (n=5) | 0.9763 ± 0.0020 (n=5) | 344.5 ± 0.6 (n=5) | N/A | N/A |
+| C_page_hinkley | adaptive_conformal | 0.1028 ± 0.0093 (n=5) | 0.8994 ± 0.0000 (n=5) | 320.4 ± 1.8 (n=5) | 555.6 ± 8.3 (n=5) | 1.734 ± 0.020 (n=5) |
+
+### Adaptive conformal escalated/retained MAE ratio
+
+Regime 'all', ~10% review, every configuration and seed:
+
+- SA1: 2.194 ± 0.214 (n=85), range 1.919 to 2.764, 85 of 85 groups above 1.
+- NSW1: 2.298 ± 0.411 (n=85), range 1.657 to 2.862, 85 of 85 groups above 1.
 
 ## Arm A operating points
 

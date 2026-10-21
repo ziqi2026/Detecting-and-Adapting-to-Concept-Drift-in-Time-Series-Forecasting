@@ -94,17 +94,26 @@ seed, regime (pre-drift, drift, post-drift, all), then tau ascending.
 | retained_coverage | mean(lower <= y_true <= upper) over retained steps; NaN if n_retained = 0 |
 | escalated_coverage | the same over escalated steps; NaN if n_escalated = 0 |
 | retained_mean_width | mean width of retained steps in MW; NaN if n_retained = 0 |
+| retained_mae | mean \|y_true − point_forecast\| over retained steps in MW; NaN if n_retained = 0 |
+| escalated_mae | the same over escalated steps; NaN if n_escalated = 0 |
+
+`retained_mae` and `escalated_mae` were added in schema version 2. They are
+evaluation-only: the point forecast never enters the escalation decision,
+and they don't change `config_hash`. The runner checks that each persisted
+`point_forecast` is the midpoint of both conformal intervals.
 
 ### results/series/escalation_by_regime.csv
 
 One row per (region, configuration, uq_method, seed, regime), with the same
 key columns plus:
 
-- `n_total`, `overall_coverage` and `mean_width`: the +inf row.
+- `n_total`, `overall_coverage`, `mean_width` and `overall_mae`: the +inf
+  row.
 - `n_distinct_review_rates`: 2 means the sweep collapsed to {0, 1}.
 - For targets 5%, 10% and 20% (`05pct`, `10pct`, `20pct`):
   `tau_at_review_<t>`, `tau_quantile_at_review_<t>`,
-  `review_rate_at_review_<t>` and `retained_coverage_at_review_<t>`. These
+  `review_rate_at_review_<t>`, `retained_coverage_at_review_<t>`,
+  `retained_mae_at_review_<t>` and `escalated_mae_at_review_<t>`. These
   come from the grid row whose review rate is closest to the target. Ties go
   to the lower review rate, then the smaller tau. Check the achieved review
   rate: static conformal can only reach 0 or 1.
@@ -119,26 +128,33 @@ key columns plus:
 
 Rows use the existing shared schema (`drift_lab.run_logger.RUNS_COLUMNS`),
 with `group = escalation_sweep`, `method = <configuration>|<uq_method>`,
-`regime` as above and `wall_clock_s = 0` (no training). There are four
+`regime` as above and `wall_clock_s = 0` (no training). There are six
 metrics per (region, configuration, uq_method, seed, regime):
 
 - `retained_coverage_at_review_05pct`
 - `retained_coverage_at_review_10pct`
 - `retained_coverage_at_review_20pct`
 - `review_rate_for_retained_coverage_90pct`
+- `retained_mae_at_review_10pct` (schema version 2)
+- `escalated_mae_at_review_10pct` (schema version 2; NaN when nothing is
+  escalated, which is always the case for static conformal at its 0% point)
 
 `config_hash` links each row to the series files. The append reuses T5's
-`append_run_metrics_safely`. A rerun with identical inputs adds nothing,
-historical bytes are preserved, and a conflicting value for an existing
+`append_run_metrics_safely`, keyed on group, method, dataset, region, seed,
+config_hash, split_id, metric_name and regime. A rerun with identical inputs
+adds nothing. A rerun after a schema extension adds only the new metrics.
+Historical bytes are preserved, and a conflicting value for an existing
 identity fails before anything is written.
 
 ### results/series/escalation_manifest.json and escalation_summary.md
 
-The manifest records the protocol, input and catalogue hashes, T5
-verification status, skipped inputs, the runs.csv metrics and the output
-hashes. The summary is generated and reports the static {0, 1} check, the A
-vs B vs C_* comparison at the ~10% operating point, and arm A operating
-points. Both are deterministic for identical inputs.
+The manifest records the protocol, `schema_version`, input and catalogue
+hashes, T5 verification status, skipped inputs, the runs.csv metrics and
+the output hashes. The summary is generated. It reports the static {0, 1}
+check, the A vs B vs C_* comparison at the ~10% operating point (coverage,
+retained/escalated MAE and their ratio), the per-region adaptive MAE ratio,
+and arm A operating points. Both files are deterministic for identical
+inputs.
 
 ## Reproduction
 
@@ -149,3 +165,14 @@ PYTHONPATH=src python -m pytest -q tests/uncertainty/test_escalation.py
 
 Options: `--seeds`, `--regions`, `--run-dir`, `--events`, `--output-dir`,
 `--runs`, `--t5-manifest` and `--skip-runs-log`.
+
+## Backlog
+
+- **Lagged-nonconformity escalation score (later sprint).** Add a
+  separately named score option that uses only past nonconformity scores,
+  for example a lagged or rolling mean of `|y_s − yhat_s|` over steps
+  s < t, and compare it with width-based escalation. Never use the
+  current-step score. The motivation is the PGS242-163 finding that, under
+  adaptive conformal, escalating the widest intervals lowers retained
+  coverage, because the widest adaptive intervals are the best covered.
+  This is deferred by decision on PGS242-163 and still needs a ticket.
