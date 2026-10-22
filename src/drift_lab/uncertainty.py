@@ -15,15 +15,27 @@ future information is used to construct the interval.
 The current Sprint 4 implementation intentionally leaves escalation inactive.
 Adaptive conformal updates and escalation policies belong to Sprint 5.
 Shared uncertainty evaluation metrics live in drift_lab.evaluation.
+
+PGS242-163 adds pure escalation-policy helpers at the end of this module.
+The frozen uq() contract is unchanged: its escalate_flag stays False, and
+escalation is evaluated separately as a threshold sweep.
 """
 
 import math
+from collections.abc import Sequence
 
 import numpy as np
+import pandas as pd
+from numpy.typing import ArrayLike
 
 
 DEFAULT_ALPHA = 0.10
 DEFAULT_GAMMA = 0.005
+
+# Calibration-quantile tau grid: p0, p5, ..., p95, p99, p100.
+ESCALATION_QUANTILES = tuple(
+    [round(0.05 * step, 2) for step in range(20)] + [0.99, 1.0]
+)
 
 
 def _validate_calibration_residuals(calibration_residuals):
@@ -260,4 +272,471 @@ def adaptive_prediction_intervals(
         escalate,
         alpha_path,
         radius_path,
+    )
+
+
+# Escalation policy (PGS242-163)
+#
+# escalate(t) = score(t) > tau, with a strict inequality: a step whose score
+# equals tau is retained. The intended score is the interval width, which is
+# fixed when the interval is issued and so is known before y_t is observed.
+# The current-step nonconformity |y_t - yhat_t| must not be used as a score.
+
+SWEEP_METRIC_COLUMNS = (
+    "n_total",
+    "n_escalated",
+    "n_retained",
+    "review_rate",
+    "retained_coverage",
+    "escalated_coverage",
+    "retained_mean_width",
+)
+
+# Evaluation-only point-forecast error columns; never used to escalate.
+SWEEP_MAE_COLUMNS = (
+    "retained_mae",
+    "escalated_mae",
+)
+
+
+def _as_1d_float(values, name):
+    array = np.asarray(values, dtype=float)
+
+    if array.ndim != 1:
+        raise ValueError(f"{name} must be one-dimensional.")
+
+    return array
+
+
+def _validate_bounds(lower, upper):
+    lower = _as_1d_float(lower, "lower")
+    upper = _as_1d_float(upper, "upper")
+
+    if len(lower) != len(upper):
+        raise ValueError("lower and upper must have equal length.")
+
+    if not (np.isfinite(lower).all() and np.isfinite(upper).all()):
+        raise ValueError("lower and upper must contain only finite values.")
+
+    if (lower > upper).any():
+        raise ValueError("lower must not exceed upper.")
+
+    return lower, upper
+
+
+def _validate_scores(scores):
+    scores = _as_1d_float(scores, "scores")
+
+    if not np.isfinite(scores).all():
+        raise ValueError("scores must not contain NaN or infinite values.")
+
+    return scores
+
+
+def _validate_tau(tau):
+    if isinstance(tau, (bool, np.bool_)) or not np.isscalar(tau):
+        raise ValueError("tau must be a real scalar.")
+
+    tau = float(tau)
+
+    if np.isnan(tau):
+        raise ValueError(
+            "tau must not be NaN; use -inf or +inf for the endpoints."
+        )
+
+    return tau
+
+
+def _validate_flags(flags):
+    flags = np.asarray(flags)
+
+    if flags.ndim != 1:
+        raise ValueError("flags must be one-dimensional.")
+
+    if flags.dtype != bool:
+        raise ValueError("flags must be a boolean array.")
+
+    return flags
+
+
+def _mean_where(values, mask):
+    """Mean of values[mask], or NaN when the mask selects nothing."""
+    if not mask.any():
+        return float("nan")
+
+    return float(values[mask].mean())
+
+
+def interval_width(lower: ArrayLike, upper: ArrayLike) -> np.ndarray:
+    """Return the width ``upper - lower`` of each prediction interval.
+
+    The width is fixed when the interval is issued, before y_t is observed,
+    so it is a valid ex-ante escalation score.
+
+    Raises
+    ------
+    ValueError
+        If the bounds differ in length, are non-finite, or lower > upper.
+    """
+    lower, upper = _validate_bounds(lower, upper)
+    return upper - lower
+
+
+def escalation_flags(scores: ArrayLike, tau: float) -> np.ndarray:
+    """Return ``scores > tau`` as a boolean escalation array.
+
+    The comparison is strict: a step whose score equals tau is retained.
+    tau = -inf escalates every step; tau = +inf escalates none.
+
+    Raises
+    ------
+    ValueError
+        If scores contain NaN/inf or tau is NaN or not a real scalar.
+    """
+    scores = _validate_scores(scores)
+    tau = _validate_tau(tau)
+    return scores > tau
+
+
+def review_rate(flags: ArrayLike) -> float:
+    """Return the fraction of steps escalated: ``n_escalated / n_total``.
+
+    Raises
+    ------
+    ValueError
+        If flags are empty, not one-dimensional or not boolean.
+    """
+    flags = _validate_flags(flags)
+
+    if len(flags) == 0:
+        raise ValueError("flags must not be empty.")
+
+    return float(flags.mean())
+
+
+def retained_coverage(
+    y_true: ArrayLike,
+    lower: ArrayLike,
+    upper: ArrayLike,
+    flags: ArrayLike,
+) -> float:
+    """Return coverage ``mean(lower <= y_true <= upper)`` on retained steps.
+
+    Retained steps are those with ``flags == False``. Bounds are inclusive,
+    matching drift_lab.evaluation.calculate_empirical_coverage. If every step
+    is escalated (n_retained == 0) the coverage is undefined and NaN is
+    returned, never 0 or 1.
+
+    Raises
+    ------
+    ValueError
+        If lengths differ, y_true is non-finite, bounds are invalid, or
+        flags are not boolean.
+    """
+    y_true = _as_1d_float(y_true, "y_true")
+    lower, upper = _validate_bounds(lower, upper)
+    flags = _validate_flags(flags)
+
+    if not (len(y_true) == len(lower) == len(flags)):
+        raise ValueError(
+            "y_true, lower, upper and flags must have equal length."
+        )
+
+    if not np.isfinite(y_true).all():
+        raise ValueError("y_true must contain only finite values.")
+
+    covered = (y_true >= lower) & (y_true <= upper)
+    return _mean_where(covered.astype(float), ~flags)
+
+
+def retained_mae(
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    flags: ArrayLike,
+) -> float:
+    """Return the point-forecast MAE ``mean(|y_true - y_pred|)`` on retained steps.
+
+    Retained steps are those with ``flags == False``; pass ``~flags`` for the
+    escalated-step MAE. This is an evaluation metric only: y_true is known
+    after the fact and plays no part in the escalation decision. NaN is
+    returned when no steps are selected.
+
+    Raises
+    ------
+    ValueError
+        If lengths differ, values are non-finite, or flags are not boolean.
+    """
+    y_true = _as_1d_float(y_true, "y_true")
+    y_pred = _as_1d_float(y_pred, "y_pred")
+    flags = _validate_flags(flags)
+
+    if not (len(y_true) == len(y_pred) == len(flags)):
+        raise ValueError("y_true, y_pred and flags must have equal length.")
+
+    if not (np.isfinite(y_true).all() and np.isfinite(y_pred).all()):
+        raise ValueError("y_true and y_pred must contain only finite values.")
+
+    return _mean_where(np.abs(y_true - y_pred), ~flags)
+
+
+def _with_endpoints(taus, labels, extra=None):
+    """Add -inf/+inf endpoints and order the grid strict -> loose."""
+    extra = extra or {}
+
+    grid = pd.DataFrame(
+        {
+            "tau": np.r_[-np.inf, taus, np.inf],
+            "tau_quantile": ["-inf", *labels, "+inf"],
+            **{
+                name: np.r_[-np.inf, values, np.inf]
+                for name, values in extra.items()
+            },
+        }
+    )
+
+    return grid.sort_values(
+        "tau", kind="mergesort"
+    ).reset_index(drop=True)
+
+
+def calibration_tau_grid(
+    cal_scores: ArrayLike,
+    quantiles: Sequence[float] = ESCALATION_QUANTILES,
+) -> pd.DataFrame:
+    """Build a tau grid from quantiles of calibration-window scores.
+
+    Use calibration-window scores only, never the test stream. Quantiles use
+    numpy's default linear interpolation. The grid always includes
+    tau = -inf (escalate everything) and tau = +inf (escalate nothing).
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns ``tau`` and ``tau_quantile`` (labels "-inf", "p0", "p5",
+        ..., "p100", "+inf"), ordered strict -> loose (tau ascending).
+
+    Raises
+    ------
+    ValueError
+        If cal_scores are empty or non-finite, or quantiles are not unique
+        values in [0, 1].
+    """
+    scores = _validate_scores(cal_scores)
+
+    if len(scores) == 0:
+        raise ValueError("cal_scores must not be empty.")
+
+    quantiles = _as_1d_float(quantiles, "quantiles")
+
+    if len(quantiles) == 0:
+        raise ValueError("quantiles must not be empty.")
+
+    if not np.isfinite(quantiles).all() or (
+        (quantiles < 0.0) | (quantiles > 1.0)
+    ).any():
+        raise ValueError("quantiles must lie in [0, 1].")
+
+    if len(np.unique(quantiles)) != len(quantiles):
+        raise ValueError("quantiles must be unique.")
+
+    quantiles = np.sort(quantiles)
+    labels = [f"p{round(100.0 * q, 6):g}" for q in quantiles]
+
+    return _with_endpoints(np.quantile(scores, quantiles), labels)
+
+
+def calibration_width_tau_grid(
+    calibration_width: float,
+    multipliers: Sequence[float],
+) -> pd.DataFrame:
+    """Build a tau grid as multiples of a calibration-window interval width.
+
+    tau = k * calibration_width for each multiplier k, plus the -inf and
+    +inf endpoints. Use this when calibration-window intervals exist only as
+    one reference width (for example 2 * static conformal radius).
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns ``tau``, ``tau_quantile`` (labels "-inf", "k0.5", ...,
+        "+inf") and ``tau_multiplier`` (k, with -inf/+inf at the endpoints),
+        ordered strict -> loose (tau ascending).
+
+    Raises
+    ------
+    ValueError
+        If calibration_width is not a finite positive scalar, or multipliers
+        are empty, non-finite, non-positive or not unique.
+    """
+    if isinstance(calibration_width, (bool, np.bool_)) or not np.isscalar(
+        calibration_width
+    ):
+        raise ValueError("calibration_width must be a real scalar.")
+
+    calibration_width = float(calibration_width)
+
+    if not np.isfinite(calibration_width) or calibration_width <= 0.0:
+        raise ValueError("calibration_width must be finite and positive.")
+
+    multipliers = _as_1d_float(multipliers, "multipliers")
+
+    if len(multipliers) == 0:
+        raise ValueError("multipliers must not be empty.")
+
+    if not np.isfinite(multipliers).all() or (multipliers <= 0.0).any():
+        raise ValueError("multipliers must be finite and positive.")
+
+    if len(np.unique(multipliers)) != len(multipliers):
+        raise ValueError("multipliers must be unique.")
+
+    multipliers = np.sort(multipliers)
+    labels = [f"k{k:g}" for k in multipliers]
+
+    return _with_endpoints(
+        multipliers * calibration_width,
+        labels,
+        extra={"tau_multiplier": multipliers},
+    )
+
+
+def escalation_sweep(
+    df: pd.DataFrame,
+    taus: pd.DataFrame | Sequence[float],
+    group_cols: Sequence[str],
+    *,
+    score_col: str = "score",
+    y_true_col: str = "y_true",
+    lower_col: str = "lower",
+    upper_col: str = "upper",
+    y_pred_col: str | None = None,
+) -> pd.DataFrame:
+    """Evaluate the escalation rule for every group and every tau.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        One row per forecast step with score, y_true, lower and upper
+        columns plus the grouping columns.
+    taus : pd.DataFrame or sequence of float
+        Tau values. A DataFrame must have a ``tau`` column; its other
+        columns (for example ``tau_quantile``) are copied to the output.
+    group_cols : sequence of str
+        Columns that define independent groups (may be empty).
+    y_pred_col : str, optional
+        Point-forecast column. When given, retained_mae and escalated_mae
+        are added. The forecast is used for evaluation only; escalation
+        depends on the score alone.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per (group, tau): group columns, tau columns, then
+        n_total, n_escalated, n_retained, review_rate, retained_coverage,
+        escalated_coverage, retained_mean_width and, with y_pred_col,
+        retained_mae and escalated_mae. Groups are sorted and taus run
+        strict -> loose. Metrics on an empty subset are NaN.
+
+    Raises
+    ------
+    ValueError
+        On missing columns, NaN group keys, NaN taus or invalid inputs.
+    """
+    if isinstance(group_cols, str):
+        group_cols = [group_cols]
+
+    group_cols = list(group_cols)
+    value_cols = [score_col, y_true_col, lower_col, upper_col]
+    value_cols += [y_pred_col] if y_pred_col is not None else []
+    missing = set(group_cols + value_cols) - set(df.columns)
+
+    if missing:
+        raise ValueError(f"df is missing columns: {sorted(missing)}")
+
+    if df.empty:
+        raise ValueError("df must not be empty.")
+
+    if group_cols and df[group_cols].isna().any().any():
+        raise ValueError("Group columns must not contain missing values.")
+
+    grid = (
+        taus.copy()
+        if isinstance(taus, pd.DataFrame)
+        else pd.DataFrame({"tau": _as_1d_float(taus, "taus")})
+    )
+
+    if "tau" not in grid.columns or grid.empty:
+        raise ValueError("taus must provide at least one tau value.")
+
+    tau_values = [_validate_tau(tau) for tau in grid["tau"].tolist()]
+    grid["tau"] = tau_values
+    grid = grid.sort_values("tau", kind="mergesort").reset_index(drop=True)
+
+    scores = _validate_scores(df[score_col])
+    lower, upper = _validate_bounds(df[lower_col], df[upper_col])
+    y_true = _as_1d_float(df[y_true_col], "y_true")
+
+    if not np.isfinite(y_true).all():
+        raise ValueError("y_true must contain only finite values.")
+
+    covered = ((y_true >= lower) & (y_true <= upper)).astype(float)
+    width = upper - lower
+    abs_error = None
+    metric_columns = list(SWEEP_METRIC_COLUMNS)
+
+    if y_pred_col is not None:
+        y_pred = _as_1d_float(df[y_pred_col], "y_pred")
+
+        if not np.isfinite(y_pred).all():
+            raise ValueError("y_pred must contain only finite values.")
+
+        abs_error = np.abs(y_true - y_pred)
+        metric_columns += SWEEP_MAE_COLUMNS
+
+    if group_cols:
+        groups = df.groupby(group_cols, sort=True, observed=True).indices
+        group_items = sorted(
+            groups.items(),
+            key=lambda item: item[0],
+        )
+    else:
+        group_items = [((), np.arange(len(df)))]
+
+    grid_records = grid.to_dict("records")
+    rows = []
+
+    for key, positions in group_items:
+        key = key if isinstance(key, tuple) else (key,)
+        group_values = dict(zip(group_cols, key))
+        group_scores = scores[positions]
+        group_covered = covered[positions]
+        group_width = width[positions]
+        group_error = (
+            abs_error[positions] if abs_error is not None else None
+        )
+
+        for tau_row in grid_records:
+            flags = group_scores > tau_row["tau"]
+            retained = ~flags
+            n_escalated = int(flags.sum())
+            row = {
+                **group_values,
+                **tau_row,
+                "n_total": len(flags),
+                "n_escalated": n_escalated,
+                "n_retained": len(flags) - n_escalated,
+                "review_rate": review_rate(flags),
+                "retained_coverage": _mean_where(group_covered, retained),
+                "escalated_coverage": _mean_where(group_covered, flags),
+                "retained_mean_width": _mean_where(group_width, retained),
+            }
+
+            if group_error is not None:
+                row["retained_mae"] = _mean_where(group_error, retained)
+                row["escalated_mae"] = _mean_where(group_error, flags)
+
+            rows.append(row)
+
+    return pd.DataFrame(
+        rows,
+        columns=[*group_cols, *grid.columns, *metric_columns],
     )
