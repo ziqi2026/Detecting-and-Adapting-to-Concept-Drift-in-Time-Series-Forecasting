@@ -1,0 +1,1361 @@
+region,configuration,uq_method,regime,metric,display,n_achieved,n_seeds,mean,sd
+NSW1,A,adaptive_conformal,all,coverage @ 10%,90.000% ± 0.001 pp,5,5,0.9000044610328779,8.144694456478458e-06
+NSW1,A,adaptive_conformal,all,coverage @ 20%,90.000% ± 0.001 pp,5,5,0.9000044610328779,8.144694456478458e-06
+NSW1,A,adaptive_conformal,all,coverage @ 5%,90.000% ± 0.001 pp,5,5,0.9000044610328779,8.144694456478458e-06
+NSW1,A,adaptive_conformal,all,review rate for 0.90,partial: 2/5 seeds achieved; 3/5 unreachable,2,5,,
+NSW1,A,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,A,adaptive_conformal,drift,coverage @ 10%,90.049% ± 0.036 pp,5,5,0.9004859387923905,0.00036001830741272986
+NSW1,A,adaptive_conformal,drift,coverage @ 20%,90.049% ± 0.036 pp,5,5,0.9004859387923905,0.00036001830741272986
+NSW1,A,adaptive_conformal,drift,coverage @ 5%,90.049% ± 0.036 pp,5,5,0.9004859387923905,0.00036001830741272986
+NSW1,A,adaptive_conformal,drift,review rate for 0.90,partial: 4/5 seeds achieved; 1/5 unreachable,4,5,,
+NSW1,A,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,A,adaptive_conformal,post-drift,coverage @ 10%,89.940% ± 0.013 pp,5,5,0.8994002651459354,0.00012590875866795812
+NSW1,A,adaptive_conformal,post-drift,coverage @ 20%,89.940% ± 0.013 pp,5,5,0.8994002651459354,0.00012590875866795812
+NSW1,A,adaptive_conformal,post-drift,coverage @ 5%,89.940% ± 0.013 pp,5,5,0.8994002651459354,0.00012590875866795812
+NSW1,A,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+NSW1,A,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,A,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,A,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,A,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,A,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,A,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,A,static_conformal,all,coverage @ 10%,96.899% ± 0.192 pp,5,5,0.9689898734553675,0.0019202200374854935
+NSW1,A,static_conformal,all,coverage @ 20%,96.899% ± 0.192 pp,5,5,0.9689898734553675,0.0019202200374854935
+NSW1,A,static_conformal,all,coverage @ 5%,96.899% ± 0.192 pp,5,5,0.9689898734553675,0.0019202200374854935
+NSW1,A,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,A,static_conformal,all,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,A,static_conformal,drift,coverage @ 10%,96.689% ± 0.178 pp,5,5,0.9668941273779984,0.0017801616446183764
+NSW1,A,static_conformal,drift,coverage @ 20%,96.689% ± 0.178 pp,5,5,0.9668941273779984,0.0017801616446183764
+NSW1,A,static_conformal,drift,coverage @ 5%,96.689% ± 0.178 pp,5,5,0.9668941273779984,0.0017801616446183764
+NSW1,A,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,A,static_conformal,drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,A,static_conformal,post-drift,coverage @ 10%,96.989% ± 0.196 pp,5,5,0.9698869973274972,0.001961380429947553
+NSW1,A,static_conformal,post-drift,coverage @ 20%,96.989% ± 0.196 pp,5,5,0.9698869973274972,0.001961380429947553
+NSW1,A,static_conformal,post-drift,coverage @ 5%,96.989% ± 0.196 pp,5,5,0.9698869973274972,0.001961380429947553
+NSW1,A,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,A,static_conformal,post-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,A,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,A,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,A,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,A,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,A,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,adaptive_conformal,all,coverage @ 10%,90.011% ± 0.002 pp,5,5,0.9001100408896701,2.466242102828796e-05
+NSW1,B,adaptive_conformal,all,coverage @ 20%,90.011% ± 0.002 pp,5,5,0.9001100408896701,2.466242102828796e-05
+NSW1,B,adaptive_conformal,all,coverage @ 5%,90.011% ± 0.002 pp,5,5,0.9001100408896701,2.466242102828796e-05
+NSW1,B,adaptive_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,B,adaptive_conformal,drift,coverage @ 10%,89.914% ± 0.026 pp,5,5,0.8991366161137592,0.0002562834051955218
+NSW1,B,adaptive_conformal,drift,coverage @ 20%,89.914% ± 0.026 pp,5,5,0.8991366161137592,0.0002562834051955218
+NSW1,B,adaptive_conformal,drift,coverage @ 5%,89.914% ± 0.026 pp,5,5,0.8991366161137592,0.0002562834051955218
+NSW1,B,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,B,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,B,adaptive_conformal,post-drift,coverage @ 10%,90.010% ± 0.011 pp,5,5,0.9000989036426,0.0001129303496559623
+NSW1,B,adaptive_conformal,post-drift,coverage @ 20%,90.010% ± 0.011 pp,5,5,0.9000989036426,0.0001129303496559623
+NSW1,B,adaptive_conformal,post-drift,coverage @ 5%,90.010% ± 0.011 pp,5,5,0.9000989036426,0.0001129303496559623
+NSW1,B,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,B,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,B,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,B,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,B,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,B,static_conformal,all,coverage @ 10%,97.707% ± 0.143 pp,5,5,0.9770702910080447,0.0014308182955466685
+NSW1,B,static_conformal,all,coverage @ 20%,97.707% ± 0.143 pp,5,5,0.9770702910080447,0.0014308182955466685
+NSW1,B,static_conformal,all,coverage @ 5%,97.707% ± 0.143 pp,5,5,0.9770702910080447,0.0014308182955466685
+NSW1,B,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,static_conformal,all,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,static_conformal,drift,coverage @ 10%,97.830% ± 0.132 pp,5,5,0.9782981803143093,0.0013217306435141666
+NSW1,B,static_conformal,drift,coverage @ 20%,97.830% ± 0.132 pp,5,5,0.9782981803143093,0.0013217306435141666
+NSW1,B,static_conformal,drift,coverage @ 5%,97.830% ± 0.132 pp,5,5,0.9782981803143093,0.0013217306435141666
+NSW1,B,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,static_conformal,drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,static_conformal,post-drift,coverage @ 10%,97.668% ± 0.145 pp,5,5,0.9766797836745861,0.001454762278974273
+NSW1,B,static_conformal,post-drift,coverage @ 20%,97.668% ± 0.145 pp,5,5,0.9766797836745861,0.001454762278974273
+NSW1,B,static_conformal,post-drift,coverage @ 5%,97.668% ± 0.145 pp,5,5,0.9766797836745861,0.001454762278974273
+NSW1,B,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,static_conformal,post-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,B,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,B,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,B,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,B,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,adaptive_conformal,all,coverage @ 10%,90.012% ± 0.001 pp,5,5,0.9001151010978378,1.2691020426164215e-05
+NSW1,C_adwin,adaptive_conformal,all,coverage @ 20%,90.012% ± 0.001 pp,5,5,0.9001151010978378,1.2691020426164215e-05
+NSW1,C_adwin,adaptive_conformal,all,coverage @ 5%,90.012% ± 0.001 pp,5,5,0.9001151010978378,1.2691020426164215e-05
+NSW1,C_adwin,adaptive_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,C_adwin,adaptive_conformal,drift,coverage @ 10%,89.877% ± 0.045 pp,5,5,0.8987715349717232,0.0004512116168608277
+NSW1,C_adwin,adaptive_conformal,drift,coverage @ 20%,89.877% ± 0.045 pp,5,5,0.8987715349717232,0.0004512116168608277
+NSW1,C_adwin,adaptive_conformal,drift,coverage @ 5%,89.877% ± 0.045 pp,5,5,0.8987715349717232,0.0004512116168608277
+NSW1,C_adwin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,C_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,C_adwin,adaptive_conformal,post-drift,coverage @ 10%,90.025% ± 0.017 pp,5,5,0.9002546242713747,0.00017479901228758737
+NSW1,C_adwin,adaptive_conformal,post-drift,coverage @ 20%,90.025% ± 0.017 pp,5,5,0.9002546242713747,0.00017479901228758737
+NSW1,C_adwin,adaptive_conformal,post-drift,coverage @ 5%,90.025% ± 0.017 pp,5,5,0.9002546242713747,0.00017479901228758737
+NSW1,C_adwin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,C_adwin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,C_adwin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,C_adwin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,C_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,C_adwin,static_conformal,all,coverage @ 10%,97.690% ± 0.152 pp,5,5,0.9769037457806065,0.0015223317816975637
+NSW1,C_adwin,static_conformal,all,coverage @ 20%,97.690% ± 0.152 pp,5,5,0.9769037457806065,0.0015223317816975637
+NSW1,C_adwin,static_conformal,all,coverage @ 5%,97.690% ± 0.152 pp,5,5,0.9769037457806065,0.0015223317816975637
+NSW1,C_adwin,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,static_conformal,all,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,static_conformal,drift,coverage @ 10%,97.854% ± 0.114 pp,5,5,0.9785359801488834,0.0011439808868071468
+NSW1,C_adwin,static_conformal,drift,coverage @ 20%,97.854% ± 0.114 pp,5,5,0.9785359801488834,0.0011439808868071468
+NSW1,C_adwin,static_conformal,drift,coverage @ 5%,97.854% ± 0.114 pp,5,5,0.9785359801488834,0.0011439808868071468
+NSW1,C_adwin,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,static_conformal,drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,static_conformal,post-drift,coverage @ 10%,97.635% ± 0.171 pp,5,5,0.9763472990888239,0.001713901250561504
+NSW1,C_adwin,static_conformal,post-drift,coverage @ 20%,97.635% ± 0.171 pp,5,5,0.9763472990888239,0.001713901250561504
+NSW1,C_adwin,static_conformal,post-drift,coverage @ 5%,97.635% ± 0.171 pp,5,5,0.9763472990888239,0.001713901250561504
+NSW1,C_adwin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,static_conformal,post-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_adwin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_adwin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,adaptive_conformal,all,coverage @ 10%,90.014% ± 0.002 pp,5,5,0.9001442400630493,2.4434083369523213e-05
+NSW1,C_kswin,adaptive_conformal,all,coverage @ 20%,90.014% ± 0.002 pp,5,5,0.9001442400630493,2.4434083369523213e-05
+NSW1,C_kswin,adaptive_conformal,all,coverage @ 5%,90.014% ± 0.002 pp,5,5,0.9001442400630493,2.4434083369523213e-05
+NSW1,C_kswin,adaptive_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,C_kswin,adaptive_conformal,drift,coverage @ 10%,89.879% ± 0.048 pp,5,5,0.8987903225806452,0.0004785685198938277
+NSW1,C_kswin,adaptive_conformal,drift,coverage @ 20%,89.879% ± 0.048 pp,5,5,0.8987903225806452,0.0004785685198938277
+NSW1,C_kswin,adaptive_conformal,drift,coverage @ 5%,89.879% ± 0.048 pp,5,5,0.8987903225806452,0.0004785685198938277
+NSW1,C_kswin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,C_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,C_kswin,adaptive_conformal,post-drift,coverage @ 10%,90.029% ± 0.020 pp,5,5,0.9002882935965152,0.0001982991770272776
+NSW1,C_kswin,adaptive_conformal,post-drift,coverage @ 20%,90.029% ± 0.020 pp,5,5,0.9002882935965152,0.0001982991770272776
+NSW1,C_kswin,adaptive_conformal,post-drift,coverage @ 5%,90.029% ± 0.020 pp,5,5,0.9002882935965152,0.0001982991770272776
+NSW1,C_kswin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,C_kswin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,C_kswin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,C_kswin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,C_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,C_kswin,static_conformal,all,coverage @ 10%,97.639% ± 0.153 pp,5,5,0.9763922140106173,0.0015346716758782562
+NSW1,C_kswin,static_conformal,all,coverage @ 20%,97.639% ± 0.153 pp,5,5,0.9763922140106173,0.0015346716758782562
+NSW1,C_kswin,static_conformal,all,coverage @ 5%,97.639% ± 0.153 pp,5,5,0.9763922140106173,0.0015346716758782562
+NSW1,C_kswin,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,static_conformal,all,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,static_conformal,drift,coverage @ 10%,97.708% ± 0.158 pp,5,5,0.9770781637717121,0.0015839455821772441
+NSW1,C_kswin,static_conformal,drift,coverage @ 20%,97.708% ± 0.158 pp,5,5,0.9770781637717121,0.0015839455821772441
+NSW1,C_kswin,static_conformal,drift,coverage @ 5%,97.708% ± 0.158 pp,5,5,0.9770781637717121,0.0015839455821772441
+NSW1,C_kswin,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,static_conformal,drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,static_conformal,post-drift,coverage @ 10%,97.622% ± 0.151 pp,5,5,0.9762168304539045,0.001506502433941672
+NSW1,C_kswin,static_conformal,post-drift,coverage @ 20%,97.622% ± 0.151 pp,5,5,0.9762168304539045,0.001506502433941672
+NSW1,C_kswin,static_conformal,post-drift,coverage @ 5%,97.622% ± 0.151 pp,5,5,0.9762168304539045,0.001506502433941672
+NSW1,C_kswin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,static_conformal,post-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_kswin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_kswin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,adaptive_conformal,all,coverage @ 10%,90.012% ± 0.001 pp,5,5,0.9001234219096196,8.144694456539268e-06
+NSW1,C_page_hinkley,adaptive_conformal,all,coverage @ 20%,90.012% ± 0.001 pp,5,5,0.9001234219096196,8.144694456539268e-06
+NSW1,C_page_hinkley,adaptive_conformal,all,coverage @ 5%,90.012% ± 0.001 pp,5,5,0.9001234219096196,8.144694456539268e-06
+NSW1,C_page_hinkley,adaptive_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,C_page_hinkley,adaptive_conformal,drift,coverage @ 10%,89.922% ± 0.029 pp,5,5,0.8992245657568239,0.00029151927584513413
+NSW1,C_page_hinkley,adaptive_conformal,drift,coverage @ 20%,89.922% ± 0.029 pp,5,5,0.8992245657568239,0.00029151927584513413
+NSW1,C_page_hinkley,adaptive_conformal,drift,coverage @ 5%,89.922% ± 0.029 pp,5,5,0.8992245657568239,0.00029151927584513413
+NSW1,C_page_hinkley,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,C_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,C_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,90.008% ± 0.010 pp,5,5,0.90008206898003,9.802668040531015e-05
+NSW1,C_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,90.008% ± 0.010 pp,5,5,0.90008206898003,9.802668040531015e-05
+NSW1,C_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,90.008% ± 0.010 pp,5,5,0.90008206898003,9.802668040531015e-05
+NSW1,C_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,C_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,C_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,C_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,C_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,C_page_hinkley,static_conformal,all,coverage @ 10%,97.630% ± 0.198 pp,5,5,0.9762970453092239,0.001975011435439418
+NSW1,C_page_hinkley,static_conformal,all,coverage @ 20%,97.630% ± 0.198 pp,5,5,0.9762970453092239,0.001975011435439418
+NSW1,C_page_hinkley,static_conformal,all,coverage @ 5%,97.630% ± 0.198 pp,5,5,0.9762970453092239,0.001975011435439418
+NSW1,C_page_hinkley,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,static_conformal,all,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,static_conformal,drift,coverage @ 10%,97.719% ± 0.135 pp,5,5,0.9771918941273781,0.001352213450028221
+NSW1,C_page_hinkley,static_conformal,drift,coverage @ 20%,97.719% ± 0.135 pp,5,5,0.9771918941273781,0.001352213450028221
+NSW1,C_page_hinkley,static_conformal,drift,coverage @ 5%,97.719% ± 0.135 pp,5,5,0.9771918941273781,0.001352213450028221
+NSW1,C_page_hinkley,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,static_conformal,drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,static_conformal,post-drift,coverage @ 10%,97.604% ± 0.223 pp,5,5,0.9760358578312747,0.0022285768816747713
+NSW1,C_page_hinkley,static_conformal,post-drift,coverage @ 20%,97.604% ± 0.223 pp,5,5,0.9760358578312747,0.0022285768816747713
+NSW1,C_page_hinkley,static_conformal,post-drift,coverage @ 5%,97.604% ± 0.223 pp,5,5,0.9760358578312747,0.0022285768816747713
+NSW1,C_page_hinkley,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,static_conformal,post-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,C_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,C_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_adwin,adaptive_conformal,all,coverage @ 10%,89.998% ± 0.009 pp,5,5,0.8999752706566223,8.546869918798236e-05
+NSW1,D_120d_adwin,adaptive_conformal,all,coverage @ 20%,89.998% ± 0.009 pp,5,5,0.8999752706566223,8.546869918798236e-05
+NSW1,D_120d_adwin,adaptive_conformal,all,coverage @ 5%,89.998% ± 0.009 pp,5,5,0.8999752706566223,8.546869918798236e-05
+NSW1,D_120d_adwin,adaptive_conformal,all,review rate for 0.90,partial: 2/5 seeds achieved; 3/5 unreachable,2,5,,
+NSW1,D_120d_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_adwin,adaptive_conformal,drift,coverage @ 10%,89.721% ± 0.021 pp,5,5,0.897214477767595,0.00020654812415188127
+NSW1,D_120d_adwin,adaptive_conformal,drift,coverage @ 20%,89.721% ± 0.021 pp,5,5,0.897214477767595,0.00020654812415188127
+NSW1,D_120d_adwin,adaptive_conformal,drift,coverage @ 5%,89.721% ± 0.021 pp,5,5,0.897214477767595,0.00020654812415188127
+NSW1,D_120d_adwin,adaptive_conformal,drift,review rate for 0.90,71.267% ± 1.100 pp,5,5,0.7126654259718777,0.010998016064499572
+NSW1,D_120d_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_adwin,adaptive_conformal,post-drift,coverage @ 10%,90.070% ± 0.009 pp,5,5,0.9006991923805607,8.852422648887234e-05
+NSW1,D_120d_adwin,adaptive_conformal,post-drift,coverage @ 20%,90.070% ± 0.009 pp,5,5,0.9006991923805607,8.852422648887234e-05
+NSW1,D_120d_adwin,adaptive_conformal,post-drift,coverage @ 5%,90.070% ± 0.009 pp,5,5,0.9006991923805607,8.852422648887234e-05
+NSW1,D_120d_adwin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_adwin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_120d_adwin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_120d_adwin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_120d_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_adwin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_120d_adwin,static_conformal,all,coverage @ 10%,89.108% ± 0.431 pp,5,5,0.8910823952772532,0.004307593818320705
+NSW1,D_120d_adwin,static_conformal,all,coverage @ 20%,89.108% ± 0.431 pp,5,5,0.8910823952772532,0.004307593818320705
+NSW1,D_120d_adwin,static_conformal,all,coverage @ 5%,89.108% ± 0.431 pp,5,5,0.8910823952772532,0.004307593818320705
+NSW1,D_120d_adwin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_120d_adwin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_adwin,static_conformal,drift,coverage @ 10%,86.303% ± 0.492 pp,5,5,0.8630272952853597,0.004923122026253208
+NSW1,D_120d_adwin,static_conformal,drift,coverage @ 20%,86.303% ± 0.492 pp,5,5,0.8630272952853597,0.004923122026253208
+NSW1,D_120d_adwin,static_conformal,drift,coverage @ 5%,86.303% ± 0.492 pp,5,5,0.8630272952853597,0.004923122026253208
+NSW1,D_120d_adwin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_120d_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_adwin,static_conformal,post-drift,coverage @ 10%,90.192% ± 0.406 pp,5,5,0.9019170472001852,0.004059644715437408
+NSW1,D_120d_adwin,static_conformal,post-drift,coverage @ 20%,90.192% ± 0.406 pp,5,5,0.9019170472001852,0.004059644715437408
+NSW1,D_120d_adwin,static_conformal,post-drift,coverage @ 5%,90.192% ± 0.406 pp,5,5,0.9019170472001852,0.004059644715437408
+NSW1,D_120d_adwin,static_conformal,post-drift,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+NSW1,D_120d_adwin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_adwin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_adwin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_adwin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_kswin,adaptive_conformal,all,coverage @ 10%,89.974% ± 0.006 pp,5,5,0.8997386377658856,5.5827000577092945e-05
+NSW1,D_120d_kswin,adaptive_conformal,all,coverage @ 20%,89.974% ± 0.006 pp,5,5,0.8997386377658856,5.5827000577092945e-05
+NSW1,D_120d_kswin,adaptive_conformal,all,coverage @ 5%,89.974% ± 0.006 pp,5,5,0.8997386377658856,5.5827000577092945e-05
+NSW1,D_120d_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_120d_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_kswin,adaptive_conformal,drift,coverage @ 10%,89.510% ± 0.014 pp,5,5,0.8950986450735374,0.00014012525884091794
+NSW1,D_120d_kswin,adaptive_conformal,drift,coverage @ 20%,89.510% ± 0.014 pp,5,5,0.8950986450735374,0.00014012525884091794
+NSW1,D_120d_kswin,adaptive_conformal,drift,coverage @ 5%,89.510% ± 0.014 pp,5,5,0.8950986450735374,0.00014012525884091794
+NSW1,D_120d_kswin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_120d_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_kswin,adaptive_conformal,post-drift,coverage @ 10%,90.122% ± 0.008 pp,5,5,0.9012226173691632,7.873692444974105e-05
+NSW1,D_120d_kswin,adaptive_conformal,post-drift,coverage @ 20%,90.122% ± 0.008 pp,5,5,0.9012226173691632,7.873692444974105e-05
+NSW1,D_120d_kswin,adaptive_conformal,post-drift,coverage @ 5%,90.122% ± 0.008 pp,5,5,0.9012226173691632,7.873692444974105e-05
+NSW1,D_120d_kswin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_kswin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_120d_kswin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_120d_kswin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_120d_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_kswin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_120d_kswin,static_conformal,all,coverage @ 10%,91.636% ± 0.402 pp,5,5,0.9163556335410192,0.004016760399065492
+NSW1,D_120d_kswin,static_conformal,all,coverage @ 20%,91.636% ± 0.402 pp,5,5,0.9163556335410192,0.004016760399065492
+NSW1,D_120d_kswin,static_conformal,all,coverage @ 5%,91.636% ± 0.402 pp,5,5,0.9163556335410192,0.004016760399065492
+NSW1,D_120d_kswin,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_kswin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_kswin,static_conformal,drift,coverage @ 10%,88.483% ± 0.456 pp,5,5,0.8848325062034739,0.004558955470217292
+NSW1,D_120d_kswin,static_conformal,drift,coverage @ 20%,88.483% ± 0.456 pp,5,5,0.8848325062034739,0.004558955470217292
+NSW1,D_120d_kswin,static_conformal,drift,coverage @ 5%,88.483% ± 0.456 pp,5,5,0.8848325062034739,0.004558955470217292
+NSW1,D_120d_kswin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_120d_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_kswin,static_conformal,post-drift,coverage @ 10%,92.881% ± 0.380 pp,5,5,0.9288062119904884,0.00379621874254983
+NSW1,D_120d_kswin,static_conformal,post-drift,coverage @ 20%,92.881% ± 0.380 pp,5,5,0.9288062119904884,0.00379621874254983
+NSW1,D_120d_kswin,static_conformal,post-drift,coverage @ 5%,92.881% ± 0.380 pp,5,5,0.9288062119904884,0.00379621874254983
+NSW1,D_120d_kswin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_kswin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_kswin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_kswin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_kswin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_page_hinkley,adaptive_conformal,all,coverage @ 10%,89.994% ± 0.003 pp,5,5,0.8999357456260348,2.840278733419294e-05
+NSW1,D_120d_page_hinkley,adaptive_conformal,all,coverage @ 20%,89.994% ± 0.003 pp,5,5,0.8999357456260348,2.840278733419294e-05
+NSW1,D_120d_page_hinkley,adaptive_conformal,all,coverage @ 5%,89.994% ± 0.003 pp,5,5,0.8999357456260348,2.840278733419294e-05
+NSW1,D_120d_page_hinkley,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_120d_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_page_hinkley,adaptive_conformal,drift,coverage @ 10%,90.121% ± 0.016 pp,5,5,0.9012124899536023,0.00015597278927742688
+NSW1,D_120d_page_hinkley,adaptive_conformal,drift,coverage @ 20%,90.124% ± 0.018 pp,5,5,0.9012424960764107,0.00018372716650766834
+NSW1,D_120d_page_hinkley,adaptive_conformal,drift,coverage @ 5%,90.115% ± 0.019 pp,5,5,0.9011520826528697,0.00018504027181359854
+NSW1,D_120d_page_hinkley,adaptive_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,89.904% ± 0.003 pp,5,5,0.8990448770823724,3.449478842401327e-05
+NSW1,D_120d_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,89.904% ± 0.003 pp,5,5,0.8990448770823724,3.449478842401327e-05
+NSW1,D_120d_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,89.904% ± 0.003 pp,5,5,0.8990448770823724,3.449478842401327e-05
+NSW1,D_120d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_120d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_120d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_120d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_120d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_120d_page_hinkley,static_conformal,all,coverage @ 10%,93.627% ± 0.330 pp,5,5,0.9362726583294918,0.003297069160244033
+NSW1,D_120d_page_hinkley,static_conformal,all,coverage @ 20%,93.627% ± 0.330 pp,5,5,0.9362726583294918,0.003297069160244033
+NSW1,D_120d_page_hinkley,static_conformal,all,coverage @ 5%,93.627% ± 0.330 pp,5,5,0.9362726583294918,0.003297069160244033
+NSW1,D_120d_page_hinkley,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_page_hinkley,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_page_hinkley,static_conformal,drift,coverage @ 10%,92.354% ± 0.393 pp,5,5,0.9235421836228287,0.003925634526459406
+NSW1,D_120d_page_hinkley,static_conformal,drift,coverage @ 20%,92.354% ± 0.393 pp,5,5,0.9235421836228287,0.003925634526459406
+NSW1,D_120d_page_hinkley,static_conformal,drift,coverage @ 5%,92.354% ± 0.393 pp,5,5,0.9235421836228287,0.003925634526459406
+NSW1,D_120d_page_hinkley,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_page_hinkley,static_conformal,post-drift,coverage @ 10%,94.123% ± 0.304 pp,5,5,0.9412344016329621,0.003038105686780608
+NSW1,D_120d_page_hinkley,static_conformal,post-drift,coverage @ 20%,94.123% ± 0.304 pp,5,5,0.9412344016329621,0.003038105686780608
+NSW1,D_120d_page_hinkley,static_conformal,post-drift,coverage @ 5%,94.123% ± 0.304 pp,5,5,0.9412344016329621,0.003038105686780608
+NSW1,D_120d_page_hinkley,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_page_hinkley,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_120d_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_120d_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_120d_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_adwin,adaptive_conformal,all,coverage @ 10%,90.000% ± 0.004 pp,5,5,0.8999958318290628,3.5983621272852246e-05
+NSW1,D_180d_adwin,adaptive_conformal,all,coverage @ 20%,90.000% ± 0.004 pp,5,5,0.8999958318290628,3.5983621272852246e-05
+NSW1,D_180d_adwin,adaptive_conformal,all,coverage @ 5%,90.000% ± 0.004 pp,5,5,0.8999958318290628,3.5983621272852246e-05
+NSW1,D_180d_adwin,adaptive_conformal,all,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+NSW1,D_180d_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_adwin,adaptive_conformal,drift,coverage @ 10%,89.836% ± 0.022 pp,5,5,0.8983592749258971,0.0002237555776984754
+NSW1,D_180d_adwin,adaptive_conformal,drift,coverage @ 20%,89.836% ± 0.022 pp,5,5,0.8983592749258971,0.0002237555776984754
+NSW1,D_180d_adwin,adaptive_conformal,drift,coverage @ 5%,89.836% ± 0.022 pp,5,5,0.8983592749258971,0.0002237555776984754
+NSW1,D_180d_adwin,adaptive_conformal,drift,review rate for 0.90,42.591% ± 1.781 pp,5,5,0.42590984284532674,0.017808948457617563
+NSW1,D_180d_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_adwin,adaptive_conformal,post-drift,coverage @ 10%,90.026% ± 0.004 pp,5,5,0.900256379976598,4.129082904677935e-05
+NSW1,D_180d_adwin,adaptive_conformal,post-drift,coverage @ 20%,90.026% ± 0.004 pp,5,5,0.900256379976598,4.129082904677935e-05
+NSW1,D_180d_adwin,adaptive_conformal,post-drift,coverage @ 5%,90.026% ± 0.004 pp,5,5,0.900256379976598,4.129082904677935e-05
+NSW1,D_180d_adwin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_adwin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_180d_adwin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_180d_adwin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_180d_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_adwin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_180d_adwin,static_conformal,all,coverage @ 10%,90.504% ± 0.417 pp,5,5,0.9050365061190501,0.004172363028967341
+NSW1,D_180d_adwin,static_conformal,all,coverage @ 20%,90.504% ± 0.417 pp,5,5,0.9050365061190501,0.004172363028967341
+NSW1,D_180d_adwin,static_conformal,all,coverage @ 5%,90.504% ± 0.417 pp,5,5,0.9050365061190501,0.004172363028967341
+NSW1,D_180d_adwin,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_adwin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_adwin,static_conformal,drift,coverage @ 10%,87.540% ± 0.555 pp,5,5,0.8754032258064516,0.005553297956781029
+NSW1,D_180d_adwin,static_conformal,drift,coverage @ 20%,87.540% ± 0.555 pp,5,5,0.8754032258064516,0.005553297956781029
+NSW1,D_180d_adwin,static_conformal,drift,coverage @ 5%,87.540% ± 0.555 pp,5,5,0.8754032258064516,0.005553297956781029
+NSW1,D_180d_adwin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_180d_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_adwin,static_conformal,post-drift,coverage @ 10%,91.663% ± 0.361 pp,5,5,0.9166263336209255,0.0036100502671669835
+NSW1,D_180d_adwin,static_conformal,post-drift,coverage @ 20%,91.663% ± 0.361 pp,5,5,0.9166263336209255,0.0036100502671669835
+NSW1,D_180d_adwin,static_conformal,post-drift,coverage @ 5%,91.663% ± 0.361 pp,5,5,0.9166263336209255,0.0036100502671669835
+NSW1,D_180d_adwin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_adwin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_adwin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_adwin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_adwin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_kswin,adaptive_conformal,all,coverage @ 10%,89.983% ± 0.004 pp,5,5,0.8998326976235657,3.8211743413309845e-05
+NSW1,D_180d_kswin,adaptive_conformal,all,coverage @ 20%,89.983% ± 0.004 pp,5,5,0.8998326976235657,3.8211743413309845e-05
+NSW1,D_180d_kswin,adaptive_conformal,all,coverage @ 5%,89.983% ± 0.004 pp,5,5,0.8998326976235657,3.8211743413309845e-05
+NSW1,D_180d_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_180d_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_kswin,adaptive_conformal,drift,coverage @ 10%,89.849% ± 0.025 pp,5,5,0.8984890273981726,0.0002478219297963324
+NSW1,D_180d_kswin,adaptive_conformal,drift,coverage @ 20%,89.850% ± 0.024 pp,5,5,0.8984964606247783,0.0002395974300760236
+NSW1,D_180d_kswin,adaptive_conformal,drift,coverage @ 5%,89.849% ± 0.025 pp,5,5,0.8984890273981726,0.0002478219297963324
+NSW1,D_180d_kswin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_180d_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_kswin,adaptive_conformal,post-drift,coverage @ 10%,89.997% ± 0.007 pp,5,5,0.8999726436733233,6.587603729928132e-05
+NSW1,D_180d_kswin,adaptive_conformal,post-drift,coverage @ 20%,89.997% ± 0.007 pp,5,5,0.8999726436733233,6.587603729928132e-05
+NSW1,D_180d_kswin,adaptive_conformal,post-drift,coverage @ 5%,89.997% ± 0.007 pp,5,5,0.8999726436733233,6.587603729928132e-05
+NSW1,D_180d_kswin,adaptive_conformal,post-drift,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+NSW1,D_180d_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_kswin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_180d_kswin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_180d_kswin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_180d_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_kswin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_180d_kswin,static_conformal,all,coverage @ 10%,93.258% ± 0.365 pp,5,5,0.9325759490847447,0.0036506406759841945
+NSW1,D_180d_kswin,static_conformal,all,coverage @ 20%,93.258% ± 0.365 pp,5,5,0.9325759490847447,0.0036506406759841945
+NSW1,D_180d_kswin,static_conformal,all,coverage @ 5%,93.258% ± 0.365 pp,5,5,0.9325759490847447,0.0036506406759841945
+NSW1,D_180d_kswin,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_kswin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_kswin,static_conformal,drift,coverage @ 10%,90.682% ± 0.462 pp,5,5,0.9068238213399503,0.004624894500817464
+NSW1,D_180d_kswin,static_conformal,drift,coverage @ 20%,90.682% ± 0.462 pp,5,5,0.9068238213399503,0.004624894500817464
+NSW1,D_180d_kswin,static_conformal,drift,coverage @ 5%,90.682% ± 0.462 pp,5,5,0.9068238213399503,0.004624894500817464
+NSW1,D_180d_kswin,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_kswin,static_conformal,post-drift,coverage @ 10%,94.281% ± 0.325 pp,5,5,0.942808442583279,0.003250850278686311
+NSW1,D_180d_kswin,static_conformal,post-drift,coverage @ 20%,94.281% ± 0.325 pp,5,5,0.942808442583279,0.003250850278686311
+NSW1,D_180d_kswin,static_conformal,post-drift,coverage @ 5%,94.281% ± 0.325 pp,5,5,0.942808442583279,0.003250850278686311
+NSW1,D_180d_kswin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_kswin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_kswin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_kswin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_kswin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_page_hinkley,adaptive_conformal,all,coverage @ 10%,89.994% ± 0.003 pp,5,5,0.8999360421609778,2.57650993729774e-05
+NSW1,D_180d_page_hinkley,adaptive_conformal,all,coverage @ 20%,89.994% ± 0.003 pp,5,5,0.8999360421609778,2.57650993729774e-05
+NSW1,D_180d_page_hinkley,adaptive_conformal,all,coverage @ 5%,89.994% ± 0.003 pp,5,5,0.8999360421609778,2.57650993729774e-05
+NSW1,D_180d_page_hinkley,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_180d_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_page_hinkley,adaptive_conformal,drift,coverage @ 10%,90.100% ± 0.020 pp,5,5,0.9010036083941444,0.0001992152217179037
+NSW1,D_180d_page_hinkley,adaptive_conformal,drift,coverage @ 20%,90.103% ± 0.020 pp,5,5,0.9010286430684555,0.00019711500866938228
+NSW1,D_180d_page_hinkley,adaptive_conformal,drift,coverage @ 5%,90.094% ± 0.017 pp,5,5,0.9009424950260965,0.00016649364973500983
+NSW1,D_180d_page_hinkley,adaptive_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,89.913% ± 0.005 pp,5,5,0.8991312674629309,5.035682333355722e-05
+NSW1,D_180d_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,89.913% ± 0.005 pp,5,5,0.8991312674629309,5.035682333355722e-05
+NSW1,D_180d_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,89.913% ± 0.005 pp,5,5,0.8991312674629309,5.035682333355722e-05
+NSW1,D_180d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_180d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_180d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_180d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_180d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_180d_page_hinkley,static_conformal,all,coverage @ 10%,94.810% ± 0.247 pp,5,5,0.9481003434995315,0.002470215695029753
+NSW1,D_180d_page_hinkley,static_conformal,all,coverage @ 20%,94.810% ± 0.247 pp,5,5,0.9481003434995315,0.002470215695029753
+NSW1,D_180d_page_hinkley,static_conformal,all,coverage @ 5%,94.810% ± 0.247 pp,5,5,0.9481003434995315,0.002470215695029753
+NSW1,D_180d_page_hinkley,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_page_hinkley,static_conformal,all,review rate for 0.95,partial: 1/5 seeds achieved; 4/5 unreachable,1,5,,
+NSW1,D_180d_page_hinkley,static_conformal,drift,coverage @ 10%,94.472% ± 0.251 pp,5,5,0.9447167080231595,0.0025051313710068345
+NSW1,D_180d_page_hinkley,static_conformal,drift,coverage @ 20%,94.472% ± 0.251 pp,5,5,0.9447167080231595,0.0025051313710068345
+NSW1,D_180d_page_hinkley,static_conformal,drift,coverage @ 5%,94.472% ± 0.251 pp,5,5,0.9447167080231595,0.0025051313710068345
+NSW1,D_180d_page_hinkley,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_180d_page_hinkley,static_conformal,post-drift,coverage @ 10%,94.935% ± 0.244 pp,5,5,0.9493529176574567,0.002442902923967791
+NSW1,D_180d_page_hinkley,static_conformal,post-drift,coverage @ 20%,94.935% ± 0.244 pp,5,5,0.9493529176574567,0.002442902923967791
+NSW1,D_180d_page_hinkley,static_conformal,post-drift,coverage @ 5%,94.935% ± 0.244 pp,5,5,0.9493529176574567,0.002442902923967791
+NSW1,D_180d_page_hinkley,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_page_hinkley,static_conformal,post-drift,review rate for 0.95,partial: 2/5 seeds achieved; 3/5 unreachable,2,5,,
+NSW1,D_180d_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_180d_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_180d_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_adwin,adaptive_conformal,all,coverage @ 10%,89.988% ± 0.010 pp,5,5,0.8998799256543165,9.511235417085354e-05
+NSW1,D_30d_adwin,adaptive_conformal,all,coverage @ 20%,89.988% ± 0.010 pp,5,5,0.8998799256543165,9.511235417085354e-05
+NSW1,D_30d_adwin,adaptive_conformal,all,coverage @ 5%,89.988% ± 0.010 pp,5,5,0.8998799256543165,9.511235417085354e-05
+NSW1,D_30d_adwin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_adwin,adaptive_conformal,drift,coverage @ 10%,89.810% ± 0.020 pp,5,5,0.8980957852041096,0.00019794170406387307
+NSW1,D_30d_adwin,adaptive_conformal,drift,coverage @ 20%,89.810% ± 0.020 pp,5,5,0.8980957852041096,0.00019794170406387307
+NSW1,D_30d_adwin,adaptive_conformal,drift,coverage @ 5%,89.810% ± 0.020 pp,5,5,0.8980957852041096,0.00019794170406387307
+NSW1,D_30d_adwin,adaptive_conformal,drift,review rate for 0.90,46.401% ± 1.608 pp,5,5,0.46400951199338286,0.01608163295423346
+NSW1,D_30d_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_adwin,adaptive_conformal,post-drift,coverage @ 10%,90.020% ± 0.008 pp,5,5,0.9002031579831102,7.851911845215737e-05
+NSW1,D_30d_adwin,adaptive_conformal,post-drift,coverage @ 20%,90.020% ± 0.008 pp,5,5,0.9002031579831102,7.851911845215737e-05
+NSW1,D_30d_adwin,adaptive_conformal,post-drift,coverage @ 5%,90.020% ± 0.008 pp,5,5,0.9002031579831102,7.851911845215737e-05
+NSW1,D_30d_adwin,adaptive_conformal,post-drift,review rate for 0.90,0.116% ± 0.017 pp,5,5,0.00115738305170342,0.0001676877322710933
+NSW1,D_30d_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_adwin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_30d_adwin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_30d_adwin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_30d_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_adwin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_30d_adwin,static_conformal,all,coverage @ 10%,87.627% ± 0.424 pp,5,5,0.8762687921009977,0.004236120757451848
+NSW1,D_30d_adwin,static_conformal,all,coverage @ 20%,87.627% ± 0.424 pp,5,5,0.8762687921009977,0.004236120757451848
+NSW1,D_30d_adwin,static_conformal,all,coverage @ 5%,87.627% ± 0.424 pp,5,5,0.8762687921009977,0.004236120757451848
+NSW1,D_30d_adwin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_adwin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_adwin,static_conformal,drift,coverage @ 10%,83.904% ± 0.461 pp,5,5,0.8390405293631099,0.004609266488279199
+NSW1,D_30d_adwin,static_conformal,drift,coverage @ 20%,83.904% ± 0.461 pp,5,5,0.8390405293631099,0.004609266488279199
+NSW1,D_30d_adwin,static_conformal,drift,coverage @ 5%,83.904% ± 0.461 pp,5,5,0.8390405293631099,0.004609266488279199
+NSW1,D_30d_adwin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_adwin,static_conformal,post-drift,coverage @ 10%,89.072% ± 0.409 pp,5,5,0.8907177879253382,0.0040876197872539
+NSW1,D_30d_adwin,static_conformal,post-drift,coverage @ 20%,89.072% ± 0.409 pp,5,5,0.8907177879253382,0.0040876197872539
+NSW1,D_30d_adwin,static_conformal,post-drift,coverage @ 5%,89.072% ± 0.409 pp,5,5,0.8907177879253382,0.0040876197872539
+NSW1,D_30d_adwin,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_adwin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_adwin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_adwin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_adwin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_kswin,adaptive_conformal,all,coverage @ 10%,89.951% ± 0.007 pp,5,5,0.8995130659173007,7.190824408035223e-05
+NSW1,D_30d_kswin,adaptive_conformal,all,coverage @ 20%,89.951% ± 0.007 pp,5,5,0.8995130659173007,7.190824408035223e-05
+NSW1,D_30d_kswin,adaptive_conformal,all,coverage @ 5%,89.951% ± 0.007 pp,5,5,0.8995130659173007,7.190824408035223e-05
+NSW1,D_30d_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_kswin,adaptive_conformal,drift,coverage @ 10%,89.326% ± 0.014 pp,5,5,0.8932573210060324,0.00014035108501346424
+NSW1,D_30d_kswin,adaptive_conformal,drift,coverage @ 20%,89.326% ± 0.014 pp,5,5,0.8932573210060324,0.00014035108501346424
+NSW1,D_30d_kswin,adaptive_conformal,drift,coverage @ 5%,89.326% ± 0.014 pp,5,5,0.8932573210060324,0.00014035108501346424
+NSW1,D_30d_kswin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_kswin,adaptive_conformal,post-drift,coverage @ 10%,90.164% ± 0.006 pp,5,5,0.9016377554026256,5.9726431846932946e-05
+NSW1,D_30d_kswin,adaptive_conformal,post-drift,coverage @ 20%,90.164% ± 0.006 pp,5,5,0.9016377554026256,5.9726431846932946e-05
+NSW1,D_30d_kswin,adaptive_conformal,post-drift,coverage @ 5%,90.164% ± 0.006 pp,5,5,0.9016377554026256,5.9726431846932946e-05
+NSW1,D_30d_kswin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_kswin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_30d_kswin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_30d_kswin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_30d_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_kswin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_30d_kswin,static_conformal,all,coverage @ 10%,90.160% ± 0.422 pp,5,5,0.9016044848250531,0.004221959057288681
+NSW1,D_30d_kswin,static_conformal,all,coverage @ 20%,90.160% ± 0.422 pp,5,5,0.9016044848250531,0.004221959057288681
+NSW1,D_30d_kswin,static_conformal,all,coverage @ 5%,90.160% ± 0.422 pp,5,5,0.9016044848250531,0.004221959057288681
+NSW1,D_30d_kswin,static_conformal,all,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+NSW1,D_30d_kswin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_kswin,static_conformal,drift,coverage @ 10%,85.477% ± 0.476 pp,5,5,0.8547663358147229,0.004764502005714767
+NSW1,D_30d_kswin,static_conformal,drift,coverage @ 20%,85.477% ± 0.476 pp,5,5,0.8547663358147229,0.004764502005714767
+NSW1,D_30d_kswin,static_conformal,drift,coverage @ 5%,85.477% ± 0.476 pp,5,5,0.8547663358147229,0.004764502005714767
+NSW1,D_30d_kswin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_kswin,static_conformal,post-drift,coverage @ 10%,92.017% ± 0.400 pp,5,5,0.9201700300919594,0.004003174488132057
+NSW1,D_30d_kswin,static_conformal,post-drift,coverage @ 20%,92.017% ± 0.400 pp,5,5,0.9201700300919594,0.004003174488132057
+NSW1,D_30d_kswin,static_conformal,post-drift,coverage @ 5%,92.017% ± 0.400 pp,5,5,0.9201700300919594,0.004003174488132057
+NSW1,D_30d_kswin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_kswin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_kswin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_kswin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_kswin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_page_hinkley,adaptive_conformal,all,coverage @ 10%,89.970% ± 0.004 pp,5,5,0.8996989573092133,4.140752760561942e-05
+NSW1,D_30d_page_hinkley,adaptive_conformal,all,coverage @ 20%,89.970% ± 0.004 pp,5,5,0.8996989573092133,4.140752760561942e-05
+NSW1,D_30d_page_hinkley,adaptive_conformal,all,coverage @ 5%,89.970% ± 0.004 pp,5,5,0.8996989573092133,4.140752760561942e-05
+NSW1,D_30d_page_hinkley,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_page_hinkley,adaptive_conformal,drift,coverage @ 10%,90.086% ± 0.020 pp,5,5,0.9008602619888011,0.00019592258089327376
+NSW1,D_30d_page_hinkley,adaptive_conformal,drift,coverage @ 20%,90.089% ± 0.018 pp,5,5,0.9008903659663362,0.00017911323932554477
+NSW1,D_30d_page_hinkley,adaptive_conformal,drift,coverage @ 5%,90.086% ± 0.020 pp,5,5,0.9008591882590953,0.00019773557637409606
+NSW1,D_30d_page_hinkley,adaptive_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,89.883% ± 0.005 pp,5,5,0.8988313105755266,5.10360552349494e-05
+NSW1,D_30d_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,89.883% ± 0.005 pp,5,5,0.8988313105755266,5.10360552349494e-05
+NSW1,D_30d_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,89.883% ± 0.005 pp,5,5,0.8988313105755266,5.10360552349494e-05
+NSW1,D_30d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_30d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_30d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_30d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_30d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_30d_page_hinkley,static_conformal,all,coverage @ 10%,91.092% ± 0.406 pp,5,5,0.9109191214739253,0.004060637326187229
+NSW1,D_30d_page_hinkley,static_conformal,all,coverage @ 20%,91.092% ± 0.406 pp,5,5,0.9109191214739253,0.004060637326187229
+NSW1,D_30d_page_hinkley,static_conformal,all,coverage @ 5%,91.092% ± 0.406 pp,5,5,0.9109191214739253,0.004060637326187229
+NSW1,D_30d_page_hinkley,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_page_hinkley,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_page_hinkley,static_conformal,drift,coverage @ 10%,91.748% ± 0.346 pp,5,5,0.9174834574028121,0.003462332951130813
+NSW1,D_30d_page_hinkley,static_conformal,drift,coverage @ 20%,91.748% ± 0.346 pp,5,5,0.9174834574028121,0.003462332951130813
+NSW1,D_30d_page_hinkley,static_conformal,drift,coverage @ 5%,91.748% ± 0.346 pp,5,5,0.9174834574028121,0.003462332951130813
+NSW1,D_30d_page_hinkley,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_page_hinkley,static_conformal,post-drift,coverage @ 10%,90.782% ± 0.430 pp,5,5,0.9078218050966941,0.00430395483384718
+NSW1,D_30d_page_hinkley,static_conformal,post-drift,coverage @ 20%,90.782% ± 0.430 pp,5,5,0.9078218050966941,0.00430395483384718
+NSW1,D_30d_page_hinkley,static_conformal,post-drift,coverage @ 5%,90.782% ± 0.430 pp,5,5,0.9078218050966941,0.00430395483384718
+NSW1,D_30d_page_hinkley,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_page_hinkley,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_30d_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_30d_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_30d_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_adwin,adaptive_conformal,all,coverage @ 10%,89.994% ± 0.006 pp,5,5,0.8999448864690663,6.420898087698179e-05
+NSW1,D_60d_adwin,adaptive_conformal,all,coverage @ 20%,89.994% ± 0.006 pp,5,5,0.8999448864690663,6.420898087698179e-05
+NSW1,D_60d_adwin,adaptive_conformal,all,coverage @ 5%,89.994% ± 0.006 pp,5,5,0.8999448864690663,6.420898087698179e-05
+NSW1,D_60d_adwin,adaptive_conformal,all,review rate for 0.90,partial: 1/5 seeds achieved; 4/5 unreachable,1,5,,
+NSW1,D_60d_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_adwin,adaptive_conformal,drift,coverage @ 10%,89.676% ± 0.021 pp,5,5,0.8967645868230647,0.00020814370891131544
+NSW1,D_60d_adwin,adaptive_conformal,drift,coverage @ 20%,89.676% ± 0.021 pp,5,5,0.8967645868230647,0.00020814370891131544
+NSW1,D_60d_adwin,adaptive_conformal,drift,coverage @ 5%,89.676% ± 0.021 pp,5,5,0.8967645868230647,0.00020814370891131544
+NSW1,D_60d_adwin,adaptive_conformal,drift,review rate for 0.90,60.272% ± 9.241 pp,5,5,0.6027191894127378,0.0924084336535476
+NSW1,D_60d_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_adwin,adaptive_conformal,post-drift,coverage @ 10%,90.085% ± 0.005 pp,5,5,0.9008509951376288,5.487583759767385e-05
+NSW1,D_60d_adwin,adaptive_conformal,post-drift,coverage @ 20%,90.085% ± 0.005 pp,5,5,0.9008509951376288,5.487583759767385e-05
+NSW1,D_60d_adwin,adaptive_conformal,post-drift,coverage @ 5%,90.085% ± 0.005 pp,5,5,0.9008509951376288,5.487583759767385e-05
+NSW1,D_60d_adwin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_adwin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_60d_adwin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_60d_adwin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_60d_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_adwin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_60d_adwin,static_conformal,all,coverage @ 10%,87.790% ± 0.453 pp,5,5,0.8779015301342771,0.004526635753149743
+NSW1,D_60d_adwin,static_conformal,all,coverage @ 20%,87.790% ± 0.453 pp,5,5,0.8779015301342771,0.004526635753149743
+NSW1,D_60d_adwin,static_conformal,all,coverage @ 5%,87.790% ± 0.453 pp,5,5,0.8779015301342771,0.004526635753149743
+NSW1,D_60d_adwin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_60d_adwin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_adwin,static_conformal,drift,coverage @ 10%,84.654% ± 0.518 pp,5,5,0.8465363937138131,0.005177774699937215
+NSW1,D_60d_adwin,static_conformal,drift,coverage @ 20%,84.654% ± 0.518 pp,5,5,0.8465363937138131,0.005177774699937215
+NSW1,D_60d_adwin,static_conformal,drift,coverage @ 5%,84.654% ± 0.518 pp,5,5,0.8465363937138131,0.005177774699937215
+NSW1,D_60d_adwin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_60d_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_adwin,static_conformal,post-drift,coverage @ 10%,88.998% ± 0.426 pp,5,5,0.8899770627722481,0.00426434102853724
+NSW1,D_60d_adwin,static_conformal,post-drift,coverage @ 20%,88.998% ± 0.426 pp,5,5,0.8899770627722481,0.00426434102853724
+NSW1,D_60d_adwin,static_conformal,post-drift,coverage @ 5%,88.998% ± 0.426 pp,5,5,0.8899770627722481,0.00426434102853724
+NSW1,D_60d_adwin,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_60d_adwin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_adwin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_adwin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_adwin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_kswin,adaptive_conformal,all,coverage @ 10%,89.963% ± 0.006 pp,5,5,0.8996329442278782,6.414386351883879e-05
+NSW1,D_60d_kswin,adaptive_conformal,all,coverage @ 20%,89.963% ± 0.006 pp,5,5,0.8996329442278782,6.414386351883879e-05
+NSW1,D_60d_kswin,adaptive_conformal,all,coverage @ 5%,89.963% ± 0.006 pp,5,5,0.8996329442278782,6.414386351883879e-05
+NSW1,D_60d_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_60d_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_kswin,adaptive_conformal,drift,coverage @ 10%,89.440% ± 0.030 pp,5,5,0.8943975032991253,0.00029663720102123144
+NSW1,D_60d_kswin,adaptive_conformal,drift,coverage @ 20%,89.440% ± 0.030 pp,5,5,0.8943975032991253,0.00029663720102123144
+NSW1,D_60d_kswin,adaptive_conformal,drift,coverage @ 5%,89.440% ± 0.030 pp,5,5,0.8943975032991253,0.00029663720102123144
+NSW1,D_60d_kswin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_60d_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_kswin,adaptive_conformal,post-drift,coverage @ 10%,90.136% ± 0.005 pp,5,5,0.90136463048742,5.3732925494317996e-05
+NSW1,D_60d_kswin,adaptive_conformal,post-drift,coverage @ 20%,90.136% ± 0.005 pp,5,5,0.90136463048742,5.3732925494317996e-05
+NSW1,D_60d_kswin,adaptive_conformal,post-drift,coverage @ 5%,90.136% ± 0.005 pp,5,5,0.90136463048742,5.3732925494317996e-05
+NSW1,D_60d_kswin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_kswin,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_60d_kswin,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_60d_kswin,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_60d_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_kswin,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_60d_kswin,static_conformal,all,coverage @ 10%,91.085% ± 0.431 pp,5,5,0.9108507189697989,0.004314989635859712
+NSW1,D_60d_kswin,static_conformal,all,coverage @ 20%,91.085% ± 0.431 pp,5,5,0.9108507189697989,0.004314989635859712
+NSW1,D_60d_kswin,static_conformal,all,coverage @ 5%,91.085% ± 0.431 pp,5,5,0.9108507189697989,0.004314989635859712
+NSW1,D_60d_kswin,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_kswin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_kswin,static_conformal,drift,coverage @ 10%,87.533% ± 0.480 pp,5,5,0.8753308519437552,0.004797899076924587
+NSW1,D_60d_kswin,static_conformal,drift,coverage @ 20%,87.533% ± 0.480 pp,5,5,0.8753308519437552,0.004797899076924587
+NSW1,D_60d_kswin,static_conformal,drift,coverage @ 5%,87.533% ± 0.480 pp,5,5,0.8753308519437552,0.004797899076924587
+NSW1,D_60d_kswin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_60d_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_kswin,static_conformal,post-drift,coverage @ 10%,92.488% ± 0.412 pp,5,5,0.9248837356116244,0.004118733603380428
+NSW1,D_60d_kswin,static_conformal,post-drift,coverage @ 20%,92.488% ± 0.412 pp,5,5,0.9248837356116244,0.004118733603380428
+NSW1,D_60d_kswin,static_conformal,post-drift,coverage @ 5%,92.488% ± 0.412 pp,5,5,0.9248837356116244,0.004118733603380428
+NSW1,D_60d_kswin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_kswin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_kswin,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_kswin,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_kswin,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_page_hinkley,adaptive_conformal,all,coverage @ 10%,89.970% ± 0.006 pp,5,5,0.8996951759855983,5.5876842695292844e-05
+NSW1,D_60d_page_hinkley,adaptive_conformal,all,coverage @ 20%,89.970% ± 0.006 pp,5,5,0.8996951759855983,5.5876842695292844e-05
+NSW1,D_60d_page_hinkley,adaptive_conformal,all,coverage @ 5%,89.970% ± 0.006 pp,5,5,0.8996951759855983,5.5876842695292844e-05
+NSW1,D_60d_page_hinkley,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+NSW1,D_60d_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_page_hinkley,adaptive_conformal,drift,coverage @ 10%,90.278% ± 0.024 pp,5,5,0.9027764783108315,0.00023624033650619292
+NSW1,D_60d_page_hinkley,adaptive_conformal,drift,coverage @ 20%,90.300% ± 0.031 pp,5,5,0.9029995066902641,0.0003056516027264502
+NSW1,D_60d_page_hinkley,adaptive_conformal,drift,coverage @ 5%,90.250% ± 0.025 pp,5,5,0.9024981947549893,0.0002546771154211889
+NSW1,D_60d_page_hinkley,adaptive_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,89.815% ± 0.002 pp,5,5,0.8981547144690193,1.5348750008620984e-05
+NSW1,D_60d_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,89.815% ± 0.002 pp,5,5,0.8981547144690193,1.5348750008620984e-05
+NSW1,D_60d_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,89.815% ± 0.002 pp,5,5,0.8981547144690193,1.5348750008620984e-05
+NSW1,D_60d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+NSW1,D_60d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,95.301% ± 0.126 pp,5,5,0.9530133288765331,0.0012561193343694952
+NSW1,D_60d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,95.356% ± 0.199 pp,5,5,0.9535567038210868,0.001989390754965187
+NSW1,D_60d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,95.105% ± 0.181 pp,5,5,0.9510499660243124,0.0018075903810869723
+NSW1,D_60d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,1.667% ± 3.727 pp,5,5,0.01666666666666666,0.03726779962499648
+NSW1,D_60d_page_hinkley,static_conformal,all,coverage @ 10%,90.969% ± 0.368 pp,5,5,0.9096908504215676,0.003678367405731251
+NSW1,D_60d_page_hinkley,static_conformal,all,coverage @ 20%,90.969% ± 0.368 pp,5,5,0.9096908504215676,0.003678367405731251
+NSW1,D_60d_page_hinkley,static_conformal,all,coverage @ 5%,90.969% ± 0.368 pp,5,5,0.9096908504215676,0.003678367405731251
+NSW1,D_60d_page_hinkley,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_page_hinkley,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_page_hinkley,static_conformal,drift,coverage @ 10%,91.802% ± 0.375 pp,5,5,0.9180210918114143,0.003749874714072959
+NSW1,D_60d_page_hinkley,static_conformal,drift,coverage @ 20%,91.802% ± 0.375 pp,5,5,0.9180210918114143,0.003749874714072959
+NSW1,D_60d_page_hinkley,static_conformal,drift,coverage @ 5%,91.802% ± 0.375 pp,5,5,0.9180210918114143,0.003749874714072959
+NSW1,D_60d_page_hinkley,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_page_hinkley,static_conformal,post-drift,coverage @ 10%,90.586% ± 0.365 pp,5,5,0.9058647755729045,0.003646287212292808
+NSW1,D_60d_page_hinkley,static_conformal,post-drift,coverage @ 20%,90.586% ± 0.365 pp,5,5,0.9058647755729045,0.003646287212292808
+NSW1,D_60d_page_hinkley,static_conformal,post-drift,coverage @ 5%,90.586% ± 0.365 pp,5,5,0.9058647755729045,0.003646287212292808
+NSW1,D_60d_page_hinkley,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_page_hinkley,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+NSW1,D_60d_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.354% ± 0.521 pp,5,5,0.9635416666666666,0.0052083333333333565
+NSW1,D_60d_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+NSW1,D_60d_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,A,adaptive_conformal,all,coverage @ 10%,89.992% ± 0.001 pp,5,5,0.899918504245073,1.1919565300557064e-05
+SA1,A,adaptive_conformal,all,coverage @ 20%,89.992% ± 0.001 pp,5,5,0.899918504245073,1.1919565300557064e-05
+SA1,A,adaptive_conformal,all,coverage @ 5%,89.992% ± 0.001 pp,5,5,0.899918504245073,1.1919565300557064e-05
+SA1,A,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,A,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,A,adaptive_conformal,drift,coverage @ 10%,89.980% ± 0.038 pp,5,5,0.8997977714414904,0.00037629422274603754
+SA1,A,adaptive_conformal,drift,coverage @ 20%,89.980% ± 0.038 pp,5,5,0.8997977714414904,0.00037629422274603754
+SA1,A,adaptive_conformal,drift,coverage @ 5%,89.980% ± 0.038 pp,5,5,0.8997977714414904,0.00037629422274603754
+SA1,A,adaptive_conformal,drift,review rate for 0.90,partial: 2/5 seeds achieved; 3/5 unreachable,2,5,,
+SA1,A,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,A,adaptive_conformal,post-drift,coverage @ 10%,89.986% ± 0.019 pp,5,5,0.8998574490106146,0.00019284314934011522
+SA1,A,adaptive_conformal,post-drift,coverage @ 20%,89.986% ± 0.019 pp,5,5,0.8998574490106146,0.00019284314934011522
+SA1,A,adaptive_conformal,post-drift,coverage @ 5%,89.986% ± 0.019 pp,5,5,0.8998574490106146,0.00019284314934011522
+SA1,A,adaptive_conformal,post-drift,review rate for 0.90,partial: 1/5 seeds achieved; 4/5 unreachable,1,5,,
+SA1,A,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,A,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,A,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,A,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,A,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,A,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,A,static_conformal,all,coverage @ 10%,94.043% ± 0.392 pp,5,5,0.9404273669496945,0.003923122709257169
+SA1,A,static_conformal,all,coverage @ 20%,94.043% ± 0.392 pp,5,5,0.9404273669496945,0.003923122709257169
+SA1,A,static_conformal,all,coverage @ 5%,94.043% ± 0.392 pp,5,5,0.9404273669496945,0.003923122709257169
+SA1,A,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,A,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,A,static_conformal,drift,coverage @ 10%,93.202% ± 0.519 pp,5,5,0.932020047940728,0.005190104294139551
+SA1,A,static_conformal,drift,coverage @ 20%,93.202% ± 0.519 pp,5,5,0.932020047940728,0.005190104294139551
+SA1,A,static_conformal,drift,coverage @ 5%,93.202% ± 0.519 pp,5,5,0.932020047940728,0.005190104294139551
+SA1,A,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,A,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,A,static_conformal,post-drift,coverage @ 10%,94.462% ± 0.330 pp,5,5,0.9446220400728598,0.0033002164617888553
+SA1,A,static_conformal,post-drift,coverage @ 20%,94.462% ± 0.330 pp,5,5,0.9446220400728598,0.0033002164617888553
+SA1,A,static_conformal,post-drift,coverage @ 5%,94.462% ± 0.330 pp,5,5,0.9446220400728598,0.0033002164617888553
+SA1,A,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,A,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,A,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,A,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,A,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,A,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,A,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,B,adaptive_conformal,all,coverage @ 10%,89.999% ± 0.001 pp,5,5,0.8999910754127971,1.3096149071423259e-05
+SA1,B,adaptive_conformal,all,coverage @ 20%,89.999% ± 0.001 pp,5,5,0.8999910754127971,1.3096149071423259e-05
+SA1,B,adaptive_conformal,all,coverage @ 5%,89.999% ± 0.001 pp,5,5,0.8999910754127971,1.3096149071423259e-05
+SA1,B,adaptive_conformal,all,review rate for 0.90,partial: 1/5 seeds achieved; 4/5 unreachable,1,5,,
+SA1,B,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,B,adaptive_conformal,drift,coverage @ 10%,89.909% ± 0.027 pp,5,5,0.8990891261712791,0.00026971886592751633
+SA1,B,adaptive_conformal,drift,coverage @ 20%,89.909% ± 0.027 pp,5,5,0.8990891261712791,0.00026971886592751633
+SA1,B,adaptive_conformal,drift,coverage @ 5%,89.909% ± 0.027 pp,5,5,0.8990891261712791,0.00026971886592751633
+SA1,B,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,B,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,B,adaptive_conformal,post-drift,coverage @ 10%,90.035% ± 0.015 pp,5,5,0.9003473732478883,0.00014510028180082993
+SA1,B,adaptive_conformal,post-drift,coverage @ 20%,90.035% ± 0.015 pp,5,5,0.9003473732478883,0.00014510028180082993
+SA1,B,adaptive_conformal,post-drift,coverage @ 5%,90.035% ± 0.015 pp,5,5,0.9003473732478883,0.00014510028180082993
+SA1,B,adaptive_conformal,post-drift,review rate for 0.90,0.007% ± 0.015 pp,5,5,6.830601092896e-05,0.00015273688370899812
+SA1,B,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,B,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,B,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,B,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,B,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,B,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,B,static_conformal,all,coverage @ 10%,95.007% ± 0.397 pp,5,5,0.9500721200315245,0.003967458379859344
+SA1,B,static_conformal,all,coverage @ 20%,95.007% ± 0.397 pp,5,5,0.9500721200315245,0.003967458379859344
+SA1,B,static_conformal,all,coverage @ 5%,95.007% ± 0.397 pp,5,5,0.9500721200315245,0.003967458379859344
+SA1,B,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,B,static_conformal,all,review rate for 0.95,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,B,static_conformal,drift,coverage @ 10%,94.548% ± 0.424 pp,5,5,0.945478317716278,0.004240846270829134
+SA1,B,static_conformal,drift,coverage @ 20%,94.548% ± 0.424 pp,5,5,0.945478317716278,0.004240846270829134
+SA1,B,static_conformal,drift,coverage @ 5%,94.548% ± 0.424 pp,5,5,0.945478317716278,0.004240846270829134
+SA1,B,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,B,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,B,static_conformal,post-drift,coverage @ 10%,95.236% ± 0.381 pp,5,5,0.9523588342440801,0.0038056931677064
+SA1,B,static_conformal,post-drift,coverage @ 20%,95.236% ± 0.381 pp,5,5,0.9523588342440801,0.0038056931677064
+SA1,B,static_conformal,post-drift,coverage @ 5%,95.236% ± 0.381 pp,5,5,0.9523588342440801,0.0038056931677064
+SA1,B,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,B,static_conformal,post-drift,review rate for 0.95,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,B,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,B,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,B,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,B,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,B,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_adwin,adaptive_conformal,all,coverage @ 10%,90.001% ± 0.002 pp,5,5,0.9000098183870303,1.9385363488916573e-05
+SA1,C_adwin,adaptive_conformal,all,coverage @ 20%,90.001% ± 0.002 pp,5,5,0.9000098183870303,1.9385363488916573e-05
+SA1,C_adwin,adaptive_conformal,all,coverage @ 5%,90.001% ± 0.002 pp,5,5,0.9000098183870303,1.9385363488916573e-05
+SA1,C_adwin,adaptive_conformal,all,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,C_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,C_adwin,adaptive_conformal,drift,coverage @ 10%,89.946% ± 0.020 pp,5,5,0.8994552190019611,0.00020208364557628255
+SA1,C_adwin,adaptive_conformal,drift,coverage @ 20%,89.946% ± 0.020 pp,5,5,0.8994552190019611,0.00020208364557628255
+SA1,C_adwin,adaptive_conformal,drift,coverage @ 5%,89.946% ± 0.020 pp,5,5,0.8994552190019611,0.00020208364557628255
+SA1,C_adwin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,C_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_adwin,adaptive_conformal,post-drift,coverage @ 10%,90.018% ± 0.006 pp,5,5,0.9001777322019311,5.729627411340574e-05
+SA1,C_adwin,adaptive_conformal,post-drift,coverage @ 20%,90.018% ± 0.006 pp,5,5,0.9001777322019311,5.729627411340574e-05
+SA1,C_adwin,adaptive_conformal,post-drift,coverage @ 5%,90.018% ± 0.006 pp,5,5,0.9001777322019311,5.729627411340574e-05
+SA1,C_adwin,adaptive_conformal,post-drift,review rate for 0.90,0.010% ± 0.014 pp,5,5,0.00010473588342437999,0.0001436412595226175
+SA1,C_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_adwin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_adwin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_adwin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_adwin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_adwin,static_conformal,all,coverage @ 10%,95.019% ± 0.377 pp,5,5,0.9501910809082664,0.003765818188991413
+SA1,C_adwin,static_conformal,all,coverage @ 20%,95.019% ± 0.377 pp,5,5,0.9501910809082664,0.003765818188991413
+SA1,C_adwin,static_conformal,all,coverage @ 5%,95.019% ± 0.377 pp,5,5,0.9501910809082664,0.003765818188991413
+SA1,C_adwin,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_adwin,static_conformal,all,review rate for 0.95,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,C_adwin,static_conformal,drift,coverage @ 10%,94.407% ± 0.435 pp,5,5,0.9440749618653301,0.004349348071232542
+SA1,C_adwin,static_conformal,drift,coverage @ 20%,94.407% ± 0.435 pp,5,5,0.9440749618653301,0.004349348071232542
+SA1,C_adwin,static_conformal,drift,coverage @ 5%,94.407% ± 0.435 pp,5,5,0.9440749618653301,0.004349348071232542
+SA1,C_adwin,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_adwin,static_conformal,post-drift,coverage @ 10%,95.327% ± 0.344 pp,5,5,0.9532741347905282,0.003438800450591721
+SA1,C_adwin,static_conformal,post-drift,coverage @ 20%,95.327% ± 0.344 pp,5,5,0.9532741347905282,0.003438800450591721
+SA1,C_adwin,static_conformal,post-drift,coverage @ 5%,95.327% ± 0.344 pp,5,5,0.9532741347905282,0.003438800450591721
+SA1,C_adwin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_adwin,static_conformal,post-drift,review rate for 0.95,partial: 4/5 seeds achieved; 1/5 unreachable,4,5,,
+SA1,C_adwin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_adwin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_adwin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_kswin,adaptive_conformal,all,coverage @ 10%,89.997% ± 0.001 pp,5,5,0.8999744198730351,1.2592602510838712e-05
+SA1,C_kswin,adaptive_conformal,all,coverage @ 20%,89.997% ± 0.001 pp,5,5,0.8999744198730351,1.2592602510838712e-05
+SA1,C_kswin,adaptive_conformal,all,coverage @ 5%,89.997% ± 0.001 pp,5,5,0.8999744198730351,1.2592602510838712e-05
+SA1,C_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,C_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,C_kswin,adaptive_conformal,drift,coverage @ 10%,89.945% ± 0.038 pp,5,5,0.8994482388128366,0.0003767398345258486
+SA1,C_kswin,adaptive_conformal,drift,coverage @ 20%,89.945% ± 0.038 pp,5,5,0.8994482388128366,0.0003767398345258486
+SA1,C_kswin,adaptive_conformal,drift,coverage @ 5%,89.945% ± 0.038 pp,5,5,0.8994482388128366,0.0003767398345258486
+SA1,C_kswin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,C_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_kswin,adaptive_conformal,post-drift,coverage @ 10%,90.013% ± 0.023 pp,5,5,0.9001281234436688,0.00022587259400260913
+SA1,C_kswin,adaptive_conformal,post-drift,coverage @ 20%,90.013% ± 0.023 pp,5,5,0.9001281234436688,0.00022587259400260913
+SA1,C_kswin,adaptive_conformal,post-drift,coverage @ 5%,90.013% ± 0.023 pp,5,5,0.9001281234436688,0.00022587259400260913
+SA1,C_kswin,adaptive_conformal,post-drift,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,C_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_kswin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_kswin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_kswin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_kswin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_kswin,static_conformal,all,coverage @ 10%,95.012% ± 0.369 pp,5,5,0.9501197043822213,0.0036891899789776605
+SA1,C_kswin,static_conformal,all,coverage @ 20%,95.012% ± 0.369 pp,5,5,0.9501197043822213,0.0036891899789776605
+SA1,C_kswin,static_conformal,all,coverage @ 5%,95.012% ± 0.369 pp,5,5,0.9501197043822213,0.0036891899789776605
+SA1,C_kswin,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_kswin,static_conformal,all,review rate for 0.95,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,C_kswin,static_conformal,drift,coverage @ 10%,94.417% ± 0.425 pp,5,5,0.944170843320985,0.004250129826675925
+SA1,C_kswin,static_conformal,drift,coverage @ 20%,94.417% ± 0.425 pp,5,5,0.944170843320985,0.004250129826675925
+SA1,C_kswin,static_conformal,drift,coverage @ 5%,94.417% ± 0.425 pp,5,5,0.944170843320985,0.004250129826675925
+SA1,C_kswin,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_kswin,static_conformal,post-drift,coverage @ 10%,95.311% ± 0.341 pp,5,5,0.9531147540983607,0.003409314730202024
+SA1,C_kswin,static_conformal,post-drift,coverage @ 20%,95.311% ± 0.341 pp,5,5,0.9531147540983607,0.003409314730202024
+SA1,C_kswin,static_conformal,post-drift,coverage @ 5%,95.311% ± 0.341 pp,5,5,0.9531147540983607,0.003409314730202024
+SA1,C_kswin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_kswin,static_conformal,post-drift,review rate for 0.95,partial: 4/5 seeds achieved; 1/5 unreachable,4,5,,
+SA1,C_kswin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_kswin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_kswin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_page_hinkley,adaptive_conformal,all,coverage @ 10%,90.003% ± 0.003 pp,5,5,0.900033016447271,3.4468341915951894e-05
+SA1,C_page_hinkley,adaptive_conformal,all,coverage @ 20%,90.003% ± 0.003 pp,5,5,0.900033016447271,3.4468341915951894e-05
+SA1,C_page_hinkley,adaptive_conformal,all,coverage @ 5%,90.003% ± 0.003 pp,5,5,0.900033016447271,3.4468341915951894e-05
+SA1,C_page_hinkley,adaptive_conformal,all,review rate for 0.90,partial: 4/5 seeds achieved; 1/5 unreachable,4,5,,
+SA1,C_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,C_page_hinkley,adaptive_conformal,drift,coverage @ 10%,89.931% ± 0.041 pp,5,5,0.8993070385704947,0.0004095361938839338
+SA1,C_page_hinkley,adaptive_conformal,drift,coverage @ 20%,89.931% ± 0.041 pp,5,5,0.8993070385704947,0.0004095361938839338
+SA1,C_page_hinkley,adaptive_conformal,drift,coverage @ 5%,89.931% ± 0.041 pp,5,5,0.8993070385704947,0.0004095361938839338
+SA1,C_page_hinkley,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,C_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,90.029% ± 0.017 pp,5,5,0.9002934758540982,0.0001690041446229558
+SA1,C_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,90.029% ± 0.017 pp,5,5,0.9002934758540982,0.0001690041446229558
+SA1,C_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,90.029% ± 0.017 pp,5,5,0.9002934758540982,0.0001690041446229558
+SA1,C_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,C_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_page_hinkley,static_conformal,all,coverage @ 10%,94.988% ± 0.360 pp,5,5,0.9498847566506565,0.0035970054357898503
+SA1,C_page_hinkley,static_conformal,all,coverage @ 20%,94.988% ± 0.360 pp,5,5,0.9498847566506565,0.0035970054357898503
+SA1,C_page_hinkley,static_conformal,all,coverage @ 5%,94.988% ± 0.360 pp,5,5,0.9498847566506565,0.0035970054357898503
+SA1,C_page_hinkley,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_page_hinkley,static_conformal,all,review rate for 0.95,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,C_page_hinkley,static_conformal,drift,coverage @ 10%,94.335% ± 0.445 pp,5,5,0.9433514926999346,0.004449086027770089
+SA1,C_page_hinkley,static_conformal,drift,coverage @ 20%,94.335% ± 0.445 pp,5,5,0.9433514926999346,0.004449086027770089
+SA1,C_page_hinkley,static_conformal,drift,coverage @ 5%,94.335% ± 0.445 pp,5,5,0.9433514926999346,0.004449086027770089
+SA1,C_page_hinkley,static_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,C_page_hinkley,static_conformal,post-drift,coverage @ 10%,95.318% ± 0.313 pp,5,5,0.9531830601092895,0.003133377718822395
+SA1,C_page_hinkley,static_conformal,post-drift,coverage @ 20%,95.318% ± 0.313 pp,5,5,0.9531830601092895,0.003133377718822395
+SA1,C_page_hinkley,static_conformal,post-drift,coverage @ 5%,95.318% ± 0.313 pp,5,5,0.9531830601092895,0.003133377718822395
+SA1,C_page_hinkley,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_page_hinkley,static_conformal,post-drift,review rate for 0.95,partial: 4/5 seeds achieved; 1/5 unreachable,4,5,,
+SA1,C_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,C_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,C_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_adwin,adaptive_conformal,all,coverage @ 10%,89.986% ± 0.004 pp,5,5,0.8998610834941758,4.3549862714245155e-05
+SA1,D_120d_adwin,adaptive_conformal,all,coverage @ 20%,89.986% ± 0.004 pp,5,5,0.8998610834941758,4.3549862714245155e-05
+SA1,D_120d_adwin,adaptive_conformal,all,coverage @ 5%,89.986% ± 0.004 pp,5,5,0.8998610834941758,4.3549862714245155e-05
+SA1,D_120d_adwin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_adwin,adaptive_conformal,drift,coverage @ 10%,90.102% ± 0.016 pp,5,5,0.9010194469524206,0.0001615425855873726
+SA1,D_120d_adwin,adaptive_conformal,drift,coverage @ 20%,90.102% ± 0.016 pp,5,5,0.9010194469524206,0.0001615425855873726
+SA1,D_120d_adwin,adaptive_conformal,drift,coverage @ 5%,90.102% ± 0.016 pp,5,5,0.9010194469524206,0.0001615425855873726
+SA1,D_120d_adwin,adaptive_conformal,drift,review rate for 0.90,0.275% ± 0.030 pp,5,5,0.0027456962301154403,0.0002955907597788612
+SA1,D_120d_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_adwin,adaptive_conformal,post-drift,coverage @ 10%,89.914% ± 0.009 pp,5,5,0.8991419090536432,9.217885516315319e-05
+SA1,D_120d_adwin,adaptive_conformal,post-drift,coverage @ 20%,89.914% ± 0.009 pp,5,5,0.8991419090536432,9.217885516315319e-05
+SA1,D_120d_adwin,adaptive_conformal,post-drift,coverage @ 5%,89.914% ± 0.009 pp,5,5,0.8991419090536432,9.217885516315319e-05
+SA1,D_120d_adwin,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_adwin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_adwin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_adwin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_adwin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_adwin,static_conformal,all,coverage @ 10%,89.114% ± 0.501 pp,5,5,0.8911389016937055,0.005006154408209619
+SA1,D_120d_adwin,static_conformal,all,coverage @ 20%,89.114% ± 0.501 pp,5,5,0.8911389016937055,0.005006154408209619
+SA1,D_120d_adwin,static_conformal,all,coverage @ 5%,89.114% ± 0.501 pp,5,5,0.8911389016937055,0.005006154408209619
+SA1,D_120d_adwin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_adwin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_adwin,static_conformal,drift,coverage @ 10%,87.209% ± 0.601 pp,5,5,0.8720941381564611,0.00601307144296691
+SA1,D_120d_adwin,static_conformal,drift,coverage @ 20%,87.209% ± 0.601 pp,5,5,0.8720941381564611,0.00601307144296691
+SA1,D_120d_adwin,static_conformal,drift,coverage @ 5%,87.209% ± 0.601 pp,5,5,0.8720941381564611,0.00601307144296691
+SA1,D_120d_adwin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_adwin,static_conformal,post-drift,coverage @ 10%,90.046% ± 0.445 pp,5,5,0.9004599271402549,0.004454240972392176
+SA1,D_120d_adwin,static_conformal,post-drift,coverage @ 20%,90.046% ± 0.445 pp,5,5,0.9004599271402549,0.004454240972392176
+SA1,D_120d_adwin,static_conformal,post-drift,coverage @ 5%,90.046% ± 0.445 pp,5,5,0.9004599271402549,0.004454240972392176
+SA1,D_120d_adwin,static_conformal,post-drift,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,D_120d_adwin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_adwin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_adwin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_adwin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_kswin,adaptive_conformal,all,coverage @ 10%,89.985% ± 0.004 pp,5,5,0.8998487506974044,3.5732355350371954e-05
+SA1,D_120d_kswin,adaptive_conformal,all,coverage @ 20%,89.985% ± 0.004 pp,5,5,0.8998487506974044,3.5732355350371954e-05
+SA1,D_120d_kswin,adaptive_conformal,all,coverage @ 5%,89.985% ± 0.004 pp,5,5,0.8998487506974044,3.5732355350371954e-05
+SA1,D_120d_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_kswin,adaptive_conformal,drift,coverage @ 10%,90.014% ± 0.018 pp,5,5,0.9001388898465799,0.00017839540479663168
+SA1,D_120d_kswin,adaptive_conformal,drift,coverage @ 20%,90.014% ± 0.018 pp,5,5,0.9001388898465799,0.00017839540479663168
+SA1,D_120d_kswin,adaptive_conformal,drift,coverage @ 5%,90.014% ± 0.018 pp,5,5,0.9001388898465799,0.00017839540479663168
+SA1,D_120d_kswin,adaptive_conformal,drift,review rate for 0.90,partial: 4/5 seeds achieved; 1/5 unreachable,4,5,,
+SA1,D_120d_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_kswin,adaptive_conformal,post-drift,coverage @ 10%,89.960% ± 0.011 pp,5,5,0.899604238761478,0.00011441614475177012
+SA1,D_120d_kswin,adaptive_conformal,post-drift,coverage @ 20%,89.960% ± 0.011 pp,5,5,0.899604238761478,0.00011441614475177012
+SA1,D_120d_kswin,adaptive_conformal,post-drift,coverage @ 5%,89.960% ± 0.011 pp,5,5,0.899604238761478,0.00011441614475177012
+SA1,D_120d_kswin,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_kswin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_kswin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_kswin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_kswin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_kswin,static_conformal,all,coverage @ 10%,88.129% ± 0.559 pp,5,5,0.8812859670775774,0.005592264491774684
+SA1,D_120d_kswin,static_conformal,all,coverage @ 20%,88.129% ± 0.559 pp,5,5,0.8812859670775774,0.005592264491774684
+SA1,D_120d_kswin,static_conformal,all,coverage @ 5%,88.129% ± 0.559 pp,5,5,0.8812859670775774,0.005592264491774684
+SA1,D_120d_kswin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_kswin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_kswin,static_conformal,drift,coverage @ 10%,86.497% ± 0.644 pp,5,5,0.864972760950098,0.006440953826508456
+SA1,D_120d_kswin,static_conformal,drift,coverage @ 20%,86.497% ± 0.644 pp,5,5,0.864972760950098,0.006440953826508456
+SA1,D_120d_kswin,static_conformal,drift,coverage @ 5%,86.497% ± 0.644 pp,5,5,0.864972760950098,0.006440953826508456
+SA1,D_120d_kswin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_kswin,static_conformal,post-drift,coverage @ 10%,88.909% ± 0.513 pp,5,5,0.8890938069216758,0.0051278311099654346
+SA1,D_120d_kswin,static_conformal,post-drift,coverage @ 20%,88.909% ± 0.513 pp,5,5,0.8890938069216758,0.0051278311099654346
+SA1,D_120d_kswin,static_conformal,post-drift,coverage @ 5%,88.909% ± 0.513 pp,5,5,0.8890938069216758,0.0051278311099654346
+SA1,D_120d_kswin,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_kswin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_kswin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_kswin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_kswin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_page_hinkley,adaptive_conformal,all,coverage @ 10%,89.977% ± 0.001 pp,5,5,0.8997695020062049,7.204852678293446e-06
+SA1,D_120d_page_hinkley,adaptive_conformal,all,coverage @ 20%,89.977% ± 0.001 pp,5,5,0.8997695020062049,7.204852678293446e-06
+SA1,D_120d_page_hinkley,adaptive_conformal,all,coverage @ 5%,89.977% ± 0.001 pp,5,5,0.8997695020062049,7.204852678293446e-06
+SA1,D_120d_page_hinkley,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_page_hinkley,adaptive_conformal,drift,coverage @ 10%,89.628% ± 0.015 pp,5,5,0.8962842288849489,0.00015055245872745647
+SA1,D_120d_page_hinkley,adaptive_conformal,drift,coverage @ 20%,89.628% ± 0.015 pp,5,5,0.8962842288849489,0.00015055245872745647
+SA1,D_120d_page_hinkley,adaptive_conformal,drift,coverage @ 5%,89.628% ± 0.015 pp,5,5,0.8962842288849489,0.00015055245872745647
+SA1,D_120d_page_hinkley,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_120d_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,90.147% ± 0.003 pp,5,5,0.9014739927889874,3.3082032661163256e-05
+SA1,D_120d_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,90.147% ± 0.003 pp,5,5,0.9014739927889874,3.3082032661163256e-05
+SA1,D_120d_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,90.147% ± 0.003 pp,5,5,0.9014739927889874,3.3082032661163256e-05
+SA1,D_120d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_120d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_page_hinkley,static_conformal,all,coverage @ 10%,91.160% ± 0.541 pp,5,5,0.9116001724932714,0.005411426773080654
+SA1,D_120d_page_hinkley,static_conformal,all,coverage @ 20%,91.160% ± 0.541 pp,5,5,0.9116001724932714,0.005411426773080654
+SA1,D_120d_page_hinkley,static_conformal,all,coverage @ 5%,91.160% ± 0.541 pp,5,5,0.9116001724932714,0.005411426773080654
+SA1,D_120d_page_hinkley,static_conformal,all,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_page_hinkley,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_page_hinkley,static_conformal,drift,coverage @ 10%,90.087% ± 0.596 pp,5,5,0.9008672913488777,0.005957152687976031
+SA1,D_120d_page_hinkley,static_conformal,drift,coverage @ 20%,90.087% ± 0.596 pp,5,5,0.9008672913488777,0.005957152687976031
+SA1,D_120d_page_hinkley,static_conformal,drift,coverage @ 5%,90.087% ± 0.596 pp,5,5,0.9008672913488777,0.005957152687976031
+SA1,D_120d_page_hinkley,static_conformal,drift,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,D_120d_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_page_hinkley,static_conformal,post-drift,coverage @ 10%,91.676% ± 0.510 pp,5,5,0.9167577413479053,0.005102722662859396
+SA1,D_120d_page_hinkley,static_conformal,post-drift,coverage @ 20%,91.676% ± 0.510 pp,5,5,0.9167577413479053,0.005102722662859396
+SA1,D_120d_page_hinkley,static_conformal,post-drift,coverage @ 5%,91.676% ± 0.510 pp,5,5,0.9167577413479053,0.005102722662859396
+SA1,D_120d_page_hinkley,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_page_hinkley,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_120d_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_120d_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_120d_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_adwin,adaptive_conformal,all,coverage @ 10%,89.989% ± 0.002 pp,5,5,0.8998893594456264,2.2379092451289914e-05
+SA1,D_180d_adwin,adaptive_conformal,all,coverage @ 20%,89.989% ± 0.002 pp,5,5,0.8998893594456264,2.2379092451289914e-05
+SA1,D_180d_adwin,adaptive_conformal,all,coverage @ 5%,89.989% ± 0.002 pp,5,5,0.8998893594456264,2.2379092451289914e-05
+SA1,D_180d_adwin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_180d_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_adwin,adaptive_conformal,drift,coverage @ 10%,89.875% ± 0.015 pp,5,5,0.8987522098887541,0.0001518233323926707
+SA1,D_180d_adwin,adaptive_conformal,drift,coverage @ 20%,89.875% ± 0.015 pp,5,5,0.8987522098887541,0.0001518233323926707
+SA1,D_180d_adwin,adaptive_conformal,drift,coverage @ 5%,89.875% ± 0.015 pp,5,5,0.8987522098887541,0.0001518233323926707
+SA1,D_180d_adwin,adaptive_conformal,drift,review rate for 0.90,66.759% ± 0.923 pp,5,5,0.6675877097406843,0.009227935317247771
+SA1,D_180d_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_adwin,adaptive_conformal,post-drift,coverage @ 10%,90.036% ± 0.007 pp,5,5,0.900364093172841,6.792785980311246e-05
+SA1,D_180d_adwin,adaptive_conformal,post-drift,coverage @ 20%,90.036% ± 0.007 pp,5,5,0.900364093172841,6.792785980311246e-05
+SA1,D_180d_adwin,adaptive_conformal,post-drift,coverage @ 5%,90.036% ± 0.007 pp,5,5,0.900364093172841,6.792785980311246e-05
+SA1,D_180d_adwin,adaptive_conformal,post-drift,review rate for 0.90,0.066% ± 0.061 pp,5,5,0.0006602914389799401,0.0006079703972139465
+SA1,D_180d_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_adwin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_adwin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_adwin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_adwin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_adwin,static_conformal,all,coverage @ 10%,88.437% ± 0.575 pp,5,5,0.8843700278071049,0.005753320155037763
+SA1,D_180d_adwin,static_conformal,all,coverage @ 20%,88.437% ± 0.575 pp,5,5,0.8843700278071049,0.005753320155037763
+SA1,D_180d_adwin,static_conformal,all,coverage @ 5%,88.437% ± 0.575 pp,5,5,0.8843700278071049,0.005753320155037763
+SA1,D_180d_adwin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_180d_adwin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_adwin,static_conformal,drift,coverage @ 10%,85.996% ± 0.646 pp,5,5,0.8599607757681411,0.006464869989757779
+SA1,D_180d_adwin,static_conformal,drift,coverage @ 20%,85.996% ± 0.646 pp,5,5,0.8599607757681411,0.006464869989757779
+SA1,D_180d_adwin,static_conformal,drift,coverage @ 5%,85.996% ± 0.646 pp,5,5,0.8599607757681411,0.006464869989757779
+SA1,D_180d_adwin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_180d_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_adwin,static_conformal,post-drift,coverage @ 10%,89.643% ± 0.536 pp,5,5,0.8964344262295082,0.005361347456805923
+SA1,D_180d_adwin,static_conformal,post-drift,coverage @ 20%,89.643% ± 0.536 pp,5,5,0.8964344262295082,0.005361347456805923
+SA1,D_180d_adwin,static_conformal,post-drift,coverage @ 5%,89.643% ± 0.536 pp,5,5,0.8964344262295082,0.005361347456805923
+SA1,D_180d_adwin,static_conformal,post-drift,review rate for 0.90,partial: 2/5 seeds achieved; 3/5 unreachable,2,5,,
+SA1,D_180d_adwin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_adwin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_adwin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_adwin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_kswin,adaptive_conformal,all,coverage @ 10%,89.994% ± 0.002 pp,5,5,0.8999431523908396,2.4319403220610322e-05
+SA1,D_180d_kswin,adaptive_conformal,all,coverage @ 20%,89.994% ± 0.002 pp,5,5,0.8999431523908396,2.4319403220610322e-05
+SA1,D_180d_kswin,adaptive_conformal,all,coverage @ 5%,89.994% ± 0.002 pp,5,5,0.8999431523908396,2.4319403220610322e-05
+SA1,D_180d_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_180d_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_kswin,adaptive_conformal,drift,coverage @ 10%,89.728% ± 0.011 pp,5,5,0.8972845881428617,0.00010946899419326068
+SA1,D_180d_kswin,adaptive_conformal,drift,coverage @ 20%,89.728% ± 0.011 pp,5,5,0.8972845881428617,0.00010946899419326068
+SA1,D_180d_kswin,adaptive_conformal,drift,coverage @ 5%,89.728% ± 0.011 pp,5,5,0.8972845881428617,0.00010946899419326068
+SA1,D_180d_kswin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_180d_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_kswin,adaptive_conformal,post-drift,coverage @ 10%,90.121% ± 0.008 pp,5,5,0.9012089229402589,7.534627417665576e-05
+SA1,D_180d_kswin,adaptive_conformal,post-drift,coverage @ 20%,90.121% ± 0.008 pp,5,5,0.9012089229402589,7.534627417665576e-05
+SA1,D_180d_kswin,adaptive_conformal,post-drift,coverage @ 5%,90.121% ± 0.008 pp,5,5,0.9012089229402589,7.534627417665576e-05
+SA1,D_180d_kswin,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_kswin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_kswin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_kswin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_kswin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_kswin,static_conformal,all,coverage @ 10%,90.489% ± 0.496 pp,5,5,0.904887805023123,0.004957820312585348
+SA1,D_180d_kswin,static_conformal,all,coverage @ 20%,90.489% ± 0.496 pp,5,5,0.904887805023123,0.004957820312585348
+SA1,D_180d_kswin,static_conformal,all,coverage @ 5%,90.489% ± 0.496 pp,5,5,0.904887805023123,0.004957820312585348
+SA1,D_180d_kswin,static_conformal,all,review rate for 0.90,partial: 4/5 seeds achieved; 1/5 unreachable,4,5,,
+SA1,D_180d_kswin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_kswin,static_conformal,drift,coverage @ 10%,88.573% ± 0.604 pp,5,5,0.8857267378513838,0.006039201445132785
+SA1,D_180d_kswin,static_conformal,drift,coverage @ 20%,88.573% ± 0.604 pp,5,5,0.8857267378513838,0.006039201445132785
+SA1,D_180d_kswin,static_conformal,drift,coverage @ 5%,88.573% ± 0.604 pp,5,5,0.8857267378513838,0.006039201445132785
+SA1,D_180d_kswin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_180d_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_kswin,static_conformal,post-drift,coverage @ 10%,91.439% ± 0.437 pp,5,5,0.9143897996357012,0.004366749612487775
+SA1,D_180d_kswin,static_conformal,post-drift,coverage @ 20%,91.439% ± 0.437 pp,5,5,0.9143897996357012,0.004366749612487775
+SA1,D_180d_kswin,static_conformal,post-drift,coverage @ 5%,91.439% ± 0.437 pp,5,5,0.9143897996357012,0.004366749612487775
+SA1,D_180d_kswin,static_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_kswin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_kswin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_kswin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_kswin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_page_hinkley,adaptive_conformal,all,coverage @ 10%,89.977% ± 0.001 pp,5,5,0.8997675699106852,1.3629139369575198e-05
+SA1,D_180d_page_hinkley,adaptive_conformal,all,coverage @ 20%,89.977% ± 0.001 pp,5,5,0.8997675699106852,1.3629139369575198e-05
+SA1,D_180d_page_hinkley,adaptive_conformal,all,coverage @ 5%,89.977% ± 0.001 pp,5,5,0.8997675699106852,1.3629139369575198e-05
+SA1,D_180d_page_hinkley,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_180d_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_page_hinkley,adaptive_conformal,drift,coverage @ 10%,89.700% ± 0.016 pp,5,5,0.8970009958474421,0.00016494964395571694
+SA1,D_180d_page_hinkley,adaptive_conformal,drift,coverage @ 20%,89.700% ± 0.016 pp,5,5,0.8970009958474421,0.00016494964395571694
+SA1,D_180d_page_hinkley,adaptive_conformal,drift,coverage @ 5%,89.700% ± 0.016 pp,5,5,0.8970009958474421,0.00016494964395571694
+SA1,D_180d_page_hinkley,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_180d_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,90.109% ± 0.006 pp,5,5,0.9010874266308722,6.478851792300688e-05
+SA1,D_180d_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,90.109% ± 0.006 pp,5,5,0.9010874266308722,6.478851792300688e-05
+SA1,D_180d_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,90.109% ± 0.006 pp,5,5,0.9010874266308722,6.478851792300688e-05
+SA1,D_180d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_180d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_page_hinkley,static_conformal,all,coverage @ 10%,90.131% ± 0.502 pp,5,5,0.901307082633199,0.005021310371240071
+SA1,D_180d_page_hinkley,static_conformal,all,coverage @ 20%,90.131% ± 0.502 pp,5,5,0.901307082633199,0.005021310371240071
+SA1,D_180d_page_hinkley,static_conformal,all,coverage @ 5%,90.131% ± 0.502 pp,5,5,0.901307082633199,0.005021310371240071
+SA1,D_180d_page_hinkley,static_conformal,all,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,D_180d_page_hinkley,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_page_hinkley,static_conformal,drift,coverage @ 10%,89.926% ± 0.474 pp,5,5,0.8992634560906515,0.004740543884432573
+SA1,D_180d_page_hinkley,static_conformal,drift,coverage @ 20%,89.926% ± 0.474 pp,5,5,0.8992634560906515,0.004740543884432573
+SA1,D_180d_page_hinkley,static_conformal,drift,coverage @ 5%,89.926% ± 0.474 pp,5,5,0.8992634560906515,0.004740543884432573
+SA1,D_180d_page_hinkley,static_conformal,drift,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,D_180d_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_page_hinkley,static_conformal,post-drift,coverage @ 10%,90.184% ± 0.515 pp,5,5,0.901835154826958,0.005145583480640372
+SA1,D_180d_page_hinkley,static_conformal,post-drift,coverage @ 20%,90.184% ± 0.515 pp,5,5,0.901835154826958,0.005145583480640372
+SA1,D_180d_page_hinkley,static_conformal,post-drift,coverage @ 5%,90.184% ± 0.515 pp,5,5,0.901835154826958,0.005145583480640372
+SA1,D_180d_page_hinkley,static_conformal,post-drift,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,D_180d_page_hinkley,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_180d_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_180d_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_180d_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_adwin,adaptive_conformal,all,coverage @ 10%,89.958% ± 0.006 pp,5,5,0.8995791979922989,6.052374304011672e-05
+SA1,D_30d_adwin,adaptive_conformal,all,coverage @ 20%,89.958% ± 0.006 pp,5,5,0.8995791979922989,6.052374304011672e-05
+SA1,D_30d_adwin,adaptive_conformal,all,coverage @ 5%,89.958% ± 0.006 pp,5,5,0.8995791979922989,6.052374304011672e-05
+SA1,D_30d_adwin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_adwin,adaptive_conformal,drift,coverage @ 10%,90.041% ± 0.018 pp,5,5,0.9004095007881661,0.000176536812016198
+SA1,D_30d_adwin,adaptive_conformal,drift,coverage @ 20%,90.041% ± 0.018 pp,5,5,0.9004095007881661,0.000176536812016198
+SA1,D_30d_adwin,adaptive_conformal,drift,coverage @ 5%,90.041% ± 0.018 pp,5,5,0.9004095007881661,0.000176536812016198
+SA1,D_30d_adwin,adaptive_conformal,drift,review rate for 0.90,0.756% ± 0.084 pp,5,5,0.00755720200479402,0.0008375323518808721
+SA1,D_30d_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_adwin,adaptive_conformal,post-drift,coverage @ 10%,89.904% ± 0.008 pp,5,5,0.8990442053334642,7.58090396438605e-05
+SA1,D_30d_adwin,adaptive_conformal,post-drift,coverage @ 20%,89.904% ± 0.008 pp,5,5,0.8990442053334642,7.58090396438605e-05
+SA1,D_30d_adwin,adaptive_conformal,post-drift,coverage @ 5%,89.904% ± 0.008 pp,5,5,0.8990442053334642,7.58090396438605e-05
+SA1,D_30d_adwin,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_adwin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_adwin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_adwin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_adwin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_adwin,static_conformal,all,coverage @ 10%,86.615% ± 0.596 pp,5,5,0.8661452214902823,0.005957419487015866
+SA1,D_30d_adwin,static_conformal,all,coverage @ 20%,86.615% ± 0.596 pp,5,5,0.8661452214902823,0.005957419487015866
+SA1,D_30d_adwin,static_conformal,all,coverage @ 5%,86.615% ± 0.596 pp,5,5,0.8661452214902823,0.005957419487015866
+SA1,D_30d_adwin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_adwin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_adwin,static_conformal,drift,coverage @ 10%,84.041% ± 0.671 pp,5,5,0.8404096753105252,0.0067064218108098435
+SA1,D_30d_adwin,static_conformal,drift,coverage @ 20%,84.041% ± 0.671 pp,5,5,0.8404096753105252,0.0067064218108098435
+SA1,D_30d_adwin,static_conformal,drift,coverage @ 5%,84.041% ± 0.671 pp,5,5,0.8404096753105252,0.0067064218108098435
+SA1,D_30d_adwin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_adwin,static_conformal,post-drift,coverage @ 10%,87.874% ± 0.555 pp,5,5,0.8787431693989071,0.005552325944719499
+SA1,D_30d_adwin,static_conformal,post-drift,coverage @ 20%,87.874% ± 0.555 pp,5,5,0.8787431693989071,0.005552325944719499
+SA1,D_30d_adwin,static_conformal,post-drift,coverage @ 5%,87.874% ± 0.555 pp,5,5,0.8787431693989071,0.005552325944719499
+SA1,D_30d_adwin,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_adwin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_adwin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_adwin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_adwin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_kswin,adaptive_conformal,all,coverage @ 10%,89.958% ± 0.003 pp,5,5,0.8995805859302266,2.7163979512834585e-05
+SA1,D_30d_kswin,adaptive_conformal,all,coverage @ 20%,89.958% ± 0.003 pp,5,5,0.8995805859302266,2.7163979512834585e-05
+SA1,D_30d_kswin,adaptive_conformal,all,coverage @ 5%,89.958% ± 0.003 pp,5,5,0.8995805859302266,2.7163979512834585e-05
+SA1,D_30d_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_kswin,adaptive_conformal,drift,coverage @ 10%,89.900% ± 0.013 pp,5,5,0.8990021122236082,0.00012630588843860283
+SA1,D_30d_kswin,adaptive_conformal,drift,coverage @ 20%,89.900% ± 0.013 pp,5,5,0.8990021122236082,0.00012630588843860283
+SA1,D_30d_kswin,adaptive_conformal,drift,coverage @ 5%,89.900% ± 0.013 pp,5,5,0.8990021122236082,0.00012630588843860283
+SA1,D_30d_kswin,adaptive_conformal,drift,review rate for 0.90,77.365% ± 4.462 pp,5,5,0.7736500326868598,0.04461673864462928
+SA1,D_30d_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_kswin,adaptive_conformal,post-drift,coverage @ 10%,89.980% ± 0.004 pp,5,5,0.89979959121286,4.33972212761925e-05
+SA1,D_30d_kswin,adaptive_conformal,post-drift,coverage @ 20%,89.980% ± 0.004 pp,5,5,0.89979959121286,4.33972212761925e-05
+SA1,D_30d_kswin,adaptive_conformal,post-drift,coverage @ 5%,89.980% ± 0.004 pp,5,5,0.89979959121286,4.33972212761925e-05
+SA1,D_30d_kswin,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_kswin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_kswin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_kswin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_kswin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_kswin,static_conformal,all,coverage @ 10%,86.493% ± 0.690 pp,5,5,0.8649288465255989,0.0069035162424745085
+SA1,D_30d_kswin,static_conformal,all,coverage @ 20%,86.493% ± 0.690 pp,5,5,0.8649288465255989,0.0069035162424745085
+SA1,D_30d_kswin,static_conformal,all,coverage @ 5%,86.493% ± 0.690 pp,5,5,0.8649288465255989,0.0069035162424745085
+SA1,D_30d_kswin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_kswin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_kswin,static_conformal,drift,coverage @ 10%,85.028% ± 0.754 pp,5,5,0.8502767487470038,0.007541821896451109
+SA1,D_30d_kswin,static_conformal,drift,coverage @ 20%,85.028% ± 0.754 pp,5,5,0.8502767487470038,0.007541821896451109
+SA1,D_30d_kswin,static_conformal,drift,coverage @ 5%,85.028% ± 0.754 pp,5,5,0.8502767487470038,0.007541821896451109
+SA1,D_30d_kswin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_kswin,static_conformal,post-drift,coverage @ 10%,87.173% ± 0.656 pp,5,5,0.8717258652094717,0.006561435415610118
+SA1,D_30d_kswin,static_conformal,post-drift,coverage @ 20%,87.173% ± 0.656 pp,5,5,0.8717258652094717,0.006561435415610118
+SA1,D_30d_kswin,static_conformal,post-drift,coverage @ 5%,87.173% ± 0.656 pp,5,5,0.8717258652094717,0.006561435415610118
+SA1,D_30d_kswin,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_kswin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_kswin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_kswin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_kswin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_page_hinkley,adaptive_conformal,all,coverage @ 10%,89.981% ± 0.001 pp,5,5,0.899813796524831,6.244159302266037e-06
+SA1,D_30d_page_hinkley,adaptive_conformal,all,coverage @ 20%,89.981% ± 0.001 pp,5,5,0.899813796524831,6.244159302266037e-06
+SA1,D_30d_page_hinkley,adaptive_conformal,all,coverage @ 5%,89.981% ± 0.001 pp,5,5,0.899813796524831,6.244159302266037e-06
+SA1,D_30d_page_hinkley,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_page_hinkley,adaptive_conformal,drift,coverage @ 10%,90.052% ± 0.015 pp,5,5,0.900524818743583,0.00014968702446656557
+SA1,D_30d_page_hinkley,adaptive_conformal,drift,coverage @ 20%,90.052% ± 0.015 pp,5,5,0.900524818743583,0.00014968702446656557
+SA1,D_30d_page_hinkley,adaptive_conformal,drift,coverage @ 5%,90.052% ± 0.015 pp,5,5,0.900524818743583,0.00014968702446656557
+SA1,D_30d_page_hinkley,adaptive_conformal,drift,review rate for 0.90,0.054% ± 0.050 pp,5,5,0.00054042275005444,0.0004955770662784511
+SA1,D_30d_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,89.932% ± 0.005 pp,5,5,0.8993170718472273,5.3887100972094205e-05
+SA1,D_30d_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,89.932% ± 0.005 pp,5,5,0.8993170718472273,5.3887100972094205e-05
+SA1,D_30d_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,89.932% ± 0.005 pp,5,5,0.8993170718472273,5.3887100972094205e-05
+SA1,D_30d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,99.477% ± 0.197 pp,5,5,0.9947677595628417,0.0019707333114953266
+SA1,D_30d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_30d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_page_hinkley,static_conformal,all,coverage @ 10%,87.274% ± 0.668 pp,5,5,0.8727416021056076,0.006684713836224051
+SA1,D_30d_page_hinkley,static_conformal,all,coverage @ 20%,87.274% ± 0.668 pp,5,5,0.8727416021056076,0.006684713836224051
+SA1,D_30d_page_hinkley,static_conformal,all,coverage @ 5%,87.274% ± 0.668 pp,5,5,0.8727416021056076,0.006684713836224051
+SA1,D_30d_page_hinkley,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_page_hinkley,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_page_hinkley,static_conformal,drift,coverage @ 10%,88.736% ± 0.564 pp,5,5,0.8873567225975159,0.005642088259062953
+SA1,D_30d_page_hinkley,static_conformal,drift,coverage @ 20%,88.736% ± 0.564 pp,5,5,0.8873567225975159,0.005642088259062953
+SA1,D_30d_page_hinkley,static_conformal,drift,coverage @ 5%,88.736% ± 0.564 pp,5,5,0.8873567225975159,0.005642088259062953
+SA1,D_30d_page_hinkley,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_page_hinkley,static_conformal,post-drift,coverage @ 10%,86.432% ± 0.721 pp,5,5,0.8643169398907103,0.00721499967897089
+SA1,D_30d_page_hinkley,static_conformal,post-drift,coverage @ 20%,86.432% ± 0.721 pp,5,5,0.8643169398907103,0.00721499967897089
+SA1,D_30d_page_hinkley,static_conformal,post-drift,coverage @ 5%,86.432% ± 0.721 pp,5,5,0.8643169398907103,0.00721499967897089
+SA1,D_30d_page_hinkley,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_30d_page_hinkley,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_30d_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_30d_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_30d_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_adwin,adaptive_conformal,all,coverage @ 10%,89.972% ± 0.003 pp,5,5,0.8997189964879123,3.487011209547033e-05
+SA1,D_60d_adwin,adaptive_conformal,all,coverage @ 20%,89.972% ± 0.003 pp,5,5,0.8997189964879123,3.487011209547033e-05
+SA1,D_60d_adwin,adaptive_conformal,all,coverage @ 5%,89.972% ± 0.003 pp,5,5,0.8997189964879123,3.487011209547033e-05
+SA1,D_60d_adwin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_adwin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_adwin,adaptive_conformal,drift,coverage @ 10%,89.992% ± 0.019 pp,5,5,0.8999237005532199,0.00018792829100910236
+SA1,D_60d_adwin,adaptive_conformal,drift,coverage @ 20%,89.992% ± 0.019 pp,5,5,0.8999237005532199,0.00018792829100910236
+SA1,D_60d_adwin,adaptive_conformal,drift,coverage @ 5%,89.992% ± 0.019 pp,5,5,0.8999237005532199,0.00018792829100910236
+SA1,D_60d_adwin,adaptive_conformal,drift,review rate for 0.90,partial: 3/5 seeds achieved; 2/5 unreachable,3,5,,
+SA1,D_60d_adwin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_adwin,adaptive_conformal,post-drift,coverage @ 10%,89.950% ± 0.007 pp,5,5,0.8995017266122405,6.567093718227563e-05
+SA1,D_60d_adwin,adaptive_conformal,post-drift,coverage @ 20%,89.950% ± 0.007 pp,5,5,0.8995017266122405,6.567093718227563e-05
+SA1,D_60d_adwin,adaptive_conformal,post-drift,coverage @ 5%,89.950% ± 0.007 pp,5,5,0.8995017266122405,6.567093718227563e-05
+SA1,D_60d_adwin,adaptive_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_adwin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_adwin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_adwin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_adwin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_adwin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_adwin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_adwin,static_conformal,all,coverage @ 10%,87.499% ± 0.625 pp,5,5,0.8749899626760248,0.006247617749503734
+SA1,D_60d_adwin,static_conformal,all,coverage @ 20%,87.499% ± 0.625 pp,5,5,0.8749899626760248,0.006247617749503734
+SA1,D_60d_adwin,static_conformal,all,coverage @ 5%,87.499% ± 0.625 pp,5,5,0.8749899626760248,0.006247617749503734
+SA1,D_60d_adwin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_adwin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_adwin,static_conformal,drift,coverage @ 10%,85.182% ± 0.661 pp,5,5,0.8518195685334495,0.006607957714679834
+SA1,D_60d_adwin,static_conformal,drift,coverage @ 20%,85.182% ± 0.661 pp,5,5,0.8518195685334495,0.006607957714679834
+SA1,D_60d_adwin,static_conformal,drift,coverage @ 5%,85.182% ± 0.661 pp,5,5,0.8518195685334495,0.006607957714679834
+SA1,D_60d_adwin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_adwin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_adwin,static_conformal,post-drift,coverage @ 10%,88.633% ± 0.604 pp,5,5,0.8863251366120218,0.0060441407031350276
+SA1,D_60d_adwin,static_conformal,post-drift,coverage @ 20%,88.633% ± 0.604 pp,5,5,0.8863251366120218,0.0060441407031350276
+SA1,D_60d_adwin,static_conformal,post-drift,coverage @ 5%,88.633% ± 0.604 pp,5,5,0.8863251366120218,0.0060441407031350276
+SA1,D_60d_adwin,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_adwin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_adwin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_adwin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_adwin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_adwin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_adwin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_kswin,adaptive_conformal,all,coverage @ 10%,89.976% ± 0.002 pp,5,5,0.8997595636476484,2.4005579615031214e-05
+SA1,D_60d_kswin,adaptive_conformal,all,coverage @ 20%,89.976% ± 0.002 pp,5,5,0.8997595636476484,2.4005579615031214e-05
+SA1,D_60d_kswin,adaptive_conformal,all,coverage @ 5%,89.976% ± 0.002 pp,5,5,0.8997595636476484,2.4005579615031214e-05
+SA1,D_60d_kswin,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_kswin,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_kswin,adaptive_conformal,drift,coverage @ 10%,89.899% ± 0.012 pp,5,5,0.8989859889199552,0.00012208687539174548
+SA1,D_60d_kswin,adaptive_conformal,drift,coverage @ 20%,89.899% ± 0.012 pp,5,5,0.8989859889199552,0.00012208687539174548
+SA1,D_60d_kswin,adaptive_conformal,drift,coverage @ 5%,89.899% ± 0.012 pp,5,5,0.8989859889199552,0.00012208687539174548
+SA1,D_60d_kswin,adaptive_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_kswin,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_kswin,adaptive_conformal,post-drift,coverage @ 10%,90.006% ± 0.007 pp,5,5,0.9000630046343421,6.588490819537749e-05
+SA1,D_60d_kswin,adaptive_conformal,post-drift,coverage @ 20%,90.006% ± 0.007 pp,5,5,0.9000630046343421,6.588490819537749e-05
+SA1,D_60d_kswin,adaptive_conformal,post-drift,coverage @ 5%,90.006% ± 0.007 pp,5,5,0.9000630046343421,6.588490819537749e-05
+SA1,D_60d_kswin,adaptive_conformal,post-drift,review rate for 0.90,partial: 4/5 seeds achieved; 1/5 unreachable,4,5,,
+SA1,D_60d_kswin,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_kswin,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_kswin,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_kswin,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_kswin,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_kswin,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_kswin,static_conformal,all,coverage @ 10%,86.090% ± 0.664 pp,5,5,0.8609020208478937,0.006637154772925309
+SA1,D_60d_kswin,static_conformal,all,coverage @ 20%,86.090% ± 0.664 pp,5,5,0.8609020208478937,0.006637154772925309
+SA1,D_60d_kswin,static_conformal,all,coverage @ 5%,86.090% ± 0.664 pp,5,5,0.8609020208478937,0.006637154772925309
+SA1,D_60d_kswin,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_kswin,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_kswin,static_conformal,drift,coverage @ 10%,84.981% ± 0.667 pp,5,5,0.8498060579646982,0.006669500809033229
+SA1,D_60d_kswin,static_conformal,drift,coverage @ 20%,84.981% ± 0.667 pp,5,5,0.8498060579646982,0.006669500809033229
+SA1,D_60d_kswin,static_conformal,drift,coverage @ 5%,84.981% ± 0.667 pp,5,5,0.8498060579646982,0.006669500809033229
+SA1,D_60d_kswin,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_kswin,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_kswin,static_conformal,post-drift,coverage @ 10%,86.581% ± 0.661 pp,5,5,0.8658060109289618,0.0066136109264328755
+SA1,D_60d_kswin,static_conformal,post-drift,coverage @ 20%,86.581% ± 0.661 pp,5,5,0.8658060109289618,0.0066136109264328755
+SA1,D_60d_kswin,static_conformal,post-drift,coverage @ 5%,86.581% ± 0.661 pp,5,5,0.8658060109289618,0.0066136109264328755
+SA1,D_60d_kswin,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_kswin,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_kswin,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_kswin,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_kswin,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_kswin,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_kswin,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_page_hinkley,adaptive_conformal,all,coverage @ 10%,89.979% ± 0.001 pp,5,5,0.8997851490413022,1.2664810683328177e-05
+SA1,D_60d_page_hinkley,adaptive_conformal,all,coverage @ 20%,89.979% ± 0.001 pp,5,5,0.8997851490413022,1.2664810683328177e-05
+SA1,D_60d_page_hinkley,adaptive_conformal,all,coverage @ 5%,89.979% ± 0.001 pp,5,5,0.8997851490413022,1.2664810683328177e-05
+SA1,D_60d_page_hinkley,adaptive_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_page_hinkley,adaptive_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_page_hinkley,adaptive_conformal,drift,coverage @ 10%,90.084% ± 0.019 pp,5,5,0.9008420332048679,0.00019075562127259676
+SA1,D_60d_page_hinkley,adaptive_conformal,drift,coverage @ 20%,90.084% ± 0.019 pp,5,5,0.9008420332048679,0.00019075562127259676
+SA1,D_60d_page_hinkley,adaptive_conformal,drift,coverage @ 5%,90.084% ± 0.019 pp,5,5,0.9008420332048679,0.00019075562127259676
+SA1,D_60d_page_hinkley,adaptive_conformal,drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_page_hinkley,adaptive_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_page_hinkley,adaptive_conformal,post-drift,coverage @ 10%,89.911% ± 0.007 pp,5,5,0.899107521069474,6.630074208264949e-05
+SA1,D_60d_page_hinkley,adaptive_conformal,post-drift,coverage @ 20%,89.911% ± 0.007 pp,5,5,0.899107521069474,6.630074208264949e-05
+SA1,D_60d_page_hinkley,adaptive_conformal,post-drift,coverage @ 5%,89.911% ± 0.007 pp,5,5,0.899107521069474,6.630074208264949e-05
+SA1,D_60d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.90,98.670% ± 0.683 pp,5,5,0.9866985428051003,0.006829299359872157
+SA1,D_60d_page_hinkley,adaptive_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 10%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 20%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_page_hinkley,adaptive_conformal,pre-drift,coverage @ 5%,91.458% ± 0.622 pp,5,5,0.9145833333333334,0.006217362701204857
+SA1,D_60d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_page_hinkley,adaptive_conformal,pre-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_page_hinkley,static_conformal,all,coverage @ 10%,88.535% ± 0.637 pp,5,5,0.8853514550402238,0.006366604036784793
+SA1,D_60d_page_hinkley,static_conformal,all,coverage @ 20%,88.535% ± 0.637 pp,5,5,0.8853514550402238,0.006366604036784793
+SA1,D_60d_page_hinkley,static_conformal,all,coverage @ 5%,88.535% ± 0.637 pp,5,5,0.8853514550402238,0.006366604036784793
+SA1,D_60d_page_hinkley,static_conformal,all,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_page_hinkley,static_conformal,all,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_page_hinkley,static_conformal,drift,coverage @ 10%,88.960% ± 0.599 pp,5,5,0.8895968620614513,0.005987112930298153
+SA1,D_60d_page_hinkley,static_conformal,drift,coverage @ 20%,88.960% ± 0.599 pp,5,5,0.8895968620614513,0.005987112930298153
+SA1,D_60d_page_hinkley,static_conformal,drift,coverage @ 5%,88.960% ± 0.599 pp,5,5,0.8895968620614513,0.005987112930298153
+SA1,D_60d_page_hinkley,static_conformal,drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_page_hinkley,static_conformal,drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_page_hinkley,static_conformal,post-drift,coverage @ 10%,88.245% ± 0.655 pp,5,5,0.8824544626593808,0.00654742005504523
+SA1,D_60d_page_hinkley,static_conformal,post-drift,coverage @ 20%,88.245% ± 0.655 pp,5,5,0.8824544626593808,0.00654742005504523
+SA1,D_60d_page_hinkley,static_conformal,post-drift,coverage @ 5%,88.245% ± 0.655 pp,5,5,0.8824544626593808,0.00654742005504523
+SA1,D_60d_page_hinkley,static_conformal,post-drift,review rate for 0.90,unreachable,0,5,,
+SA1,D_60d_page_hinkley,static_conformal,post-drift,review rate for 0.95,unreachable,0,5,,
+SA1,D_60d_page_hinkley,static_conformal,pre-drift,coverage @ 10%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_page_hinkley,static_conformal,pre-drift,coverage @ 20%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_page_hinkley,static_conformal,pre-drift,coverage @ 5%,96.302% ± 1.213 pp,5,5,0.9630208333333334,0.01213105697797098
+SA1,D_60d_page_hinkley,static_conformal,pre-drift,review rate for 0.90,0.000% ± 0.000 pp,5,5,0.0,0.0
+SA1,D_60d_page_hinkley,static_conformal,pre-drift,review rate for 0.95,0.000% ± 0.000 pp,5,5,0.0,0.0

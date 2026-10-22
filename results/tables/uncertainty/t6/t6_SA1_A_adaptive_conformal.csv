@@ -1,0 +1,5 @@
+regime,review rate for 0.90,review rate for 0.95,coverage @ 5%,coverage @ 10%,coverage @ 20%
+pre-drift,0.000% ± 0.000 pp,unreachable,91.458% ± 0.622 pp,91.458% ± 0.622 pp,91.458% ± 0.622 pp
+drift,partial: 2/5 seeds achieved; 3/5 unreachable,unreachable,89.980% ± 0.038 pp,89.980% ± 0.038 pp,89.980% ± 0.038 pp
+post-drift,partial: 1/5 seeds achieved; 4/5 unreachable,unreachable,89.986% ± 0.019 pp,89.986% ± 0.019 pp,89.986% ± 0.019 pp
+all,unreachable,unreachable,89.992% ± 0.001 pp,89.992% ± 0.001 pp,89.992% ± 0.001 pp

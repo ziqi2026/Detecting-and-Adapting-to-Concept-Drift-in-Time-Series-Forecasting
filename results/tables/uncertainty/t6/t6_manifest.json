@@ -1,0 +1,35 @@
+{
+  "task": "T6",
+  "selection": "stored discrete thresholds; no interpolation",
+  "target_rule": "minimum review achieving target among nonempty retained sets",
+  "budget_rule": "maximum retained coverage at review <= budget; ties least review then smallest tau",
+  "coverage_definition": "retained coverage; no assumed human correction",
+  "upstream_log_comparisons": 5440,
+  "seed_points": 6800,
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "upstream_regimes": {
+    "scope": "full",
+    "regime_days": 7,
+    "labels": [
+      "pre-drift",
+      "drift",
+      "post-drift",
+      "all"
+    ],
+    "source": "T5 full-scope assignment"
+  },
+  "inputs_sha256": {
+    "results/series/escalation_sweep.csv": "21dfdfce77b3c457d01470ed487621557ebb400abffe18e15a041daa38e2e3fa",
+    "results/series/escalation_by_regime.csv": "9307a256d70122e87b678ec105fb070e605312478b0273407545970a0c4fdcec",
+    "results/series/escalation_manifest.json": "0ee19838b979976f79698d260fb0c3b48fa31763a81a09d45b41d2f1b6490ca3",
+    "results/runs.csv": "2b4bf4ca5beb7f62a1fa08496e3deafae9f7a8e7ad4ca41d47c5d48e9455f4c5"
+  },
+  "generator_sha256": "4eb554a5873eb3f8dbcdd75df31781ef107b09190efd6554fc52c8962c90f9c7",
+  "runs_note": "Read-only; validates upstream legacy nearest-rate metrics. New 95% and hard-cap points traced to sweep rows, not claimed as existing log metrics."
+}

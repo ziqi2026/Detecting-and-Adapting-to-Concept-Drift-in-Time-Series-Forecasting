@@ -1,0 +1,5 @@
+regime,review rate for 0.90,review rate for 0.95,coverage @ 5%,coverage @ 10%,coverage @ 20%
+pre-drift,0.000% ± 0.000 pp,unreachable,91.458% ± 0.622 pp,91.458% ± 0.622 pp,91.458% ± 0.622 pp
+drift,0.756% ± 0.084 pp,unreachable,90.041% ± 0.018 pp,90.041% ± 0.018 pp,90.041% ± 0.018 pp
+post-drift,unreachable,unreachable,89.904% ± 0.008 pp,89.904% ± 0.008 pp,89.904% ± 0.008 pp
+all,unreachable,unreachable,89.958% ± 0.006 pp,89.958% ± 0.006 pp,89.958% ± 0.006 pp
