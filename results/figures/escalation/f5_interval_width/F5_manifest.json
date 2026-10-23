@@ -1,0 +1,22 @@
+{
+  "source": "results/series/escalation_agaci_full_post7/escalation_sweep.csv",
+  "source_sha256": "f54a0878dd6b5bce25d8d0294f1eca542ccda3e15c7ef45355ddb8dcbc0ea14d",
+  "score_label": "Interval width",
+  "max_review": 0.25,
+  "regimes": [
+    "pre-drift",
+    "drift",
+    "post-drift"
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "figure_count": 34,
+  "aggregation": "mean and sample SD at matching tau_quantile over 5 seeds",
+  "selection": "no threshold selection for plots; test-sweep operating points",
+  "warning": "Descriptive offline curve; no prospective threshold guarantee"
+}

@@ -1,0 +1,45 @@
+{
+  "task": "T6",
+  "selection": "stored discrete thresholds; no interpolation",
+  "target_rule": "minimum review achieving target among nonempty retained sets",
+  "budget_rule": "maximum retained coverage at review <= budget; ties least review then smallest tau",
+  "coverage_definition": "retained coverage; no assumed human correction",
+  "upstream_log_comparisons": 8160,
+  "seed_points": 10200,
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "upstream_regimes": {
+    "scope": "full",
+    "regime_days": 7,
+    "definition": "event start through seven days after event end",
+    "labels": [
+      "pre-drift",
+      "drift",
+      "post-drift",
+      "all"
+    ]
+  },
+  "inputs_sha256": {
+    "results/series/escalation_lag1_nonconformity_full_post7/escalation_sweep.csv": "960b72b790e440f7bca84497be3a054412008a6b6d279e8be43337d8d50650d7",
+    "results/series/escalation_lag1_nonconformity_full_post7/escalation_by_regime.csv": "bbb767bd283693daecc8c228cddc7a1abf21c16eaf50f4f5380d564db5fac508",
+    "results/series/escalation_lag1_nonconformity_full_post7/escalation_manifest.json": "590bee7673b17dcc90b5cd4dda4a78c395765a9dd85455b5d079491ffb02d46a",
+    "results/runs.csv": "a3e8ade1e3a2538afca93acd80e20c176a47357100ef4e38d27727fc8c4f4c55"
+  },
+  "generator_sha256": "1116e8cae0ace4508355a972a05a36b2f8b918f005a37d4bbf3bac9eefcd2043",
+  "log_group": "escalation_lag1_nonconformity",
+  "runs_note": "Read-only; validates upstream legacy nearest-rate metrics. New 95% and hard-cap points traced to sweep rows, not claimed as existing log metrics.",
+  "protocol": "pgs242-163-escalation-lag1-absolute-error-full-post7-v1",
+  "score": {
+    "name": "lagged_absolute_error",
+    "lag_steps": 1,
+    "cadence_minutes": 30,
+    "first_test_score": 0.0,
+    "decimals": 6,
+    "requires_previous_observation_available": true
+  }
+}

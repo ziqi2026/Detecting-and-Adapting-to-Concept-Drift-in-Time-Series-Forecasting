@@ -51,7 +51,7 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def validate_sources(sweep, summary, runs):
+def validate_sources(sweep, summary, runs, log_group):
     if sweep.duplicated(KEYS + ["tau"]).any() or summary.duplicated(KEYS).any():
         raise ValueError("Duplicate sweep/summary keys")
     for col in ["review_rate", "retained_coverage"]:
@@ -72,7 +72,7 @@ def validate_sources(sweep, summary, runs):
     if sweep.loc[sweep.n_retained.gt(0), "retained_coverage"].isna().any():
         raise ValueError("Nonempty retained set has missing coverage")
     indexed = summary.set_index(KEYS)
-    logs = runs[runs.group.eq("escalation_sweep")].copy()
+    logs = runs[runs.group.eq(log_group)].copy()
     logkeys = ["method", "region", "seed", "config_hash", "split_id", "regime", "metric_name"]
     loggroups = {k: g.metric_value.tolist() for k, g in logs.groupby(logkeys)}
     checks = 0
@@ -179,14 +179,25 @@ def main():
     p.add_argument("--summary", type=Path, default=Path("results/series/escalation_by_regime.csv"))
     p.add_argument("--manifest", type=Path, default=Path("results/series/escalation_manifest.json"))
     p.add_argument("--runs", type=Path, default=Path("results/runs.csv"))
-    p.add_argument("--output-dir", type=Path, default=Path("results/tables/uncertainty/t6"))
+    p.add_argument("--output-dir", type=Path, required=True,
+                   help="Use a NEW folder for each score; never overwrite earlier T6 results.")
     a = p.parse_args()
+    if a.output_dir.exists():
+        p.error(f"Output directory already exists; refusing overwrite: {a.output_dir}")
     manifest = json.loads(a.manifest.read_text())
     for path in [a.sweep, a.summary]:
         if digest(path) != manifest["outputs"][path.name]:
             raise ValueError(f"Upstream hash mismatch: {path}")
     sweep, summary, runs = [pd.read_csv(x) for x in [a.sweep, a.summary, a.runs]]
-    checks = validate_sources(sweep, summary, runs)
+    log_group = manifest.get("runs", {}).get("group")
+    if not log_group:
+        score_name = manifest.get("score", {}).get("name", "")
+        log_group = ("escalation_lag1_nonconformity" if "lag" in score_name or "nonconformity" in score_name
+                     else "escalation_sweep")
+    checks = validate_sources(sweep, summary, runs, log_group)
+    expected_methods = set(manifest.get("methods", []))
+    if expected_methods and set(sweep.uq_method) != expected_methods:
+        raise ValueError("Methods do not match manifest")
     details = generate(sweep)
     write_outputs(details, a.output_dir)
     audit = {"task":"T6", "selection":"stored discrete thresholds; no interpolation",
@@ -196,8 +207,10 @@ def main():
              "upstream_log_comparisons":checks, "seed_points":len(details),
              "seeds":sorted(map(int,sweep.seed.unique())), "upstream_regimes":manifest["regimes"],
              "inputs_sha256":{str(x):digest(x) for x in [a.sweep,a.summary,a.manifest,a.runs]},
-             "generator_sha256":digest(__file__),
+             "generator_sha256":digest(__file__), "log_group":log_group,
              "runs_note":"Read-only; validates upstream legacy nearest-rate metrics. New 95% and hard-cap points traced to sweep rows, not claimed as existing log metrics."}
+    audit["protocol"] = manifest.get("protocol")
+    audit["score"] = manifest.get("score")
     (a.output_dir / "t6_manifest.json").write_text(json.dumps(audit,indent=2)+"\n")
     print(f"T6 complete: {len(details)} seed operating points; {checks} verified log comparisons")
 
