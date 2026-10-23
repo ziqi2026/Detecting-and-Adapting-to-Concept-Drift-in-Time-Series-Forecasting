@@ -1,0 +1,5 @@
+model,status,validation_mae,runtime_seconds,error
+seasonal_naive,ok,179.56832201086962,0.0005,
+sarimax,ok,38.91866786849628,30.7555,
+gradient_boosted,ok,175.2656361415236,0.1821,
+patchtst,ok,36.96537807575171,28.1296,
