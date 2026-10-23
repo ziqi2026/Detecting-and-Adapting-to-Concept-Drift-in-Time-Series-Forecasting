@@ -214,7 +214,7 @@ def test_log_preserves_history_and_rejects_conflicting_rerun(tmp_path):
 def test_full_regime_union_and_half_open_boundaries():
     from drift_lab.evaluation import assign_full_stream_forecast_regimes
     windows = pd.DataFrame(dict(event_id=["x", "y"],
-        pre_drift_start=["2020-03-02", "2020-03-03"],
+        drift_start=["2020-03-02", "2020-03-03"],
         post_drift_end=["2020-03-04", "2020-03-05"]))
     stamps = ["2020-03-01", "2020-03-02", "2020-03-04", "2020-03-05"]
     assigned = assign_full_stream_forecast_regimes(stamps, windows)

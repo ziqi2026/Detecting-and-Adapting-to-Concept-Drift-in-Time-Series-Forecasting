@@ -59,13 +59,13 @@ TASK = "PGS242-163"
 # The protocol id and config_hash describe the escalation policy and inputs.
 # Evaluation-only columns (schema version 2 added MAE) do not change them, so
 # earlier runs.csv rows stay linked and reruns append only new metrics.
-PROTOCOL_ID = "pgs242-163-escalation-sweep-v1"
+PROTOCOL_ID = "pgs242-163-escalation-agaci-full-post7-v1"
 SCHEMA_VERSION = 2
 GROUP = "escalation_sweep"
 DATASET = "AEMO_TOTALDEMAND"
 SEEDS = (1, 2, 3, 4, 5)
 REGIONS = ("SA1", "NSW1")
-UQ_METHODS = ("static_conformal", "adaptive_conformal")
+UQ_METHODS = ("static_conformal", "adaptive_conformal", "agaci_boa")
 REGIMES = (*AEMO_REGIMES, "all")
 REGIME_SCOPE = "full"
 REGIME_DAYS = 7
@@ -206,7 +206,7 @@ def sweep_config_hash(*, upstream_uq_hash, interval_sha256, events_sha256):
 
 
 def sweep_stream(frame, labels, summary, *, region, seed, split_id,
-                 interval_sha256, events_sha256):
+                 interval_sha256, events_sha256, methods=None, protocol_id=None):
     """Sweep every configuration and UQ method of one seed/region stream.
 
     Returns the sweep rows and one metadata row per configuration/method.
@@ -214,8 +214,9 @@ def sweep_stream(frame, labels, summary, *, region, seed, split_id,
     """
     width_cal = calibration_width(summary, region)
     sweeps, metadata = [], []
-    for method in UQ_METHODS:
-        prefix = method.split("_")[0]
+    for method in (methods if methods is not None else UQ_METHODS[:2]):
+        prefix = {"static_conformal": "static", "adaptive_conformal": "adaptive",
+                  "agaci_boa": "agaci"}[method]
         grid = calibration_width_tau_grid(width_cal, WIDTH_MULTIPLIERS)
         parts, hashes = [], {}
         for configuration, group in frame.groupby("configuration", sort=True):
@@ -229,8 +230,12 @@ def sweep_stream(frame, labels, summary, *, region, seed, split_id,
             forecast = group.point_forecast.to_numpy(dtype=float)
             lower = group[f"{prefix}_lower_90"].to_numpy(dtype=float)
             upper = group[f"{prefix}_upper_90"].to_numpy(dtype=float)
-            # Both conformal methods are symmetric around the point forecast.
-            if not np.allclose((lower + upper) / 2.0, forecast, rtol=0.0, atol=1e-6):
+            # Static and ACI intervals are symmetric about the point forecast.
+            # Experimental AgACI may issue asymmetric intervals; its escalation
+            # score uses only interval width, which is validated below.
+            if method != "agaci_boa" and not np.allclose(
+                (lower + upper) / 2.0, forecast, rtol=0.0, atol=1e-6
+            ):
                 raise ValueError("point_forecast is not the interval midpoint.")
             for name, value in (
                 ("empirical_coverage", calculate_empirical_coverage(truth, lower, upper)),
@@ -542,10 +547,144 @@ def run_sweep(*, run_dir, events_path, output_dir, runs_path, t5_manifest,
     return sweep, by_regime, skipped
 
 
+
+def run_agaci_sweep(*, agaci_dir, events_path, output_dir, runs_path,
+                    t5_manifest, seeds=SEEDS, regions=REGIONS, write_runs=True):
+    """Three-method sweep from persisted experimental AgACI interval streams.
+
+    Reuses the original sweep_stream and shared evaluation functions; does not
+    reconstruct intervals, refit models, or modify the original sweep outputs.
+    """
+    agaci_dir = Path(agaci_dir)
+    output_dir = Path(output_dir)
+    runs_path = Path(runs_path)
+    if output_dir.exists():
+        raise FileExistsError(f"AgACI output directory already exists: {output_dir}")
+    if not Path(t5_manifest).is_file():
+        raise FileNotFoundError(f"AgACI T5 manifest is required: {t5_manifest}")
+    t5 = json.loads(Path(t5_manifest).read_text())
+    if not {'static_conformal', 'adaptive_conformal', 'agaci_boa'} <= set(t5.get('methods', [])):
+        raise ValueError('T5 manifest does not declare all three uncertainty methods.')
+    if t5['protocol']['regime_scope'] != 'full' or t5['protocol']['regime_days'] != 7:
+        raise ValueError('AgACI T5 must use Full seven-day regime protocol.')
+    if calculate_file_sha256(events_path) != t5['events_sha256']:
+        raise ValueError('Event catalogue differs from verified AgACI T5.')
+    expected_hashes = load_t5_hashes(t5_manifest)
+    if set(expected_hashes) != {(seed, region) for seed in seeds for region in regions}:
+        raise ValueError('AgACI T5 manifest lacks an exact input seed/region set.')
+    sweeps, metadata, processed, split_ids = [], [], [], set()
+    events_sha256 = calculate_file_sha256(events_path)
+    for seed in seeds:
+        base = agaci_dir / f'seed_{seed}'
+        manifest_path = base / 'agaci_manifest.json'
+        if not manifest_path.is_file():
+            raise FileNotFoundError(manifest_path)
+        manifest = json.loads(manifest_path.read_text())
+        if int(manifest['seed']) != seed or float(manifest['alpha']) != 0.10:
+            raise ValueError(f'Unexpected AgACI seed or alpha: {manifest_path}')
+        split_ids.add(manifest['split_id'])
+        for region in regions:
+            path = base / f'agaci_comparison_intervals_{region}.csv.gz'
+            summary_path = base / f'agaci_comparison_summary_{region}.csv'
+            if not path.is_file() or not summary_path.is_file():
+                raise FileNotFoundError(f'Missing AgACI stream or summary for {seed}/{region}')
+            sha = calculate_file_sha256(path)
+            if sha != expected_hashes[(seed, region)]:
+                raise ValueError(f'AgACI interval SHA256 differs from verified T5: {path}')
+            summary = pd.read_csv(summary_path)
+            if (set(summary.seed) != {seed} or set(summary.region) != {region}
+                    or summary.duplicated(['configuration', 'method']).any()):
+                raise ValueError(f'Invalid AgACI summary identities: {summary_path}')
+            if set(summary.method) != set(UQ_METHODS):
+                raise ValueError(f'Unexpected AgACI methods: {summary_path}')
+            if not (summary.alpha == 0.10).all():
+                raise ValueError(f'Unexpected alpha: {summary_path}')
+            # The original sweep validates against a conformal_radius and a
+            # uq_config_hash; AgACI persists equivalent static width and hash.
+            static = summary[summary.method == 'static_conformal']
+            ref_widths = static.mean_interval_width.to_numpy(dtype=float)
+            if not len(ref_widths) or not np.isfinite(ref_widths).all() or not np.allclose(
+                    ref_widths, ref_widths[0], rtol=0, atol=1e-6):
+                raise ValueError(f'Inconsistent calibration widths: {summary_path}')
+            summary = summary.copy()
+            summary['conformal_radius'] = np.nan
+            summary.loc[summary.method == 'static_conformal', 'conformal_radius'] = ref_widths[0] / 2
+            summary['uq_config_hash'] = summary['config_hash']
+            source_columns = ['SETTLEMENTDATE', 'seed', 'region', 'configuration', 'y_true',
+                              'point_forecast', 'static_lower', 'static_upper', 'aci_lower',
+                              'aci_upper', 'agaci_lower', 'agaci_upper']
+            frame = pd.read_csv(path, usecols=source_columns)
+            frame = frame.rename(columns={
+                'static_lower': 'static_lower_90', 'static_upper': 'static_upper_90',
+                'aci_lower': 'adaptive_lower_90', 'aci_upper': 'adaptive_upper_90',
+                'agaci_lower': 'agaci_lower_90', 'agaci_upper': 'agaci_upper_90',
+            })
+            if frame.isna().any().any() or not frame.seed.eq(seed).all() or not frame.region.eq(region).all():
+                raise ValueError(f'Invalid interval fields or seed/region: {path}')
+            if set(frame.configuration) != set(summary.configuration):
+                raise ValueError(f'Configuration mismatch: {path}')
+            frame['SETTLEMENTDATE'] = pd.to_datetime(frame.SETTLEMENTDATE)
+            frame = frame.sort_values(['configuration', 'SETTLEMENTDATE'], kind='mergesort').reset_index(drop=True)
+            sizes = set(summary.test_size.astype(int))
+            if len(sizes) != 1:
+                raise ValueError(f'Inconsistent test sizes: {summary_path}')
+            expected = pd.date_range(TEST_START, periods=sizes.pop(), freq='30min')
+            reference = None
+            for config, group in frame.groupby('configuration', sort=True):
+                if not pd.DatetimeIndex(group.SETTLEMENTDATE).equals(expected):
+                    raise ValueError(f'Test grid mismatch: {seed}/{region}/{config}')
+                truth = group.y_true.to_numpy(dtype=float)
+                if reference is not None and not np.array_equal(reference, truth):
+                    raise ValueError(f'Truth mismatch: {seed}/{region}/{config}')
+                reference = truth
+            labels = assign_regimes(expected, events_path, region)
+            sweep, meta = sweep_stream(
+                frame, labels, summary, region=region, seed=seed,
+                split_id=manifest['split_id'], interval_sha256=sha,
+                events_sha256=events_sha256, methods=UQ_METHODS)
+            sweeps.append(sweep)
+            metadata.extend(meta)
+            processed.append(dict(seed=seed, region=region, path=relative(path),
+                                  sha256=sha, t5_manifest_sha256=expected_hashes[(seed, region)],
+                                  verified_against_t5_manifest=True,
+                                  summary_sha256=calculate_file_sha256(summary_path)))
+            print(f'seed={seed} region={region}: {len(sweep)} sweep rows', flush=True)
+    if len(split_ids) != 1:
+        raise ValueError('AgACI streams have inconsistent split IDs.')
+    sweep = order_rows(pd.concat(sweeps, ignore_index=True))
+    by_regime = summarise_by_regime(sweep, metadata)
+    run_rows = build_run_rows(by_regime)
+    if write_runs:
+        append_run_metrics_safely(run_rows, runs_path)
+    output_dir.mkdir(parents=True, exist_ok=False)
+    sweep_path = output_dir / 'escalation_sweep.csv'
+    by_regime_path = output_dir / 'escalation_by_regime.csv'
+    sweep.to_csv(sweep_path, index=False, lineterminator='\n')
+    by_regime.to_csv(by_regime_path, index=False, lineterminator='\n')
+    write_summary(output_dir / 'escalation_summary.md', sweep, by_regime, processed, [])
+    metadata_manifest = dict(task=TASK, protocol=PROTOCOL_ID + '-agaci-extension',
+        experimental=True, split_id=split_ids.pop(), methods=list(UQ_METHODS),
+        score=dict(name='interval_width', decimals=WIDTH_DECIMALS),
+        rule='escalate when rounded width > tau; equal widths retained',
+        tau_grid=dict(reference='2 * calibration conformal radius (Static width)',
+            multipliers=list(WIDTH_MULTIPLIERS), endpoints=['-inf', '+inf']),
+        regimes=dict(scope=REGIME_SCOPE, regime_days=REGIME_DAYS,
+            definition='event start through seven days after event end', labels=list(REGIMES)),
+        review_targets=list(REVIEW_TARGETS), coverage_target=COVERAGE_TARGET,
+        inputs=processed, t5_manifest=relative(t5_manifest),
+        t5_manifest_sha256=calculate_file_sha256(t5_manifest),
+        runs=dict(path=relative(runs_path), written=write_runs, n_rows=len(run_rows)),
+        outputs={p.name: calculate_file_sha256(p) for p in (sweep_path, by_regime_path)})
+    (output_dir / 'escalation_manifest.json').write_text(json.dumps(metadata_manifest, indent=2) + '\n')
+    return sweep, by_regime, []
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--agaci-dir", type=Path,
+                        help="Experimental Static/ACI/AgACI interval input directory.")
     parser.add_argument("--events", type=Path, default=DEFAULT_EVENTS)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--runs", type=Path, default=DEFAULT_RUNS)
@@ -558,10 +697,19 @@ def main():
     args = parser.parse_args()
     if len(set(args.seeds)) != len(args.seeds) or len(set(args.regions)) != len(args.regions):
         raise ValueError("--seeds and --regions must be unique.")
-    _, _, skipped = run_sweep(
-        run_dir=args.run_dir, events_path=args.events, output_dir=args.output_dir,
-        runs_path=args.runs, t5_manifest=args.t5_manifest, seeds=tuple(args.seeds),
-        regions=tuple(args.regions), write_runs=not args.skip_runs_log)
+    if args.agaci_dir is not None:
+        if args.output_dir.resolve() == DEFAULT_OUTPUT_DIR.resolve():
+            parser.error('AgACI mode requires a separate --output-dir.')
+        _, _, skipped = run_agaci_sweep(
+            agaci_dir=args.agaci_dir, events_path=args.events,
+            output_dir=args.output_dir, runs_path=args.runs,
+            t5_manifest=args.t5_manifest, seeds=tuple(args.seeds),
+            regions=tuple(args.regions), write_runs=not args.skip_runs_log)
+    else:
+        _, _, skipped = run_sweep(
+            run_dir=args.run_dir, events_path=args.events, output_dir=args.output_dir,
+            runs_path=args.runs, t5_manifest=args.t5_manifest, seeds=tuple(args.seeds),
+            regions=tuple(args.regions), write_runs=not args.skip_runs_log)
     for item in skipped:
         print(f"SKIPPED seed {item['seed']} {item['region']}: {item['reason']}")
 

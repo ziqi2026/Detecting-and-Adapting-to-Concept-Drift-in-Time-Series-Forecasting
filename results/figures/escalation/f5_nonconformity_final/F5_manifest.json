@@ -1,0 +1,22 @@
+{
+  "source": "results/series/escalation_lag1_nonconformity_full_post7/escalation_sweep.csv",
+  "source_sha256": "960b72b790e440f7bca84497be3a054412008a6b6d279e8be43337d8d50650d7",
+  "score_label": "30-minute nonconformity",
+  "max_review": 0.25,
+  "regimes": [
+    "pre-drift",
+    "drift",
+    "post-drift"
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "figure_count": 34,
+  "aggregation": "mean and sample SD at matching tau_quantile over 5 seeds",
+  "selection": "no threshold selection for plots; test-sweep operating points",
+  "warning": "Descriptive offline curve; no prospective threshold guarantee"
+}

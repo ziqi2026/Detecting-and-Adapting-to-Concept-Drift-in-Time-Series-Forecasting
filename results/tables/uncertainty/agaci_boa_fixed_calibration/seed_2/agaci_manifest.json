@@ -1,0 +1,27 @@
+{
+  "protocol": "team42-experimental-agaci-boa-fixed-calibration-v1",
+  "mode": "BOA aggregation of ACI experts, fixed calibration residuals",
+  "calibration": "seed-specific calibration period only (frozen in TEST)",
+  "upstream_run_id": "pgs242_128_five_seed_final_seed2",
+  "upstream_config_hash": "76e943b33e123254e8fd1c91ddca37c2b3da98cc7bbd957ce236fc4e2f500c06",
+  "seed": 2,
+  "split_id": "aemo_train2018_2019_cal202001_202002_test202003_pr29",
+  "alpha": 0.1,
+  "aci_gamma": 0.005,
+  "agaci_gammas": [
+    0.001,
+    0.002,
+    0.004,
+    0.008,
+    0.016,
+    0.032,
+    0.064,
+    0.128
+  ],
+  "regions": [
+    "SA1",
+    "NSW1"
+  ],
+  "causality": "predict t before using observation t",
+  "shared_runs_csv_modified": false
+}

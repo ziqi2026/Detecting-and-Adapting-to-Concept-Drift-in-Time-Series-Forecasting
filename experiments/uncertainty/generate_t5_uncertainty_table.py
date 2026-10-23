@@ -466,9 +466,169 @@ def generate_uncertainty_tables(run_dir, events_path, output_dir, runs_path, pro
     return pd.DataFrame(audit)
 
 
+
+def generate_agaci_uncertainty_tables(agaci_dir, events_path, output_dir, runs_path,
+                                      protocol, training_data_dir=None):
+    """Experimental three-method T5 evaluation reusing the original T5 metrics.
+
+    Reads existing Static/ACI/AgACI intervals; never regenerates intervals.
+    The original PGS242-160 path above remains unchanged.
+    """
+    protocol = resolve_aemo_normalisation(protocol, training_data_dir)
+    validate_protocol(protocol)
+    verify_aemo_normalisation(protocol)
+    agaci_dir, output_dir, runs_path = map(Path, (agaci_dir, output_dir, runs_path))
+    if output_dir.exists():
+        raise FileExistsError(f"Choose a new output directory: {output_dir}")
+    if runs_path.resolve() in {
+        (ROOT / "results/runs.csv").resolve(),
+        (ROOT / "results/tables/runs.csv").resolve(),
+    }:
+        raise ValueError("AgACI evaluation requires a separate --runs file.")
+    methods = {
+        "static_conformal": "static",
+        "adaptive_conformal": "aci",
+        "agaci_boa": "agaci",
+    }
+    expected = pd.date_range(aemo_timestamp(protocol["test_start"]),
+                             aemo_timestamp(protocol["test_end"]), freq="30min")
+    rows, audits, sources, identities = [], [], [], []
+    split_id = None
+    truth_reference = {}
+    for seed in SEEDS:
+        base = agaci_dir / f"seed_{seed}"
+        manifest_path = base / "agaci_manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        if int(manifest["seed"]) != seed or float(manifest["alpha"]) != 0.10:
+            raise ValueError(f"Invalid seed/alpha in {manifest_path}")
+        if split_id is not None and manifest["split_id"] != split_id:
+            raise ValueError("AgACI seeds have inconsistent split IDs")
+        split_id = manifest["split_id"]
+        for region in REGIONS:
+            path = base / f"agaci_comparison_intervals_{region}.csv.gz"
+            summary_path = base / f"agaci_comparison_summary_{region}.csv"
+            frame = pd.read_csv(path)
+            summary = pd.read_csv(summary_path)
+            required = {"SETTLEMENTDATE", "region", "seed", "configuration", "y_true"}
+            required |= {f"{prefix}_{side}" for prefix in methods.values()
+                        for side in ("lower", "upper")}
+            if not required.issubset(frame.columns):
+                raise ValueError(f"Missing AgACI fields: {sorted(required - set(frame.columns))}")
+            if frame[list(required)].isna().any().any():
+                raise ValueError(f"Missing AgACI interval data in {path}")
+            if not (frame.seed.eq(seed).all() and frame.region.eq(region).all()):
+                raise ValueError(f"Seed/region mismatch: {path}")
+            if set(frame.configuration) != set(protocol["configurations"]):
+                raise ValueError(f"Unexpected configurations: {path}")
+            frame["SETTLEMENTDATE"] = frame.SETTLEMENTDATE.map(aemo_timestamp)
+            windows = build_forecast_event_windows(events_path, region, regime_days=7)
+            assign = (assign_full_stream_forecast_regimes if protocol["regime_scope"] == "full"
+                      else assign_forecast_regimes)
+            labels = assign(expected, windows).regime.to_numpy()
+            source = {"seed": seed, "region": region, "path": str(path.resolve()),
+                      "sha256": calculate_file_sha256(path),
+                      "summary_sha256": calculate_file_sha256(summary_path),
+                      "manifest_sha256": calculate_file_sha256(manifest_path),
+                      "upstream_run_id": manifest.get("upstream_run_id")}
+            sources.append(source)
+            if summary.duplicated(["configuration", "method"]).any():
+                raise ValueError(f"Duplicate summary records: {summary_path}")
+            for config in protocol["configurations"]:
+                group = frame.loc[frame.configuration.eq(config)].reset_index(drop=True)
+                if not pd.DatetimeIndex(group.SETTLEMENTDATE).equals(expected):
+                    raise ValueError(f"Bad timestamp grid: seed={seed} {region} {config}")
+                truth = group.y_true.to_numpy(dtype=float)
+                if not np.isfinite(truth).all():
+                    raise ValueError("Nonfinite actual demand")
+                if region in truth_reference and not np.array_equal(truth_reference[region], truth):
+                    raise ValueError(f"Actuals differ across seeds/configurations: {region}")
+                truth_reference[region] = truth
+                for method, prefix in methods.items():
+                    lower, upper = group[f"{prefix}_lower"], group[f"{prefix}_upper"]
+                    if not (np.isfinite(lower).all() and np.isfinite(upper).all() and
+                            (lower <= upper).all()):
+                        raise ValueError(f"Invalid intervals: {seed} {region} {config} {method}")
+                    upstream = summary.loc[summary.configuration.eq(config) &
+                                           summary.method.eq(method)]
+                    if len(upstream) != 1:
+                        raise ValueError(f"Missing unique summary: {seed} {region} {config} {method}")
+                    meta = upstream.iloc[0]
+                    if (int(meta.seed) != seed or meta.region != region or
+                            float(meta.alpha) != 0.10 or int(meta.test_size) != len(expected)):
+                        raise ValueError("AgACI summary metadata mismatch")
+                    coverage = calculate_empirical_coverage(truth, lower, upper)
+                    width = calculate_mean_interval_width(lower, upper)
+                    if not (np.isclose(coverage, meta.empirical_coverage, rtol=1e-10, atol=1e-10)
+                            and np.isclose(width, meta.mean_interval_width, rtol=1e-10, atol=1e-10)):
+                        raise ValueError("AgACI interval metrics disagree with summary")
+                    evaluation_hash = calculate_json_sha256({
+                        "protocol": protocol, "source": source, "configuration": config,
+                        "method": method, "uq_config_hash": meta.config_hash,
+                        "events_sha256": calculate_file_sha256(events_path),
+                    })
+                    identity = dict(group="t5_agaci_experimental", method=f"{config}|{method}",
+                                    dataset="AEMO_TOTALDEMAND", region=region, seed=seed,
+                                    config_hash=evaluation_hash, split_id=split_id)
+                    identities.append(identity)
+                    bounds = group[["SETTLEMENTDATE", "y_true"]].copy()
+                    bounds["lower"], bounds["upper"] = lower, upper
+                    for evaluated in evaluate_interval_stream_by_regime(
+                            bounds, labels, scale=protocol["normalisation"][region]["value"],
+                            protocol=protocol):
+                        audits.append({**identity, **evaluated})
+                        for metric in METRICS:
+                            rows.append({**identity, "regime": evaluated["regime"],
+                                         "metric_name": metric, "metric_value": evaluated[metric],
+                                         "n_retrains": int(meta.n_retrains),
+                                         "train_samples": int(meta.train_samples_total),
+                                         "wall_clock_s": 0.0})
+    # No writes above this line; all input checks must succeed first.
+    recorded = append_run_metrics_safely(rows, runs_path)
+    selected = recorded.merge(pd.DataFrame(identities).drop_duplicates(),
+                              on=list(identities[0]), how="inner", validate="many_to_one")
+    output_dir.mkdir(parents=True)
+    (output_dir / "t5_normalisation.json").write_text(json.dumps({
+        "training_window": protocol["training_window"],
+        "normalisation": protocol["normalisation"]}, indent=2) + "\n")
+    selected.to_csv(output_dir / "t5_seed_metrics.csv", index=False)
+    audit_frame = pd.DataFrame(audits)
+    audit_frame.to_csv(output_dir / "t5_window_audit.csv", index=False)
+    for region in REGIONS:
+        for config in protocol["configurations"]:
+            subset = selected.loc[selected.region.eq(region) &
+                                  selected.method.str.startswith(config + "|")]
+            table = aggregate_seed_metrics(subset)
+            if len(table) != 9 or set(table["UQ method"]) != set(methods):
+                raise ValueError("Expected 3 methods x 3 regimes per T5 table")
+            table.to_csv(output_dir / f"T5_{region}_{config}.csv", index=False)
+            count_audit = audit_frame.loc[audit_frame.region.eq(region) &
+                                          audit_frame.method.str.startswith(config + "|")]
+            for (_, _), part in count_audit.groupby(["seed", "regime"]):
+                if part.n_eligible_24h_windows.nunique() != 1:
+                    raise ValueError("Method rolling-window counts disagree")
+            caption = (f"Experimental T5: {region}, {config}. Three uncertainty methods; "
+                       f"five seeds; within-regime complete 24h windows. "
+                       f"Normalised-width denominator: {protocol['normalisation'][region]['value']:.17g} MW. "
+                       f"Minimum complete windows: {get_minimum_complete_windows(protocol)}. "
+                       "Values are mean ± sample SD across seeds; rolling windows overlap.\n")
+            (output_dir / f"T5_{region}_{config}.md").write_text(
+                caption + "\n" + table.to_csv(index=False))
+    (output_dir / "t5_manifest.json").write_text(json.dumps({
+        "experiment": "Static vs ACI vs AgACI BOA fixed calibration",
+        "protocol": protocol, "methods": list(methods), "sources": sources,
+        "events_sha256": calculate_file_sha256(events_path),
+        "runs_path": str(runs_path.resolve()), "runs_sha256": calculate_file_sha256(runs_path),
+        "metric_count": len(rows), "sd_ddof": 1,
+        "units": "coverage fractions; mean width MW; normalised width dimensionless",
+        "undefined": "N/A when a seed has insufficient complete windows",
+    }, indent=2) + "\n")
+    return audit_frame
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--run-dir", type=Path, required=True)
+    parser.add_argument("--run-dir", type=Path, help="Original PGS242-160 input directory")
+    parser.add_argument("--agaci-dir", type=Path, help="Experimental Static/ACI/AgACI comparison input directory")
     parser.add_argument("--events", type=Path, default=ROOT / "data/events.csv")
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
@@ -476,8 +636,15 @@ def main():
     parser.add_argument("--training-data-dir", type=Path,
                         help="AEMO raw-data root containing SA1/NSW1 monthly TRAIN CSVs.")
     args = parser.parse_args()
-    generate_uncertainty_tables(args.run_dir, args.events, args.output_dir, args.runs,
-             json.loads(args.protocol.read_text()), args.training_data_dir)
+    if bool(args.run_dir) == bool(args.agaci_dir):
+        parser.error("Specify exactly one of --run-dir or --agaci-dir")
+    protocol = json.loads(args.protocol.read_text())
+    if args.agaci_dir:
+        generate_agaci_uncertainty_tables(args.agaci_dir, args.events, args.output_dir,
+                                          args.runs, protocol, args.training_data_dir)
+    else:
+        generate_uncertainty_tables(args.run_dir, args.events, args.output_dir,
+                                    args.runs, protocol, args.training_data_dir)
 
 
 if __name__ == "__main__":

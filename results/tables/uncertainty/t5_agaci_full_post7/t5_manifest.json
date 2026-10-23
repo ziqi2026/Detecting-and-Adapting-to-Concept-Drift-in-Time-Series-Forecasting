@@ -1,0 +1,159 @@
+{
+  "experiment": "Static vs ACI vs AgACI BOA fixed calibration",
+  "protocol": {
+    "protocol_id": "aemo-t5-full-within-regime-v1",
+    "regime_scope": "full",
+    "regime_days": 7,
+    "rolling_boundary": "within_regime",
+    "rolling_closed": "right",
+    "incomplete_windows": "exclude",
+    "cadence": "30min",
+    "granularity": "region_configuration",
+    "configurations": [
+      "A",
+      "B",
+      "C_adwin",
+      "C_kswin",
+      "C_page_hinkley",
+      "D_120d_adwin",
+      "D_120d_kswin",
+      "D_120d_page_hinkley",
+      "D_180d_adwin",
+      "D_180d_kswin",
+      "D_180d_page_hinkley",
+      "D_30d_adwin",
+      "D_30d_kswin",
+      "D_30d_page_hinkley",
+      "D_60d_adwin",
+      "D_60d_kswin",
+      "D_60d_page_hinkley"
+    ],
+    "test_start": "2020-03-01 00:00:00",
+    "test_end": "2024-01-01 00:00:00",
+    "minimum_complete_24h_windows": 10,
+    "training_window": {
+      "start": "2018-01-01",
+      "end_exclusive": "2020-01-01"
+    },
+    "normalisation": {
+      "SA1": {
+        "value": 1300.8730537401184,
+        "statistic": "training_mean_actual_demand",
+        "source": "data/raw/SA1",
+        "source_sha256": "4f74f9058df051bb91f96544d3d69d909171a5fc4017e93f8930ee08f6bde142",
+        "n_training_observations": 35039
+      },
+      "NSW1": {
+        "value": 7982.251664716458,
+        "statistic": "training_mean_actual_demand",
+        "source": "data/raw/NSW1",
+        "source_sha256": "3fd4fe740ffa8a810993e5963d07a25d25b8cd86ed70b0d3356bba67a0a4e093",
+        "n_training_observations": 35039
+      }
+    }
+  },
+  "methods": [
+    "static_conformal",
+    "adaptive_conformal",
+    "agaci_boa"
+  ],
+  "sources": [
+    {
+      "seed": 1,
+      "region": "SA1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_1/agaci_comparison_intervals_SA1.csv.gz",
+      "sha256": "78fdc4d83d994ffd34974cbfa69595f8bbeb1d12bff6ae91d2d408b5eef60fed",
+      "summary_sha256": "798c64d56ba5aaeaa3986d816c3198cf8199dad83d5ff923ae3549d7d93cb38a",
+      "manifest_sha256": "8a3b1955809c04af5869c05257144b5a4e92ee56113ea13bc77c597ef7bed84b",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed1"
+    },
+    {
+      "seed": 1,
+      "region": "NSW1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_1/agaci_comparison_intervals_NSW1.csv.gz",
+      "sha256": "e359cfb9ee897bad367579bee9381dfa71446fbf5b66c150536f96db399f9b1a",
+      "summary_sha256": "808c7239f30564a58440ebbe61441f34cc812a8d7af0a17bd677812ee499c3fd",
+      "manifest_sha256": "8a3b1955809c04af5869c05257144b5a4e92ee56113ea13bc77c597ef7bed84b",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed1"
+    },
+    {
+      "seed": 2,
+      "region": "SA1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_2/agaci_comparison_intervals_SA1.csv.gz",
+      "sha256": "1466369517c682cb0c1c7571640e0ef049cd45fcb0332a819acce0abb015e455",
+      "summary_sha256": "ce2a3b3500e6cc6aad8df58d5479aef974940ce2b26c4706fad1b9885d9f615c",
+      "manifest_sha256": "c97503404afc5455dae3ecc3d11556dfebb33c0ad5b7845491a7526b866bb569",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed2"
+    },
+    {
+      "seed": 2,
+      "region": "NSW1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_2/agaci_comparison_intervals_NSW1.csv.gz",
+      "sha256": "29cfdb1f586314adecd26f8d45e19ff28fdfaaa08720e7e570005ba67f1168c1",
+      "summary_sha256": "94131ad6455560a902f67d7fe510d322f36d0a39f94c2d875b66fb67418d5372",
+      "manifest_sha256": "c97503404afc5455dae3ecc3d11556dfebb33c0ad5b7845491a7526b866bb569",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed2"
+    },
+    {
+      "seed": 3,
+      "region": "SA1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_3/agaci_comparison_intervals_SA1.csv.gz",
+      "sha256": "cced20006c8c1984c09a1065e46bd9347292bf99be3f55f7dfbf45db7f7cff9d",
+      "summary_sha256": "c558dabec66cf09dc1b039333e4677110bffffeb97aa49f6192663a9c95bd07c",
+      "manifest_sha256": "2e2ea5564ac29ee04d3131d3188fbae98613043b62e08530d064e78d817a36e6",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed3"
+    },
+    {
+      "seed": 3,
+      "region": "NSW1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_3/agaci_comparison_intervals_NSW1.csv.gz",
+      "sha256": "5fb7e6d39c54bc0c078da9c2ae21977a8ec8438bc43926baffb9c0b1919b3120",
+      "summary_sha256": "00334fbbe4d1d225a5df153f0978f520501392248631741865e86f782d20565b",
+      "manifest_sha256": "2e2ea5564ac29ee04d3131d3188fbae98613043b62e08530d064e78d817a36e6",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed3"
+    },
+    {
+      "seed": 4,
+      "region": "SA1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_4/agaci_comparison_intervals_SA1.csv.gz",
+      "sha256": "5116e7e04e2fc5f35faea143deeac1bb086fe9e79d9027860918eb753ba3054b",
+      "summary_sha256": "7aa725ed4b79eeb7a47a6d3f52d0d06099035a06f57ffabd9618a69d1fdd1587",
+      "manifest_sha256": "811498dbe7fc8ec1f63d7594c65461d5d75dabddeaf067ee82bf02739cb323b6",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed4"
+    },
+    {
+      "seed": 4,
+      "region": "NSW1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_4/agaci_comparison_intervals_NSW1.csv.gz",
+      "sha256": "c2304989ced97e2023c58f7a0980b20ffe3738eca2aaa489452175792b3dd112",
+      "summary_sha256": "b6955f25eaeb9bbee73a8d0312e8b31624529afc92a38b894fb804041511b835",
+      "manifest_sha256": "811498dbe7fc8ec1f63d7594c65461d5d75dabddeaf067ee82bf02739cb323b6",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed4"
+    },
+    {
+      "seed": 5,
+      "region": "SA1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_5/agaci_comparison_intervals_SA1.csv.gz",
+      "sha256": "e80bd5a5e172a1bd4879cc111a13a2fa760199ebcaf87f4606718f27d2fee026",
+      "summary_sha256": "cb9fa6528b2bfcadd48ab35a0dd2d0bf13e3662a8930b77408200b30812ec0ac",
+      "manifest_sha256": "f6030b13604382cc1f758093fd33d0397dba995bdd856182605bbcc6982f336d",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed5"
+    },
+    {
+      "seed": 5,
+      "region": "NSW1",
+      "path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/agaci_boa_fixed_calibration/seed_5/agaci_comparison_intervals_NSW1.csv.gz",
+      "sha256": "d660e226d825c78e3c7d757b79373acffa2388ff760936002c2213258b238c85",
+      "summary_sha256": "888f0906db6b590eaf4f4340dca9eade40d49a6c081aa82476350aaa39128a64",
+      "manifest_sha256": "f6030b13604382cc1f758093fd33d0397dba995bdd856182605bbcc6982f336d",
+      "upstream_run_id": "pgs242_128_five_seed_final_seed5"
+    }
+  ],
+  "events_sha256": "7f8981ef7495d8374a01ef2fae5e3fb58f228de6973a4dcecc948f6103f49225",
+  "runs_path": "/Users/saharhassan/Documents/Detecting-and-Adapting-to-Concept-Drift-in-Time-Series-Forecasting/results/tables/uncertainty/t5_agaci_full_post7_runs.csv",
+  "runs_sha256": "c4c2c45a5468e3b11d94c46a16edbc32770ce5f55f14fef85679ec8ccb47d7ce",
+  "metric_count": 6120,
+  "sd_ddof": 1,
+  "units": "coverage fractions; mean width MW; normalised width dimensionless",
+  "undefined": "N/A when a seed has insufficient complete windows"
+}
