@@ -1,0 +1,11 @@
+Trailing 7-day empirical coverage (336 half-hour observations, as in F1). Curves represent the mean of 5 seeds; envelopes show ±1 sample SD. Documented event windows include a seven-day post-event buffer; events are not verified drift labels.
+
+Trailing 7-day empirical coverage (336 half-hour observations, as in F1). Curves represent the mean of 5 seeds; envelopes show ±1 sample SD. Documented event windows include a seven-day post-event buffer; events are not verified drift labels.
+
+Trailing 7-day empirical coverage (336 half-hour observations, as in F1). Curves represent the mean of 5 seeds; envelopes show ±1 sample SD. Documented event windows include a seven-day post-event buffer; events are not verified drift labels.
+
+Trailing 7-day empirical coverage (336 half-hour observations, as in F1). Curves represent the mean of 5 seeds; envelopes show ±1 sample SD. Documented event windows include a seven-day post-event buffer; events are not verified drift labels.
+
+Trailing 7-day empirical coverage (336 half-hour observations, as in F1). Curves represent the mean of 5 seeds; envelopes show ±1 sample SD. Documented event windows include a seven-day post-event buffer; events are not verified drift labels.
+
+Trailing 7-day empirical coverage (336 half-hour observations, as in F1). Curves represent the mean of 5 seeds; envelopes show ±1 sample SD. Documented event windows include a seven-day post-event buffer; events are not verified drift labels.

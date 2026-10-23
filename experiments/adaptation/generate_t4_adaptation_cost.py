@@ -24,11 +24,11 @@ drift_lab.evaluation.calculate_adaptation_gain():
     MAE 54.3, 2 retrains, gain -34.0 -> gain per retrain -17.0.
 
 Inputs (final five-seed outputs, no re-run needed):
-  <run_dir>/t3/t3_seed_level_metrics.csv  -> mae_drift per configuration/region/seed
+  results/tables/adaptation/t3/t3_seed_metrics_full.csv -> revised full mae_drift
   <run_dir>/summary_all_seeds.csv         -> n_retrains, train_samples_total,
                                              retraining_wall_clock_s
 
-Outputs (<run_dir>/t4/):
+Outputs (results/tables/adaptation/t4/):
   t4_seed_level_metrics.csv          every configuration x region x seed
   t4_all_configurations.csv          mean +/- sd for all 17 configurations
   t4_adaptation_cost.csv             headline table, same arms as final T3
@@ -55,9 +55,9 @@ if str(SRC) not in sys.path:
 
 from drift_lab.evaluation import calculate_adaptation_gain  # noqa: E402
 
-DEFAULT_RUN_DIR = ROOT / Path(
-    "results/tables/adaptation/revised/pgs242_128_five_seed_final"
-)
+DEFAULT_RUN_DIR = ROOT / "results/tables/adaptation/pgs242_128_five_seed_final"
+DEFAULT_T3_FILE = ROOT / "results/tables/adaptation/t3/t3_seed_metrics_full.csv"
+DEFAULT_OUTPUT_DIR = ROOT / "results/tables/adaptation/t4"
 
 # Same headline configurations as the final T3 table.
 HEADLINE = {
@@ -70,9 +70,23 @@ REFERENCE = "A"
 KEYS = ["configuration", "region", "seed"]
 
 
-def load_seed_level(run_dir: Path) -> pd.DataFrame:
-    t3 = pd.read_csv(run_dir / "t3" / "t3_seed_level_metrics.csv")
-    cost = pd.read_csv(run_dir / "summary_all_seeds.csv")
+def load_seed_level(t3_file: Path, cost_file: Path) -> pd.DataFrame:
+    if not t3_file.is_file():
+        raise FileNotFoundError(f"Updated full T3 metrics not found: {t3_file}")
+    if not cost_file.is_file():
+        raise FileNotFoundError(f"Original adaptation cost summary not found: {cost_file}")
+    t3 = pd.read_csv(t3_file)
+    cost = pd.read_csv(cost_file)
+    expected_t3 = {"arm", *KEYS, "detector", "window_days", "mae_drift"}
+    expected_cost = {*KEYS, "n_retrains", "train_samples_total", "retraining_wall_clock_s"}
+    for name, df, expected in (("T3", t3, expected_t3), ("cost", cost, expected_cost)):
+        missing = expected.difference(df.columns)
+        if missing:
+            raise ValueError(f"Missing {name} columns: {sorted(missing)}")
+    if t3.duplicated(KEYS).any() or cost.duplicated(KEYS).any():
+        raise ValueError("Duplicate configuration/region/seed combinations in T3 or cost inputs")
+    if t3["mae_drift"].isna().any():
+        raise ValueError("T3 contains missing drift-regime MAE values")
 
     t3 = t3[["arm", *KEYS, "detector", "window_days", "mae_drift"]]
     cost = cost[[*KEYS, "n_retrains", "train_samples_total", "retraining_wall_clock_s"]]
@@ -172,13 +186,20 @@ def format_table(stats: pd.DataFrame, labels: dict | None) -> pd.DataFrame:
 
 def main():
     parser = argparse.ArgumentParser(description="Generate T4 adaptation cost table")
-    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR)
+    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR,
+                        help="Original five-seed adaptation results containing summary_all_seeds.csv")
+    parser.add_argument("--t3-file", type=Path, default=DEFAULT_T3_FILE,
+                        help="Revised full T3 seed-level metrics (NOT the local T3 file)")
+    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     args = parser.parse_args()
 
-    seed_level = load_seed_level(args.run_dir)
+    cost_file = args.run_dir / "summary_all_seeds.csv"
+    print(f"Using revised full T3 metrics: {args.t3_file}")
+    print(f"Using unchanged retraining costs: {cost_file}")
+    seed_level = load_seed_level(args.t3_file, cost_file)
     stats = aggregate(seed_level)
 
-    out_dir = args.run_dir / "t4"
+    out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
     seed_level.to_csv(out_dir / "t4_seed_level_metrics.csv", index=False)
     format_table(stats, None).to_csv(out_dir / "t4_all_configurations.csv", index=False)
