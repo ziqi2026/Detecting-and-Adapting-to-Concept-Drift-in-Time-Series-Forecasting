@@ -1,13 +1,15 @@
 from pathlib import Path
+import numpy as np
+from plotly.subplots import make_subplots
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
 st.set_page_config(page_title='Concept Drift Lab | Team 42', page_icon='📈', layout='wide', initial_sidebar_state='expanded')
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = next((p for p in [Path(__file__).resolve().parent, *Path(__file__).resolve().parents] if (p / 'results').is_dir()), Path(__file__).resolve().parents[1])
 RESULTS = ROOT / 'results'
-FINAL = RESULTS / 'tables/adaptation/revised/pgs242_128_five_seed_final'
+FINAL = RESULTS / 'tables/adaptation/pgs242_128_five_seed_final'
 
 @st.cache_data(show_spinner=False)
 def read_csv(path):
@@ -192,30 +194,208 @@ def render_2():
 def render_3():
     st.header('T3 · Forecast accuracy by regime')
     region = region_control('t3_region')
-    regime = st.radio('Regime evaluation', ['Full', 'Local'], horizontal=True)
-    path = FINAL / 't3_full_and_local' / f't3_{regime.lower()}.csv'
-    df = filter_region(load(path), region)
-    st.caption('Values are five-seed mean ± SD as stored in the official T3 table.')
-    table(df, 't3_'+regime.lower()+'_'+region)
-    for name in ['t3_seed_metrics_full.csv' if regime=='Full' else 't3_seed_metrics_local.csv', 'regime_observation_counts.csv']:
-        with st.expander(name):
-            table(filter_region(load(FINAL / 't3_full_and_local' / name), region), 't3_'+region+'_'+name[:-4])
+    regime = st.radio('Regime evaluation', ['Full', 'Local'], horizontal=True, key='t3_regime')
+    base = RESULTS / 'tables/adaptation/t3'
+    tag = regime.lower()
+    # The revised T3 outputs were moved to results/tables/adaptation/t3/.
+    # Load the current seed-level evaluation as the source of truth.
+    seed_candidates = [base / f't3_seed_metrics_{tag}.csv',
+                       base / 't3_full_and_local' / f't3_seed_metrics_{tag}.csv']
+    seed_path = next((p for p in seed_candidates if p.is_file()), None)
+    if seed_path is None:
+        st.warning(f'Updated T3 {regime.lower()} evaluation not found under results/tables/adaptation/t3/.')
+        return
+    raw = filter_region(load(seed_path), region)
+    if raw.empty:
+        st.info('No rows for the selected region.')
+        return
+    if 'configuration' in raw.columns:
+        opts = sorted(raw['configuration'].dropna().astype(str).unique())
+        selected = st.multiselect('Adaptation configurations', opts, default=opts, key='t3_configs')
+        raw = raw[raw['configuration'].astype(str).isin(selected)]
+    mae_cols = [f'mae_{r}' for r in ('pre-drift','drift','post-drift')]
+    available = [c for c in mae_cols if c in raw.columns]
+    if available and {'configuration','seed'}.issubset(raw.columns):
+        rows = []
+        for cfg, group in raw.groupby('configuration', sort=True):
+            item = {'configuration': cfg, 'seeds': int(group['seed'].nunique())}
+            for metric in available + (['pinball_loss'] if 'pinball_loss' in group else []):
+                nums = pd.to_numeric(group[metric], errors='coerce').dropna()
+                item[metric] = (f'{nums.mean():.2f} ± {nums.std(ddof=1):.2f}'
+                                if len(nums)>1 else (f'{nums.iloc[0]:.2f}' if len(nums) else '—'))
+            rows.append(item)
+        summary = pd.DataFrame(rows)
+        st.subheader('Five-seed forecast accuracy')
+        table(summary, f't3_{tag}_{region}_five_seed_summary')
+        plot = raw.melt(id_vars=['configuration','seed'], value_vars=available,
+                        var_name='regime', value_name='MAE (MW)')
+        plot['regime'] = plot['regime'].str.removeprefix('mae_')
+        plot['MAE (MW)'] = pd.to_numeric(plot['MAE (MW)'], errors='coerce')
+        plot = plot.groupby(['configuration', 'regime'], as_index=False)['MAE (MW)'].mean()
+        fig = px.bar(plot, x='configuration', y='MAE (MW)', color='regime',
+                     barmode='group', title='Forecast error by drift regime',
+                     category_orders={'regime':['pre-drift','drift','post-drift']})
+        fig.update_layout(height=460, xaxis_tickangle=-35)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning('Unexpected T3 seed-level schema; showing the source without aggregation.')
+    with st.expander('T3 · Source data by seed'):
+        table(raw, f't3_{tag}_{region}_seed_metrics')
+    count_path = base / 'regime_observation_counts.csv'
+    if count_path.is_file():
+        with st.expander('Regime observation counts'):
+            table(filter_region(load(count_path),region), f't3_{region}_regime_counts')
 
 def render_4():
-    st.header('T4 · Adaptation cost')
+    st.header('T4 · Adaptation cost and forecasting performance')
     region = region_control('t4_region')
-    df = filter_region(load(FINAL / 't4/t4_adaptation_cost.csv'), region)
-    st.caption('Official five-seed summary. Negative MAE gain vs Arm A indicates lower (better) MAE.')
-    table(df, 't4_cost_'+region)
-    detail = filter_region(load(FINAL / 'summary_all_seeds.csv'), region)
-    if not detail.empty:
-        st.subheader('Interactive seed-level comparisons')
-        seed = st.selectbox('Seed', sorted(detail['seed'].dropna().unique().tolist()), key='t4_seed')
-        subset = detail[detail['seed']==seed]
-        number_chart(subset, 'configuration', 'overall_mae', 'MAE by adaptation configuration')
-        number_chart(subset, 'configuration', 'n_retrains', 'Retraining events by configuration')
-        table(subset, 't4_seed_'+region+'_'+str(seed))
-    show_image(RESULTS / 'figures/adaptation/T4_cost_vs_accuracy.png', 'T4 · Adaptation cost versus forecasting accuracy')
+    detail = filter_region(load(RESULTS / 'tables/adaptation/t4/t4_seed_level_metrics.csv'), region)
+    if detail.empty:
+        return
+
+    def column(*names):
+        return next((name for name in names if name in detail.columns), None)
+
+    cfg_col = column('configuration', 'config')
+    seed_col = column('seed')
+    if cfg_col is None or seed_col is None:
+        st.warning('T4 seed-level file does not contain configuration and seed columns.')
+        table(detail, 't4_source_' + region)
+        return
+
+    # A and B are controls; C and D use the selected drift detector.
+    detector = st.selectbox('Drift detector', ['adwin', 'kswin', 'page_hinkley'], key='t4_detector')
+    config_values = detail[cfg_col].astype(str)
+    controls = config_values.isin(['A', 'B', 'never', 'every_30_days'])
+    detector_rows = config_values.str.lower().str.contains(detector, regex=False)
+    detail = detail[controls | detector_rows].copy()
+
+    def arm(config):
+        s = str(config).lower()
+        if s == 'a' or s == 'never' or s.startswith('a_'):
+            return 'A · Never retrain'
+        if s == 'b' or s == 'every_30_days' or s.startswith('b_'):
+            return 'B · Every 30 days'
+        if s.startswith('c_') or s.startswith('drift_full_history'):
+            return 'C · Drift / full history'
+        if s.startswith('d_') or s.startswith('drift_recent_window'):
+            return 'D · Drift / recent window'
+        return str(config)
+
+    detail['Arm'] = detail[cfg_col].map(arm)
+    arm_order = ['A · Never retrain', 'B · Every 30 days',
+                 'C · Drift / full history', 'D · Drift / recent window']
+    colors = {'A · Never retrain': '#6b7280', 'B · Every 30 days': '#a0aab5',
+              'C · Drift / full history': '#277d99', 'D · Drift / recent window': '#c47f43'}
+
+
+    d_configs = sorted(detail.loc[detail['Arm'] == 'D · Drift / recent window', cfg_col].astype(str).unique())
+    if len(d_configs) > 1:
+        preferred = next((x for x in d_configs if '180d' in x), d_configs[0])
+        chosen_d = st.selectbox('Arm D window', d_configs,
+                                index=d_configs.index(preferred), key='t4_d_window')
+        detail = detail[(detail['Arm'] != 'D · Drift / recent window') |
+                        (detail[cfg_col].astype(str) == chosen_d)].copy()
+
+    present = [x for x in arm_order if x in set(detail['Arm'])]
+    selected_arms = st.multiselect('Compare adaptation arms', present,
+                                   default=present, key='t4_arms')
+    detail = detail[detail['Arm'].isin(selected_arms)].copy()
+    if detail.empty:
+        st.info('Select at least one adaptation arm.')
+        return
+
+    metric_candidates = {
+        'Overall MAE (MW)': ('overall_mae', 'mae', 'test_mae'),
+        'Drift MAE (MW)': ('mae_drift', 'drift_mae'),
+        'MAE gain vs Arm A (MW)': ('mae_gain_vs_arm_a', 'mae_gain_vs_a', 'mae_gain_vs_A'),
+        'Number of retrains': ('n_retrains', 'retrains'),
+        'Cumulative training samples': ('train_samples_total', 'cumulative_train_samples', 'train_samples'),
+        'Retraining runtime (s)': ('retraining_wall_clock_s', 'wall_clock_s', 'runtime_s'),
+    }
+    metrics = {label: column(*candidates) for label, candidates in metric_candidates.items()}
+    metrics = {label: key for label, key in metrics.items() if key is not None}
+    perf = [x for x in ['Overall MAE (MW)', 'Drift MAE (MW)', 'MAE gain vs Arm A (MW)'] if x in metrics]
+    cost = [x for x in ['Number of retrains', 'Cumulative training samples', 'Retraining runtime (s)'] if x in metrics]
+    if not perf or not cost:
+        st.warning('The updated T4 file is missing the MAE or retraining-cost metrics needed for these charts.')
+        table(detail, 't4_seed_metrics_' + region)
+        return
+
+    st.subheader('Five-seed accuracy and computational cost')
+    left, right = st.columns(2)
+    with left:
+        performance = st.selectbox('Forecasting performance', perf,
+                                   index=perf.index('Overall MAE (MW)') if 'Overall MAE (MW)' in perf else 0,
+                                   key='t4_performance')
+    with right:
+        expense = st.selectbox('Retraining cost', cost, key='t4_expense')
+
+    def plot_metric(label):
+        metric = metrics[label]
+        values = detail[['Arm', seed_col, metric]].copy()
+        values[metric] = pd.to_numeric(values[metric], errors='coerce')
+        values = values.dropna(subset=[metric])
+        # Aggregate one value per arm/seed before computing across-seed SD.
+        by_seed = values.groupby(['Arm', seed_col], as_index=False)[metric].mean()
+        summary = by_seed.groupby('Arm', as_index=False)[metric].agg(['mean', 'std', 'count']).reset_index()
+        summary = summary.set_index('Arm').reindex([x for x in arm_order if x in set(summary['Arm'])]).reset_index()
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=summary['Arm'], y=summary['mean'],
+            marker_color=[colors[x] for x in summary['Arm']],
+            error_y=dict(type='data', array=summary['std'].fillna(0), visible=True),
+            text=summary['mean'].map(lambda x: f'{x:,.1f}'), textposition='outside',
+            customdata=summary[['count']].to_numpy(),
+            hovertemplate='%{x}<br>Mean: %{y:,.2f}<br>Seeds: %{customdata[0]}<extra></extra>',
+        ))
+        if 'gain' in label.lower():
+            fig.add_hline(y=0, line_dash='dash', line_color='#64748b')
+        fig.update_layout(title=label, height=430, plot_bgcolor='white',
+                          paper_bgcolor='white', font_color='#244766',
+                          xaxis_title=None, yaxis_title=label,
+                          margin=dict(t=65, b=90), showlegend=False)
+        fig.update_xaxes(tickangle=-20)
+        st.plotly_chart(fig, use_container_width=True)
+        return summary
+
+    with left:
+        performance_summary = plot_metric(performance)
+    with right:
+        expense_summary = plot_metric(expense)
+
+    st.caption('Bars show five-seed means ± standard deviation. Lower MAE and lower retraining cost are preferable. Arms A and B are controls; C and D are drift-triggered strategies.')
+
+    # Side-by-side numbers make the comparisons legible during the demo.
+    st.subheader('Comparison across the four arms')
+    numeric = detail[['Arm', seed_col] + list(dict.fromkeys(metrics.values()))].copy()
+    for name in metrics.values():
+        numeric[name] = pd.to_numeric(numeric[name], errors='coerce')
+    grouped = numeric.groupby('Arm')
+    summary_rows = []
+    for name in arm_order:
+        if name not in grouped.groups:
+            continue
+        group = grouped.get_group(name)
+        row = {'Arm': name, 'Seeds': group[seed_col].nunique()}
+        for label, metric in metrics.items():
+            per_seed = group.groupby(seed_col)[metric].mean().dropna()
+            if len(per_seed):
+                sd = per_seed.std(ddof=1) if len(per_seed) > 1 else 0.0
+                row[label] = f'{per_seed.mean():,.2f} ± {sd:,.2f}'
+            else:
+                row[label] = '—'
+        summary_rows.append(row)
+    table(pd.DataFrame(summary_rows), f't4_arm_comparison_{region}_{detector}')
+
+    with st.expander('Original T4 five-seed summary'):
+        official_path = RESULTS / 'tables/adaptation/t4/t4_adaptation_cost.csv'
+        if official_path.is_file():
+            table(filter_region(load(official_path), region), 't4_official_' + region)
+    with st.expander('Individual seed-level results'):
+        seeds = sorted(detail[seed_col].dropna().unique().tolist())
+        seed = st.selectbox('Seed', seeds, key='t4_seed')
+        table(detail[detail[seed_col] == seed], 't4_seed_' + region + '_' + str(seed))
 
 def render_5():
     st.header('F3 · Four-arm comparison')
@@ -223,7 +403,7 @@ def render_5():
     detector = st.selectbox('Detector', ['adwin','kswin','page_hinkley'], key='f3_detector')
     show_image(RESULTS / f'figures/adaptation/F3_four_arms/F3_{region}_four_arm_comparison_{detector}_180d.png')
     st.caption('F3 · Saved four-arm comparison figure from the experiment repository.')
-    df = filter_region(load(FINAL / 'summary_all_seeds.csv'), region)
+    df = filter_region(load(RESULTS / 'tables/adaptation/revised/pgs242_128_five_seed_final/summary_all_seeds.csv'), region)
     if not df.empty:
         df = df[(df['arm'].isin(['A','B'])) | (df['detector'].astype(str)==detector)]
         st.subheader('Five-seed experiment rows for selected detector')
@@ -232,125 +412,211 @@ def render_5():
 def render_6():
     st.header('Interactive actual vs forecast')
     region = region_control('forecast_region')
-    seed = st.selectbox('Seed', [1,2,3,4,5], key='forecast_seed')
-    path = FINAL / f'seed_{seed}' / f'forecasts_{region}.csv.gz'
+    seed = st.selectbox('Seed', [1, 2, 3, 4, 5], key='forecast_seed')
+    # Forecasts can live under different adaptation result revisions.
+    candidates = [FINAL / f'seed_{seed}' / f'forecasts_{region}.csv.gz']
+    candidates += sorted((RESULTS / 'tables/adaptation').rglob(f'seed_{seed}/forecasts_{region}.csv.gz'))
+    candidates += sorted((RESULTS / 'tables/adaptation').rglob(f'seed_{seed}/forecasts_{region}.csv'))
+    # The existing AgACI interval data also contain the same point forecasts.
+    fallback = (RESULTS / 'tables/uncertainty/agaci_boa_fixed_calibration'
+                / f'seed_{seed}' / f'agaci_comparison_intervals_{region}.csv.gz')
+    candidates.append(fallback)
+    path = next((x for x in candidates if x.is_file() and 'archive' not in x.parts), None)
+    if path is None:
+        st.warning('Forecast data unavailable: no seed-level forecast or AgACI comparison file found.')
+        return
+
     @st.cache_data(show_spinner='Loading forecast data…')
     def load_forecasts(p):
-        data = pd.read_csv(p, parse_dates=['SETTLEMENTDATE'])
-        return data
-    if path.exists():
-        df = load_forecasts(str(path))
-        config = choice(df, 'configuration', 'Adaptation configuration', 'forecast_config')
-        if config:
-            df = df[df['configuration'].astype(str)==config].copy()
-        if not df.empty:
-            low = df['SETTLEMENTDATE'].min().date()
-            high = df['SETTLEMENTDATE'].max().date()
-            dates = st.date_input('Date range', value=(low, min(low + pd.Timedelta(days=14),high)), min_value=low, max_value=high, key='forecast_dates')
-            if len(dates)==2:
-                start, end = dates
-                view = df[(df['SETTLEMENTDATE'].dt.date >= start) & (df['SETTLEMENTDATE'].dt.date <= end)].copy()
-                if not view.empty:
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(x=view['SETTLEMENTDATE'], y=view['y_true'], name='Actual demand', mode='lines'))
-                    fig.add_trace(go.Scatter(x=view['SETTLEMENTDATE'], y=view['y_pred'], name='Forecast', mode='lines'))
-                    if 'retrain_indicator' in view:
-                        retrains = view[view['retrain_indicator'].astype(str).str.lower().isin(['true','1'])]
-                        if len(retrains):
-                            fig.add_trace(go.Scatter(x=retrains['SETTLEMENTDATE'], y=retrains['y_pred'], name='Retraining', mode='markers', marker={'symbol':'diamond','size':10}))
-                    fig.update_layout(height=550, xaxis_title='Settlement date', yaxis_title='Electricity demand (MW)', hovermode='x unified')
-                    st.plotly_chart(fig, use_container_width=True)
-                    st.metric('Selected period MAE', f"{(view['y_true']-view['y_pred']).abs().mean():.2f} MW")
-                    st.caption('Period MAE is calculated interactively from the selected rows, not the official full-test T3 value.')
-                    table(view, f'forecast_{region}_seed{seed}_{config}')
-                else:
-                    st.info('No forecasts in selected dates.')
-            else:
-                st.info('Choose a start and end date.')
+        data = pd.read_csv(p)
+        if 'y_pred' not in data and 'point_forecast' in data:
+            data = data.rename(columns={'point_forecast': 'y_pred'})
+        data['SETTLEMENTDATE'] = pd.to_datetime(data['SETTLEMENTDATE'], errors='coerce')
+        return data.dropna(subset=['SETTLEMENTDATE'])
+
+    df = load_forecasts(str(path))
+    required = {'configuration', 'SETTLEMENTDATE', 'y_true', 'y_pred'}
+    if not required.issubset(df.columns):
+        st.error(f'Forecast file missing columns: {sorted(required - set(df.columns))}')
+        return
+    if path == fallback:
+        st.caption('Point forecasts sourced from the saved five-seed uncertainty interval outputs.')
+    config = choice(df, 'configuration', 'Adaptation configuration', 'forecast_config')
+    if not config:
+        return
+    df = df[df['configuration'].astype(str) == config].sort_values('SETTLEMENTDATE').copy()
+    if df.empty:
+        return
+    low, high = df['SETTLEMENTDATE'].min().date(), df['SETTLEMENTDATE'].max().date()
+    dates = st.date_input('Date range', value=(low, min(low + pd.Timedelta(days=14), high)),
+                          min_value=low, max_value=high, key='forecast_dates')
+    if not isinstance(dates, (tuple, list)) or len(dates) != 2:
+        st.info('Choose a start and end date.')
+        return
+    start, end = dates
+    view = df[(df['SETTLEMENTDATE'].dt.date >= start) &
+              (df['SETTLEMENTDATE'].dt.date <= end)].copy()
+    if view.empty:
+        st.info('No forecasts in selected dates.')
+        return
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=view['SETTLEMENTDATE'], y=view['y_true'], name='Actual demand', mode='lines'))
+    fig.add_trace(go.Scatter(x=view['SETTLEMENTDATE'], y=view['y_pred'], name='Forecast', mode='lines'))
+    if 'retrain_indicator' in view:
+        mask = view['retrain_indicator'].astype(str).str.lower().isin(['true', '1'])
+        retrains = view[mask]
+        if len(retrains):
+            fig.add_trace(go.Scatter(x=retrains['SETTLEMENTDATE'], y=retrains['y_pred'],
+                                     name='Retraining', mode='markers', marker={'symbol':'diamond','size':10}))
+    fig.update_layout(height=550, xaxis_title='Settlement date', yaxis_title='Electricity demand (MW)', hovermode='x unified')
+    st.plotly_chart(fig, use_container_width=True)
+    st.metric('Selected period MAE', f"{(view['y_true'] - view['y_pred']).abs().mean():.2f} MW")
+    st.caption('Period MAE is calculated from selected rows, not the official full-test T3 value.')
+    table(view, f'forecast_{region}_seed{seed}_{config}')
+
+def _t5_directories():
+    """Main selector: real AEMO evaluation with all three UQ methods only.
+
+    Exclude legacy t5_aemo and simulation folders; simulations have their
+    own browser below the main T5 evaluation.
+    """
+    base = RESULTS / 'tables/uncertainty'
+    if not base.exists():
+        return []
+    directories = set()
+    for path in base.rglob('T5_SA1_*.csv'):
+        rel = str(path.parent.relative_to(base)).lower()
+        if any(x in rel for x in ('archive', 'simulation', 't5_aemo')):
+            continue
+        try:
+            head = pd.read_csv(path, usecols=['UQ method'])
+            methods = head['UQ method'].astype(str).str.lower()
+            if (methods.str.contains('agaci').any() and
+                methods.str.contains('static').any() and
+                methods.str.contains('adaptive|aci', regex=True).any()):
+                directories.add(path.parent)
+        except (OSError, ValueError, KeyError):
+            continue
+    return sorted(directories, key=lambda p: ('post7' not in str(p).lower(), str(p)))
+
+
+def render_t5_simulation_browser():
+    """Browse simulation inputs/results without mixing them with real AEMO T5."""
+    base = RESULTS / 'tables/uncertainty/t5_simulation'
+    if not base.is_dir():
+        st.info('No T5 simulation results found under results/tables/uncertainty/t5_simulation/.')
+        return
+    files = sorted(p for p in base.rglob('*') if p.is_file() and
+                   p.suffix.lower() in ('.csv', '.png', '.json', '.md') and 'archive' not in p.parts)
+    if not files:
+        st.info('No simulation result files found.')
+        return
+    selected = st.selectbox('Simulation output', files,
+                            format_func=lambda p: str(p.relative_to(base)),
+                            key='t5_simulation_file')
+    if selected.suffix == '.csv':
+        data = load(selected)
+        region = st.selectbox('Region filter', ['All', 'SA1', 'NSW1'], key='t5_simulation_region')
+        if region != 'All':
+            data = filter_region(data, region)
+        table(data, 't5_simulation_' + selected.stem)
+    elif selected.suffix == '.png':
+        show_image(selected)
     else:
-        st.warning('Forecast file is unavailable.')
+        st.code(selected.read_text(encoding='utf-8', errors='replace')[:50000],
+                language='json' if selected.suffix == '.json' else 'markdown')
+
+def _parse_mean_sd(values):
+    parts = values.astype(str).str.split('±', n=1, expand=True)
+    avg = pd.to_numeric(parts[0].str.strip().str.replace('%','',regex=False), errors='coerce')
+    dev = (pd.to_numeric(parts[1].str.strip().str.replace('pp','',regex=False), errors='coerce')
+           if parts.shape[1]>1 else pd.Series(0., index=values.index))
+    return avg, dev.fillna(0.)
+
+
+def _render_t5_main():
+    st.header('T5 · Uncertainty coverage and interval width')
+    directories = _t5_directories()
+    if not directories:
+        st.warning('No real-data T5 tables containing Static, ACI and AgACI were found. Browse the simulation in the adjacent tab.')
+        return
+    a,b = st.columns([1,2])
+    with a: region = region_control('t5_region_updated')
+    with b:
+        folder = st.selectbox('T5 evaluation dataset', directories,
+            format_func=lambda x: str(x.relative_to(RESULTS)), key='t5_dataset_updated',
+            help='Prefer the newest Static / ACI / AgACI-BOA five-seed evaluation.')
+    files = sorted(folder.glob(f'T5_{region}_*.csv'))
+    if not files:
+        st.warning(f'No T5 tables for {region} in the selected experiment.')
+        return
+    configurations = {x.stem[len(f'T5_{region}_'):]:x for x in files}
+    preferred = next((x for x in configurations if x=='A'), next(iter(configurations)))
+    config = st.selectbox('Adaptation configuration', list(configurations),
+        index=list(configurations).index(preferred), key='t5_config_updated')
+    original = load(configurations[config])
+    necessary=['UQ method','regime','coverage','mean width','normalised width','worst 24h coverage']
+    if original.empty or not set(necessary).issubset(original):
+        st.error('Selected T5 table is missing expected columns.'); return
+    methods=original['UQ method'].dropna().unique().tolist()
+    if not any('agaci' in str(m).lower() for m in methods):
+        st.warning('This is an older T5 dataset: AgACI-BOA is NOT included. Select the three-method AgACI evaluation above.')
+    selected=st.multiselect('Uncertainty methods',methods,default=methods,key='t5_methods_updated')
+    data=original[original['UQ method'].isin(selected)].copy()
+    if data.empty: st.info('Choose at least one method.');return
+    for metric in necessary[2:]:
+        data[metric],data[metric+'_sd']=_parse_mean_sd(data[metric])
+    regimes=['pre-drift','drift','post-drift']
+    data['regime']=pd.Categorical(data['regime'],categories=regimes,ordered=True)
+    data=data.sort_values(['regime','UQ method'])
+    drift=data[data['regime']=='drift']
+    if not drift.empty:
+        cols=st.columns(3)
+        cols[0].metric('Drift coverage · method average', f"{100*drift['coverage'].mean():.2f}%")
+        cols[1].metric('Drift mean width · method average', f"{drift['mean width'].mean():.1f} MW")
+        worst=drift['worst 24h coverage'].dropna()
+        cols[2].metric('Worst 24h coverage · minimum method', f"{100*worst.min():.2f}%" if len(worst) else 'N/A')
+    colors={'static':'#4a647f','adaptive':'#c47f43','agaci':'#248174'}  # Match F4: Static, ACI, AgACI-BOA
+    def colour(method):
+        name=str(method).lower()
+        return next((value for keyword,value in colors.items() if keyword in name),'#447d88')
+    def chart(metric,title,percentage=False,target=False):
+        fig=go.Figure()
+        for method in selected:
+            rows=data[data['UQ method']==method].sort_values('regime')
+            factor=100 if percentage else 1
+            fig.add_trace(go.Bar(x=rows['regime'].astype(str),y=rows[metric]*factor,
+                name=str(method),marker_color=colour(method),
+                error_y=dict(type='data',array=rows[metric+'_sd']*factor,visible=True),
+                hovertemplate='%{x}<br>%{y:.2f}'+('%' if percentage else '')+'<extra>%{fullData.name}</extra>'))
+        if target: fig.add_hline(y=90,line_dash='dash',line_color='#a45555',annotation_text='90% nominal target')
+        fig.update_layout(title=title,barmode='group',height=380,legend=dict(orientation='h',y=-.23),
+            plot_bgcolor='white',margin=dict(t=60,b=85),yaxis_title='Coverage (%)' if percentage else title)
+        fig.update_xaxes(categoryorder='array',categoryarray=regimes)
+        st.plotly_chart(fig,use_container_width=True)
+    st.subheader('Coverage and reliability · five-seed mean ± SD')
+    chart('coverage','Empirical coverage',percentage=True,target=True)
+    chart('worst 24h coverage','Worst 24-hour coverage',percentage=True)
+    x,y=st.columns(2)
+    with x: chart('mean width','Mean prediction-interval width (MW)')
+    with y: chart('normalised width','Normalised interval width')
+    st.caption('Values come directly from the selected T5 five-seed tables. Compare coverage together with interval width; the 90% line is a nominal target, not a guarantee.')
+    st.subheader('T5 · Original results')
+    table(original, f't5_{region}_{config}_updated')
 
 def render_7():
-    region = region_control('t5_region')
-    t5_dir = RESULTS / 'tables/uncertainty/t5_aemo/tables'
-    files = sorted(t5_dir.glob(f'T5_{region}_*.csv')) if t5_dir.exists() else []
-    if not files:
-        st.info('T5 results are not available for this region.')
-        return
+    main, simulation = st.tabs(['T5 · AEMO three-method evaluation', 'Browse T5 simulation'])
+    with main:
+        _render_t5_main()
+    with simulation:
+        render_t5_simulation_browser()
 
-    configurations = {p.stem.removeprefix(f'T5_{region}_'): p for p in files}
-    config = st.selectbox('Adaptation configuration', list(configurations), key='t5_configuration')
-    df = load(configurations[config])
-    required = ['UQ method', 'regime', 'coverage', 'mean width', 'normalised width', 'worst 24h coverage']
-    if df.empty or not all(col in df.columns for col in required):
-        st.warning('The selected T5 table does not have the expected evaluation columns.')
-        return
-
-    def split_mean_sd(series):
-        parts = series.astype(str).str.split('±', n=1, expand=True)
-        mean = pd.to_numeric(parts[0].str.strip(), errors='coerce')
-        sd = pd.to_numeric(parts[1].str.strip(), errors='coerce') if parts.shape[1] > 1 else pd.Series(0.0, index=series.index)
-        return mean, sd.fillna(0)
-
-    numeric = df.copy()
-    metrics = ['coverage', 'mean width', 'normalised width', 'worst 24h coverage']
-    for metric in metrics:
-        numeric[metric], numeric[metric + '_sd'] = split_mean_sd(df[metric])
-    regimes = ['pre-drift', 'drift', 'post-drift']
-    numeric['regime'] = pd.Categorical(numeric['regime'], categories=regimes, ordered=True)
-    numeric = numeric.sort_values(['regime', 'UQ method'])
-
-    methods = numeric['UQ method'].dropna().unique().tolist()
-    selected_methods = st.multiselect('Uncertainty method', methods, default=methods, key='t5_methods')
-    plot_data = numeric[numeric['UQ method'].isin(selected_methods)].copy()
-    if plot_data.empty:
-        st.info('Select an uncertainty method to view the results.')
-        return
-
-    drift_data = plot_data[plot_data['regime'] == 'drift']
-    metric_cols = st.columns(3)
-    metric_cols[0].metric('Drift coverage', f"{drift_data['coverage'].mean():.2%}" if len(drift_data) else '—')
-    metric_cols[1].metric('Drift mean interval width', f"{drift_data['mean width'].mean():.1f} MW" if len(drift_data) else '—')
-    metric_cols[2].metric('Worst 24h coverage in drift', f"{drift_data['worst 24h coverage'].min():.2%}" if len(drift_data) else '—')
-
-    colors = ['#244766', '#6eafad', '#668fb4', '#8c9fae']
-
-    def t5_chart(metric, title, percent=False, target=False):
-        fig = go.Figure()
-        for i, method in enumerate(selected_methods):
-            rows = plot_data[plot_data['UQ method'] == method]
-            fig.add_trace(go.Bar(
-                name=method.replace('_', ' ').title(),
-                x=rows['regime'].astype(str),
-                y=rows[metric] * (100 if percent else 1),
-                error_y=dict(type='data', array=rows[metric + '_sd'] * (100 if percent else 1), visible=True),
-                marker_color=colors[i % len(colors)],
-                hovertemplate='%{x}<br>%{y:.2f}' + ('%' if percent else '') + '<extra>%{fullData.name}</extra>',
-            ))
-        if target:
-            fig.add_hline(y=90, line_dash='dash', line_color='#9b6470', annotation_text='90% target', annotation_position='top left')
-        fig.update_layout(title=title, barmode='group', height=410, plot_bgcolor='white',
-                          paper_bgcolor='white', font_color='#244766',
-                          xaxis_title='Evaluation regime', yaxis_title='Coverage (%)' if percent else title,
-                          legend_title_text='Method', margin=dict(t=75, b=45))
-        fig.update_xaxes(categoryorder='array', categoryarray=regimes)
-        st.plotly_chart(fig, use_container_width=True)
-
-    t5_chart('coverage', 'Empirical coverage', percent=True, target=True)
-    t5_chart('worst 24h coverage', 'Worst rolling 24-hour coverage', percent=True)
-    t5_chart('mean width', 'Mean prediction interval width (MW)')
-    t5_chart('normalised width', 'Normalised prediction interval width')
-    st.caption('Bars show five-seed means with ±1 standard deviation. The 90% line is the nominal coverage target; worst-window results describe observed short-period reliability.')
-    st.subheader('T5 · Regime-level results')
-    st.dataframe(df[df['UQ method'].isin(selected_methods)], use_container_width=True, hide_index=True)
-    st.download_button('Download T5 table (CSV)', df.to_csv(index=False).encode(),
-                       file_name=f'T5_{region}_{config}.csv', mime='text/csv', key='t5_download')
 
 def render_8():
     region = region_control('gallery_region')
     paths = sorted((RESULTS / 'figures').rglob('*.png'))
     paths = [p for p in paths if 'archive' not in p.parts and (region in p.name or not any(r in p.name for r in ['SA1','NSW1']))]
-    category = st.selectbox('Figure category', ['All','degradation','detection','adaptation','diagnosis'], key='gallery_category')
+    category = st.selectbox('Figure category', ['All','degradation','detection','adaptation','uncertainty','diagnosis'], key='gallery_category')
     if category != 'All':
         paths = [p for p in paths if category in p.parts]
     if paths:
@@ -361,6 +627,583 @@ def render_8():
     else:
         st.info('No figures are available for this selection.')
 
+
+
+# Embedded escalation explorer: no additional local Python module is required.
+REQUIRED = {"SETTLEMENTDATE", "region", "seed", "configuration", "y_true", "point_forecast"}
+METHODS = {
+    "Static split conformal": ("static_lower", "static_upper"),
+    "Adaptive conformal (ACI)": ("aci_lower", "aci_upper"),
+    "AgACI-BOA": ("agaci_lower", "agaci_upper"),
+}
+
+
+def _repo_root() -> Path:
+    # Component normally copied into dashboard_components/ at repository root.
+    return ROOT
+
+
+@st.cache_data(show_spinner="Loading timestamp-level forecasts…", ttl=600)
+def _load_intervals(path: str) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    missing = REQUIRED.difference(df.columns)
+    if missing:
+        raise ValueError(f"The interval data are missing columns: {sorted(missing)}")
+    df["SETTLEMENTDATE"] = pd.to_datetime(df["SETTLEMENTDATE"], errors="coerce")
+    df = df.dropna(subset=["SETTLEMENTDATE"]).sort_values("SETTLEMENTDATE")
+    return df
+
+
+def render_escalation_explorer(repo_root=None) -> None:
+    """Render an independent Streamlit escalation section with interactive 5-day windows."""
+    root = Path(repo_root) if repo_root is not None else _repo_root()
+    interval_dir = root / "results/tables/uncertainty/agaci_boa_fixed_calibration"
+
+    st.subheader("Escalation · Five-day review explorer")
+    st.caption("Move through actual forecast observations in five-day windows. Compare which points are reviewed and how retained forecast coverage changes.")
+
+    a, b, c = st.columns([1, 1, 1])
+    with a:
+        region = st.selectbox("Region", ["SA1", "NSW1"], key="escalation_region")
+    with b:
+        seed = st.selectbox("Seed", [1, 2, 3, 4, 5], key="escalation_seed")
+    with c:
+        method = st.selectbox("Uncertainty method", list(METHODS), key="escalation_uq")
+
+    path = interval_dir / f"seed_{seed}" / f"agaci_comparison_intervals_{region}.csv.gz"
+    if not path.is_file():
+        st.warning(f"Timestamp-level intervals were not found: `{path.relative_to(root) if path.is_relative_to(root) else path}`. The aggregated F5 CSV cannot provide a five-day timeline; these interval files are required.")
+        return
+
+    try:
+        df = _load_intervals(str(path))
+    except (OSError, ValueError) as exc:
+        st.error(f"Cannot load interval data: {exc}")
+        return
+
+    configurations = sorted(df["configuration"].dropna().astype(str).unique())
+    if not configurations:
+        st.warning("No configurations found in interval data.")
+        return
+    configuration = st.selectbox("Adaptation configuration", configurations, key="escalation_configuration")
+    df = df[df["configuration"].astype(str) == configuration].copy()
+    lower_col, upper_col = METHODS[method]
+    if not {lower_col, upper_col}.issubset(df.columns):
+        st.error(f"Missing interval bounds for {method}: {lower_col}, {upper_col}")
+        return
+
+    # Calculate scores BEFORE slicing the viewing window; the first timestamp in
+    # each window therefore uses the preceding observation when available.
+    df = df.sort_values("SETTLEMENTDATE").drop_duplicates("SETTLEMENTDATE", keep="last").reset_index(drop=True)
+    df["y_true"] = pd.to_numeric(df["y_true"], errors="coerce")
+    df["point_forecast"] = pd.to_numeric(df["point_forecast"], errors="coerce")
+    df["lower"] = pd.to_numeric(df[lower_col], errors="coerce")
+    df["upper"] = pd.to_numeric(df[upper_col], errors="coerce")
+    df["width"] = df["upper"] - df["lower"]
+    df["covered"] = (df["y_true"] >= df["lower"]) & (df["y_true"] <= df["upper"])
+    df["lag1_error"] = (df["y_true"] - df["point_forecast"]).abs().shift(1)
+    df["lag1_error"] = df["lag1_error"].fillna(0.0)
+    df = df.dropna(subset=["y_true", "point_forecast", "lower", "upper"])
+    if df.empty:
+        st.warning("No valid observations after selecting the configuration and UQ method.")
+        return
+
+    score_name = st.radio("Review prioritisation signal", ["Previous 30-minute absolute error", "Current interval width"], horizontal=True, key="escalation_score")
+    if score_name.startswith("Previous"):
+        df["review_score"] = df["lag1_error"]
+        st.caption("Causal score: at time t, the previous observed half-hour's absolute forecast error (t−1).")
+    else:
+        df["review_score"] = df["width"]
+        st.caption("Interval-width score. Static conformal widths may be constant, so ties can limit prioritisation.")
+
+    valid_scores = df["review_score"].replace([np.inf, -np.inf], np.nan).dropna()
+    if valid_scores.empty:
+        st.warning("There are no valid review-prioritisation scores.")
+        return
+    max_score = float(valid_scores.max())
+    default_tau = float(valid_scores.quantile(0.8))
+    threshold = st.slider(
+        "Explore escalation threshold τ (review points whose score > τ)",
+        min_value=0.0,
+        max_value=max(max_score, 0.000001),
+        value=min(default_tau, max(max_score, 0.000001)),
+        key=f"escalation_threshold_{region}_{seed}_{configuration}_{score_name}",
+        help="Interactive exploratory threshold, not a calibrated operating point. For final T6 claims, use your frozen evaluation thresholds.",
+    )
+    df["review"] = df["review_score"] > threshold
+
+    # Windows are contiguous five-calendar-day blocks, with explicit navigation.
+    start_day = df["SETTLEMENTDATE"].min().normalize()
+    last_day = df["SETTLEMENTDATE"].max().normalize()
+    max_offset = max(0, int((last_day - start_day).days) - 4)
+    slider_key = f"esc_window_slider_{region}_{seed}_{configuration}"
+    if slider_key not in st.session_state:
+        st.session_state[slider_key] = 0
+    st.session_state[slider_key] = max(0, min(int(st.session_state[slider_key]), max_offset))
+
+    p, offset_col, n = st.columns([1, 5, 1])
+    with p:
+        if st.button("◀ Previous 5d", key="esc_prev", disabled=st.session_state[slider_key] == 0):
+            st.session_state[slider_key] = max(0, st.session_state[slider_key] - 5)
+    with n:
+        if st.button("Next 5d ▶", key="esc_next", disabled=st.session_state[slider_key] >= max_offset):
+            st.session_state[slider_key] = min(max_offset, st.session_state[slider_key] + 5)
+    with offset_col:
+        st.slider("Window start (days after first test date)", 0, max_offset, key=slider_key)
+
+    view_start = start_day + pd.Timedelta(days=int(st.session_state[slider_key]))
+    view_end = view_start + pd.Timedelta(days=5)
+    part = df[(df["SETTLEMENTDATE"] >= view_start) & (df["SETTLEMENTDATE"] < view_end)].copy()
+    st.markdown(f"**Window:** {view_start:%d %b %Y} – {(view_end - pd.Timedelta(seconds=1)):%d %b %Y} · **{len(part):,} observations**")
+    if part.empty:
+        st.info("This five-day window has no observations. Move the slider to another date.")
+        return
+
+    retained = part[~part["review"]]
+    review_rate = float(part["review"].mean())
+    base_cov = float(part["covered"].mean())
+    retained_cov = float(retained["covered"].mean()) if len(retained) else float("nan")
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Human review", f"{review_rate:.1%}", f"{int(part['review'].sum()):,} forecasts")
+    m2.metric("Before review coverage", f"{base_cov:.1%}")
+    m3.metric("Retained coverage", f"{retained_cov:.1%}" if np.isfinite(retained_cov) else "Undefined")
+    m4.metric("Coverage target", "90%", "Met" if np.isfinite(retained_cov) and retained_cov >= 0.9 else "Not met")
+
+    # Figure U: forecast plus 90% interval, misses, grouped human-review stretches;
+    # and a second panel for rolling coverage. Five-day window = 240 half-hours.
+    rolling_n = st.select_slider('Rolling coverage window (half-hour observations)',
+                                 options=[24, 48, 96, 240, 336], value=48, key='esc_roll_n')
+    df['rolling_coverage'] = df['covered'].astype(float).rolling(rolling_n, min_periods=rolling_n).mean()
+    part = df[(df['SETTLEMENTDATE'] >= view_start) & (df['SETTLEMENTDATE'] < view_end)].copy()
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.075,
+                        row_heights=[0.73, 0.27])
+    x = part['SETTLEMENTDATE']
+    fig.add_trace(go.Scatter(x=x, y=part['upper'], mode='lines', showlegend=False,
+                             line=dict(width=0), hoverinfo='skip'), row=1, col=1)
+    fig.add_trace(go.Scatter(x=x, y=part['lower'], mode='lines', name='90% prediction interval',
+                             fill='tonexty', fillcolor='rgba(45,122,167,.16)',
+                             line=dict(width=0), hoverinfo='skip'), row=1, col=1)
+    fig.add_trace(go.Scatter(x=x, y=part['y_true'], name='Actual demand', mode='lines',
+                             line=dict(color='#23394b', width=2)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=x, y=part['point_forecast'], name='Forecast', mode='lines',
+                             line=dict(color='#1684a1', width=1.8)), row=1, col=1)
+    misses = part[~part['covered']]
+    if not misses.empty:
+        fig.add_trace(go.Scatter(x=misses['SETTLEMENTDATE'], y=misses['y_true'],
+                                 mode='markers', name='Outside prediction interval',
+                                 marker=dict(symbol='circle-open', color='#bf4c51', size=10, line=dict(width=2))), row=1, col=1)
+    # Shade consecutive reviewed runs. This is not a claim that the interval itself widens.
+    review = part['review'].to_numpy(bool)
+    timestamps = part['SETTLEMENTDATE'].reset_index(drop=True)
+    run_start = None
+    for i, active in enumerate(review):
+        if active and run_start is None: run_start = i
+        if run_start is not None and (not active or i == len(review)-1):
+            stop = i if not active else i+1
+            end_at = timestamps.iloc[stop] if stop < len(timestamps) else timestamps.iloc[-1] + pd.Timedelta(minutes=30)
+            fig.add_vrect(x0=timestamps.iloc[run_start], x1=end_at, fillcolor='#efb36a',
+                          opacity=.17, line_width=0, row=1, col=1)
+            run_start = None
+    reviewed = part[part['review']]
+    if not reviewed.empty:
+        fig.add_trace(go.Scatter(x=reviewed['SETTLEMENTDATE'], y=reviewed['point_forecast'],
+                                 mode='markers', name='Sent for review',
+                                 marker=dict(color='#bb762a', symbol='diamond', size=6, opacity=.85)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=x, y=part['rolling_coverage']*100, name='Rolling coverage',
+                             mode='lines', line=dict(color='#c37d39', width=2)), row=2, col=1)
+    fig.add_hline(y=90, line_color='#65717d', line_dash='dash', row=2, col=1)
+    fig.update_yaxes(title_text='Demand (MW)', row=1, col=1)
+    fig.update_yaxes(title_text='Coverage (%)', range=[0, 102], row=2, col=1)
+    fig.update_xaxes(title_text='Settlement date', row=2, col=1)
+    fig.update_layout(title='Figure U · Calibrated forecast and human escalation · five-day window',
+                      height=670, hovermode='x unified', legend=dict(orientation='h', y=-.13),
+                      margin=dict(l=30, r=20, t=65, b=90), plot_bgcolor='white')
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption('Orange shading = timestamps flagged for review. Red circles = realised misses (evaluation only); '
+               'the current observation error is never used to decide its own escalation. Rolling coverage uses '
+               f'{rolling_n} half-hour observations and includes reviewed points for diagnostic evaluation.')
+    if not np.isfinite(retained_cov):
+        st.warning('All points were sent to human review; retained coverage is undefined.')
+    elif retained_cov < .90:
+        st.info('Retained coverage is below 90% in this window.')
+    with st.expander('Inspect five-day decisions and threshold signal'):
+        graph = go.Figure()
+        graph.add_trace(go.Scatter(x=x, y=part['review_score'], name='Review signal', line=dict(color='#a66225')))
+        graph.add_hline(y=threshold, line_dash='dash', line_color='#c44343', annotation_text='τ threshold')
+        graph.update_layout(height=290, xaxis_title='Settlement date', yaxis_title='Score (MW)')
+        st.plotly_chart(graph, use_container_width=True)
+        table(part[['SETTLEMENTDATE','y_true','point_forecast','lower','upper','covered',
+                    'review_score','review','rolling_coverage']],
+              f'five_day_escalation_{region}_{seed}')
+    st.caption('This is a retrospective, exploratory visualisation. Moving the window does not change the '
+               'threshold. The dashboard does not simulate human corrections or claim operational calibration.')
+
+
+def render_model_selection():
+    section('Forecasting model selection · validation only')
+    st.caption('Supervisor guidance: select a model using training-period validation; never choose it using the test stream. '
+               'Gradient Boosting remains the fixed forecaster in the current demo for consistency and runtime.')
+    region = region_control('ms_region')
+    base = RESULTS / 'model_selection' / region
+    for fname in ['validation_comparison.csv','validation_summary.csv']:
+        path = base / fname
+        if path.exists():
+            st.subheader(fname.replace('_',' ').replace('.csv','').title())
+            table(load(path), f'model_{region}_{fname[:-4]}')
+    report = base / 'model_selection_report.md'
+    if report.exists():
+        with st.expander('Selection rationale and validation details'):
+            st.markdown(report.read_text(encoding='utf-8'))
+    st.info('These results document region-specific model-selection evidence; they do not replace GB in the current adaptation experiments.')
+
+def render_f4():
+    section('F4 · Rolling coverage trajectory')
+    a,b=st.columns(2)
+    with a: region=region_control('f4_region')
+    with b: detector=st.selectbox('Detector', ['adwin','kswin','page_hinkley'],key='f4_detector')
+    show_image(RESULTS / 'figures/uncertainty/f4'/f'F4_{region}_{detector}_four_arms.png')
+    st.caption('Four arms, three UQ methods, five seeds. The 90% line represents nominal coverage. '
+               'Event-regime annotations reflect the revised post-event buffer.')
+    with st.expander('F4 underlying five-seed metrics'):
+        p=RESULTS/'figures/uncertainty/f4/F4_coverage_width_mean_sd.csv'
+        if p.exists(): table(filter_region(load(p),region),'f4_aggregate_'+region)
+
+def render_f5():
+    section('F5 · Human-review escalation trade-off')
+    a,b,c=st.columns(3)
+    with a: region=region_control('f5_region')
+    with b: detector=st.selectbox('Detector',['adwin','kswin','page_hinkley'],key='f5_detector')
+    with c: score=st.radio('Review score',['Interval width','Lagged nonconformity'],key='f5_score')
+    folder='f5_width' if score=='Interval width' else 'f5_nonconformity'
+    alternatives=[RESULTS/'figures/uncertainty'/folder,
+                  RESULTS/'figures/uncertainty'/('f5_width_final' if score=='Interval width' else 'f5_nonconformity_final')]
+    image=next((p/f'F5_{region}_{detector}.png' for p in alternatives if (p/f'F5_{region}_{detector}.png').exists()),alternatives[0]/f'F5_{region}_{detector}.png')
+    show_image(image)
+    st.caption('F5: review rate on the horizontal axis, retained coverage on the vertical axis. '
+               'The earliest tested point reaching 90% is the reported minimum; an already adequate unreviewed '
+               'stream requires 0% review. Missing targets are not assumed to be reachable.')
+    base=image.parent
+    with st.expander('F5 crossing points, figure audit and curve data'):
+        for fname in ['F5_90pct_crossings.csv','F5_curve_points_five_seed.csv','F5_figure_audit.csv']:
+            p=base/fname
+            if p.exists():
+                st.caption(fname)
+                df=filter_region(load(p),region)
+                table(df, 'f5_'+region+'_'+folder+'_'+fname[:-4])
+
+def _t6_sources():
+    """Discover completed T6 experiments, preserving score-specific provenance."""
+    base=RESULTS/'tables'/'uncertainty'
+    if not base.exists(): return []
+    folders={p.parent for p in base.rglob('t6_aggregate_audit.csv') if 'archive' not in p.parts}
+    folders |= {p.parent for p in base.rglob('t6_*_*.csv') if 'archive' not in p.parts}
+    answer=[]
+    for folder in sorted(folders):
+        candidates=list(folder.glob('t6_SA1_*.csv'))+list(folder.glob('t6_NSW1_*.csv'))
+        if not candidates: continue
+        manifest=folder/'t6_manifest.json'
+        desc=str(folder.relative_to(base)).lower()
+        if manifest.exists():
+            try:
+                import json
+                meta=json.loads(manifest.read_text())
+                desc+=' '+str(meta.get('score','')).lower()+' '+str(meta.get('log_group','')).lower()
+            except Exception: pass
+        if any(term in desc for term in ['lag1','nonconformity','lagged']):
+            kind='Lagged nonconformity (previous 30-minute error)'
+        elif any(term in desc for term in ['width','interval','agaci','escalation','t6']):
+            kind='Interval width'
+        else: kind='Unclassified historical T6'
+        answer.append((kind,folder))
+    return answer
+
+
+def render_t6():
+    section('T6 · Human-review operating points')
+    sources=_t6_sources()
+    if not sources:
+        st.warning('No T6 per-configuration tables found under results/tables/uncertainty.')
+        st.caption('Expected separate T6 output folders for interval-width and lagged-nonconformity escalation.')
+        return
+    kinds=list(dict.fromkeys(x[0] for x in sources))
+    a,b=st.columns(2)
+    with a: region=region_control('t6_region_new')
+    with b: kind=st.selectbox('Escalation signal',kinds,key='t6_signal_new')
+    matching=[folder for label,folder in sources if label==kind]
+    folder=st.selectbox('T6 experiment',matching,
+        format_func=lambda p:str(p.relative_to(RESULTS)),key='t6_folder_new')
+    agg_path=folder/'t6_aggregate_audit.csv'
+    if agg_path.exists():
+        aggregate=filter_region(load(agg_path),region)
+        configs=sorted(aggregate['configuration'].dropna().astype(str).unique().tolist()) if 'configuration' in aggregate else []
+        methods=sorted(aggregate['uq_method'].dropna().astype(str).unique().tolist()) if 'uq_method' in aggregate else []
+    else:
+        aggregate=pd.DataFrame()
+        files=list(folder.glob(f't6_{region}_*.csv'))
+        # Parse from filenames only as a fallback for legacy folders.
+        configs=sorted({f.stem[len('t6_'+region+'_'):].rsplit('_',2)[0] for f in files})
+        methods=[]
+    if not configs:
+        st.warning('No T6 configurations for this region in this experiment.');return
+    c1,c2=st.columns(2)
+    with c1: config=st.selectbox('Adaptation configuration',configs,key='t6_config_new')
+    with c2:
+        if methods:
+            method=st.selectbox('Uncertainty method',methods,key='t6_method_new')
+        else: method=None
+    st.caption('Operating points are measured on retained forecasts, without assuming a human corrected escalated predictions. Budget columns use the evaluated discrete thresholds.')
+    if not aggregate.empty:
+        data=aggregate[aggregate['configuration'].astype(str).eq(config)].copy()
+        if method is not None: data=data[data['uq_method'].astype(str).eq(method)]
+        if 'metric' in data and 'display' in data:
+            order=['review rate for 0.90','review rate for 0.95','coverage @ 5%','coverage @ 10%','coverage @ 20%']
+            pivot=data.pivot_table(index='regime',columns='metric',values='display',aggfunc='first')
+            pivot=pivot.reindex(index=['pre-drift','drift','post-drift','all'],columns=order)
+            st.subheader('T6 · Coverage targets and fixed review budgets')
+            st.dataframe(pivot.reset_index(),use_container_width=True,hide_index=True)
+            st.download_button('Download selected operating points',pivot.reset_index().to_csv(index=False),
+                file_name=f'T6_{region}_{config}_{kind.split()[0]}.csv',mime='text/csv',key='t6_export_new')
+            if 'drift' in pivot.index:
+                items=st.columns(3)
+                for col,label in zip(items,['review rate for 0.90','coverage @ 10%','coverage @ 20%']):
+                    val=pivot.loc['drift',label]
+                    col.metric(label, '—' if pd.isna(val) else str(val))
+        with st.expander('Complete five-seed aggregate audit'):
+            table(aggregate,f't6_audit_{region}_{kind.split()[0]}')
+    else:
+        files=sorted(folder.glob(f't6_{region}_{config}_*.csv'))
+        if not files: st.warning('No T6 file for this selection.');return
+        selected_file=st.selectbox('UQ method / results file',files,format_func=lambda x:x.stem,key='t6_file_new')
+        table(load(selected_file),f't6_{region}_{config}')
+    other={label for label,_ in sources if label!=kind}
+    if other: st.caption('Switch the escalation signal above to compare the other protocol; do not interpret the two protocols as the same scoring rule.')
+
+# ============================================================
+# T7 — CROSS-TEAM TRIGGER COMPARISON (PROVISIONAL)
+# ============================================================
+
+def render_t7():
+    section('T7 · Cross-team trigger comparison')
+    st.write('Team 41: distribution-shift trigger. Team 42: forecast-error-based trigger.')
+    left, right = st.columns(2)
+    with left:
+        region = region_control('t7_region_selected')
+    with right:
+        detector = st.selectbox('Team 42 error detector', ['page_hinkley','adwin','kswin'],
+            format_func=lambda x: {'page_hinkley':'Page–Hinkley (closest algorithm match)','adwin':'ADWIN','kswin':'KSWIN'}[x],
+            key='t7_error_detector')
+    arm = st.selectbox(
+        'Team 42 adaptation arm', ['C', 'D'],
+        format_func=lambda x: 'Arm D · Recent 180-day window' if x == 'D' else 'Arm C · Full history',
+        key='t7_adaptation_arm',
+    )
+    configuration = f'D_180d_{detector}' if arm == 'D' else f'C_{detector}'
+    arm_description = ('a 180-day recent window' if arm == 'D' else 'full available history')
+    st.caption(f'Team 42: **{configuration}** — drift-triggered retraining using {arm_description}; seeds 1–5.')
+    if detector != 'page_hinkley':
+        st.info('ADWIN/KSWIN are useful sensitivity checks, but Team 41 currently uses Page–Hinkley. Select Page–Hinkley for the closest detector alignment.')
+
+    t4_path = RESULTS / 'tables/adaptation/t4/t4_seed_level_metrics.csv'
+    if not t4_path.is_file():
+        st.error('T7 requires results/tables/adaptation/t4/t4_seed_level_metrics.csv')
+        return
+    t4 = pd.read_csv(t4_path)
+    expected = {'region','configuration','seed','mae_drift','n_retrains'}
+    if not expected.issubset(t4):
+        st.error(f'T4 source missing columns: {sorted(expected-set(t4.columns))}')
+        return
+    sample = t4.loc[(t4.region.astype(str).str.upper()==region)&
+                    (t4.configuration.astype(str)==configuration)].copy()
+    if sample.empty:
+        st.warning(f'No matching Team 42 seed results found for {configuration}.')
+        return
+    n_seeds = sample.seed.nunique()
+    if n_seeds != 5:
+        st.warning(f'Expected five seeds; found {n_seeds}.')
+
+    def format_number(series, unit='', digits=2):
+        numeric = pd.to_numeric(series,errors='coerce').dropna()
+        if numeric.empty: return '—'
+        mean = numeric.mean()
+        sd = numeric.std(ddof=1) if len(numeric)>1 else float('nan')
+        return f'{mean:,.{digits}f} ± {sd:,.{digits}f}{unit}' if len(numeric)>1 else f'{mean:,.{digits}f}{unit}'
+
+  
+    audited_counts = {
+        ('SA1', 'adwin'): (15, 2, 13),
+        ('SA1', 'kswin'): (22, 5, 17),
+        ('SA1', 'page_hinkley'): (5, 0, 5),
+        ('NSW1', 'adwin'): (17, 1, 16),
+        ('NSW1', 'kswin'): (27, 2, 25),
+        ('NSW1', 'page_hinkley'): (5, 0, 5),
+    }  # (raw alerts, suppressed, accepted), matched to official T2 output
+    raw_count, suppressed_count, accepted_count = audited_counts[(region, detector)]
+    audit_path = RESULTS / 'tables/detection/T2_raw_alerts_refractory_audit.csv'
+    if audit_path.is_file():
+        audit = pd.read_csv(audit_path)
+        required_audit = {'region', 'detector', 'raw_alerts',
+                          'suppressed_refractory', 'accepted_detections'}
+        if required_audit.issubset(audit.columns):
+            matching = audit.loc[
+                audit['region'].astype(str).str.upper().eq(region) &
+                audit['detector'].astype(str).str.lower().eq(detector)
+            ]
+            if len(matching) == 1:
+                values = matching.iloc[0]
+                candidate = tuple(int(values[c]) for c in
+                    ['raw_alerts', 'suppressed_refractory', 'accepted_detections'])
+                if candidate[0] == candidate[1] + candidate[2]:
+                    raw_count, suppressed_count, accepted_count = candidate
+                else:
+                    st.warning('T2 raw-alert audit does not balance; using verified reference counts.')
+
+    # Guard against silently displaying raw counts from a different T2 run.
+    t2_path = RESULTS / 'tables/detection/T2_aemo_detection.csv'
+    if t2_path.is_file():
+        t2 = pd.read_csv(t2_path)
+        if {'region', 'detector', 'detections'}.issubset(t2.columns):
+            matching = t2.loc[
+                t2['region'].astype(str).str.upper().eq(region) &
+                t2['detector'].astype(str).str.lower().str.replace('-', '_', regex=False).eq(detector)
+            ]
+            if len(matching) == 1:
+                official_count = int(matching.iloc[0]['detections'])
+                if official_count != accepted_count:
+                    st.warning('T2 official accepted count differs from the raw-alert audit. Review source versions before comparison.')
+
+    b_values = {
+        'MAE during drift': format_number(sample['mae_drift'], ' MW'),
+        'Worst 24h coverage': '—',
+        'Review rate for 0.90 coverage (interval width)': '—',
+        'Review rate for 0.90 coverage (nonconformity, 30 min)': '—',
+        'Detections raised': str(accepted_count),
+        'Retrains triggered': format_number(sample['n_retrains'],digits=1),
+    }
+    # T4 retrain counts are independent experimental results, not inferred
+    # from the raw alert tally.
+
+    st.subheader('Match uncertainty and human-review settings')
+    a,b = st.columns(2)
+    with a:
+        uq = st.selectbox('Common uncertainty method',
+            ['agaci_boa','static_conformal','adaptive_conformal','Not agreed'],
+            key='t7_uq', help='Team 41 reports AgACI 90% intervals. Confirm matching implementation and calibration details.')
+    with b:
+        signals = st.multiselect('Common escalation signals',
+            ['Interval width', 'Lagged 30-minute nonconformity'],
+            default=['Interval width', 'Lagged 30-minute nonconformity'],
+            key='t7_escalation_signals',
+            help='Select both signals to populate both human-review rows independently.')
+
+    # Optional explicit, provenance-labelled T5/T6 values. No silent folder matching.
+    with st.expander('Populate Team 42 uncertainty results from matching T5/T6 outputs'):
+        st.write('Choose the actual five-seed results for the same configuration, UQ method and escalation signal. No values are inferred from a different experiment.')
+        base_uq = RESULTS / 'tables/uncertainty'
+        if uq != 'Not agreed':
+            t5_files = sorted(p for p in base_uq.rglob(f'T5_{region}_{configuration}.csv')
+                if 'archive' not in p.parts and 'simulation' not in str(p).lower() and 't5_aemo' not in str(p).lower()) if base_uq.exists() else []
+            if t5_files:
+                chosen_t5 = st.selectbox('T5 source', t5_files, format_func=lambda p: str(p.relative_to(RESULTS)), key='t7_t5_file')
+                st.caption('T5 is a coverage source; select a matching drift-regime row. T5 worst-24h values are not substituted if the method or configuration is absent.')
+                d5 = pd.read_csv(chosen_t5)
+                if {'UQ method','regime','worst 24h coverage'}.issubset(d5.columns):
+                    matches = d5[(d5['regime'].astype(str)=='drift') &
+                        (d5['UQ method'].astype(str).str.lower().str.replace(' ','_',regex=False).str.contains(
+                            'agaci' if uq=='agaci_boa' else ('adaptive' if uq=='adaptive_conformal' else 'static'), na=False))]
+                    if len(matches)==1:
+                        b_values['Worst 24h coverage']=str(matches.iloc[0]['worst 24h coverage'])
+                    else:
+                        st.info('No unique T5 drift row for this method; worst-24h coverage remains blank.')
+                else:
+                    st.info('Selected T5 file does not have the expected columns.')
+            else:
+                st.info('No matching T5 table found for this D-180d configuration.')
+        if uq != 'Not agreed':
+            candidates = _t6_sources()
+            for signal in signals:
+                kind = 'Lagged nonconformity' if signal.startswith('Lagged') else 'Interval width'
+                folders = [folder for label, folder in candidates if kind.lower() in label.lower()]
+                review_label = ('Review rate for 0.90 coverage (nonconformity, 30 min)'
+                                if signal.startswith('Lagged') else 'Review rate for 0.90 coverage (interval width)')
+                if folders:
+                    selected_folder = st.selectbox(f'T6 source · {signal}', folders,
+                        format_func=lambda p: str(p.relative_to(RESULTS)),
+                        key='t7_t6_folder_' + ('lagged' if signal.startswith('Lagged') else 'width'))
+                    audit_path = selected_folder / 't6_aggregate_audit.csv'
+                    if audit_path.exists():
+                        t6 = pd.read_csv(audit_path)
+                        needed = {'region', 'configuration', 'uq_method', 'regime', 'metric', 'display'}
+                        if needed.issubset(t6.columns):
+                            matches = t6.loc[
+                                t6.region.astype(str).eq(region) &
+                                t6.configuration.astype(str).eq(configuration) &
+                                t6.uq_method.astype(str).eq(uq) &
+                                t6.regime.astype(str).eq('drift') &
+                                t6.metric.astype(str).eq('review rate for 0.90')]
+                            if len(matches) == 1:
+                                b_values[review_label] = str(matches.iloc[0]['display'])
+                            else:
+                                st.info(f'No unique matching T6 drift operating point for {signal}; its row remains blank.')
+                        else:
+                            st.info(f'T6 audit for {signal} lacks expected columns.')
+                    else:
+                        st.info(f'No five-seed T6 aggregate audit for {signal}.')
+                else:
+                    st.info(f'No T6 folder found for {signal}.')
+
+    st.subheader('Headline T7 — Team 41 vs Team 42')
+    st.caption('Team 41 values are transcribed from its shared T7 table; Team 42 values are preliminary until experimental alignment is confirmed.')
+    # Team 41's shared T7 results 
+    # Its reported values remain provisional until source/protocol alignment is verified.
+    group_a_t7 = {
+        'SA1': {
+            'MAE during drift': '281 ± 16 MW',
+            'Worst 24h coverage': '0.71 ± 0.03',
+            'Review rate for 0.90 coverage (interval width)': '0.0%',
+            'Review rate for 0.90 coverage (nonconformity, 30 min)': '0.0%',
+            'Detections raised': '15',
+            'Retrains triggered': '15',
+        },
+        'NSW1': {
+            'MAE during drift': '907 ± 36 MW',
+            'Worst 24h coverage': '0.73 ± 0.02',
+            'Review rate for 0.90 coverage (interval width)': '0.0%',
+            'Review rate for 0.90 coverage (nonconformity, 30 min)': '0.0%',
+            'Detections raised': '18',
+            'Retrains triggered': '18',
+        },
+    }
+    a_values = group_a_t7[region]
+    headline=pd.DataFrame({
+        'Metric':list(b_values),
+        'Team 41 · distribution shift':[a_values.get(x, '—') for x in b_values],
+        'Team 42 · forecast error':[b_values[x] for x in b_values],
+    })
+    st.dataframe(headline, use_container_width=True, hide_index=True)
+    st.caption('Both teams report accepted detector alarms after the 14-day refractory filter. Team 42 retraining counts remain sourced independently from T4.')
+    st.download_button('Download provisional T7 table', headline.to_csv(index=False),
+        file_name=f'T7_provisional_{region}_{configuration}.csv', mime='text/csv',key='t7_download')
+
+    with st.expander('Configuration alignment audit',expanded=True):
+        alignment=pd.DataFrame([
+            ['Trigger approach','Distribution shift','Forecast error','Intended comparison variable'],
+            ['Detector','Page–Hinkley','Page–Hinkley available','Same algorithm only when Page–Hinkley selected'],
+            ['Forecaster','XGBoost (gradient boosting)','HistGradientBoostingRegressor (gradient boosting)','Same gradient-boosting family, but different algorithms and implementations'],
+            ['Adaptation','Arm D · 180 days',
+             'Arm D · 180 days' if arm == 'D' else 'Arm C · full history',
+             'Aligned: Arm D · 180 days selected' if arm == 'D' else 'NOT aligned: Team 42 selected Arm C'],
+            ['Dataset / regions','SA1 and NSW1','SA1 and NSW1','Aligned: both regions reported separately'],
+            ['Seeds','1–5','1–5','Match seed identities and test setup'],
+            ['UQ method','AgACI','AgACI available',
+             'AgACI selected; verify identical calibration/implementation' if uq == 'agaci_boa' else 'NOT aligned: select AgACI'],
+            ['Escalation signals','Interval width, Lagged 30-minute nonconformity',
+             ', '.join(signals) if signals else 'None selected',
+             'Both signal types selected; confirm scoring/threshold grid' if len(signals) == 2 else 'NOT aligned: select both signal types'],
+            ['Regime definition','Documented event + 7-day post-event buffer','Documented event + 7-day post-event buffer','Aligned: same 7-day post-event buffer'],
+        ],columns=['Setting','Team 41','Team 42','Status'])
+        st.dataframe(alignment,use_container_width=True,hide_index=True)
+     
 
 STAGES = [
     '01 · Project Overview',
@@ -570,7 +1413,7 @@ elif page == STAGES[3]:
     stage_header('STAGE 04 · F3 · T3 · T4', 'When is retraining worthwhile?',
                  'Compare frozen, periodic and drift-triggered forecasting on the same test stream, then examine regime-specific accuracy and computational cost.')
     note('<strong>Four-arm design:</strong> A — never retrain; B — every 30 days; C — on detected drift using full history; D — on detected drift using a recent window. Arms A and B are essential controls.')
-    mode=st.radio('Explore adaptation', ['Interactive forecasts', 'F3 · Four-arm comparison', 'T3 · Forecast accuracy', 'T4 · Adaptation cost'], horizontal=True, key='stage_adapt')
+    mode=st.radio('Explore adaptation', ['Interactive forecasts', 'F3 · Four-arm comparison', 'T3 · Forecast accuracy', 'T4 · Adaptation cost', 'Model selection'], horizontal=True, key='stage_adapt')
     if mode=='Interactive forecasts':
         render_6()
         insight('Research significance:', 'The forecast trajectories show actual and predicted electricity demand for the selected region, run and retraining policy. Models may initially produce identical predictions before their first retraining event.')
@@ -580,35 +1423,37 @@ elif page == STAGES[3]:
     elif mode.startswith('T3'):
         render_3()
         insight('Research significance:', 'Regime-specific MAE separates pre-drift, drift and post-drift performance; repeated seeds quantify variability rather than relying on a single run.')
-    else:
+    elif mode.startswith('T4'):
         render_4()
         insight('Research significance:', 'Retraining count, cumulative training samples and runtime contextualise MAE differences. More frequent retraining is not necessarily more effective or efficient.')
+    else:
+        render_model_selection()
 
 elif page == STAGES[4]:
     stage_header('STAGE 05 · T5 · F4', 'Do prediction intervals remain reliable during drift?',
                  'Study static and adaptive conformal uncertainty, including interval coverage, width and how calibration changes over time.')
-    section('T5 · Five-seed evaluation by regime')
     render_7()
     insight('Research significance:', 'Coverage measures how often observed demand falls inside prediction intervals; width captures their precision. Rolling and worst-window coverage reveal failures that may be hidden by full-period averages.')
-    future_output('F4','Rolling coverage trajectory',
-        'Rolling empirical coverage against the 90% target, with documented shifts annotated.', 'F4*.png')
+    render_f4()
 
 elif page == STAGES[5]:
     stage_header('STAGE 06 · T6 · F5', 'When should forecasts be escalated for human review?',
                  'Evaluate the trade-off between the fraction of cases referred for review and the coverage achieved at different operating points.')
     note('<strong>Human-review operating points:</strong> Review rate measures the proportion of forecasts referred for intervention. A target coverage level can be unreachable at some review budgets.')
-    future_output('T6','Escalation operating points',
-        'Review rates required for 90% and 95% coverage, alongside coverage at fixed review budgets.', 'T6*.csv')
-    future_output('F5','Escalation trade-off curves',
-        'Empirical coverage versus human-review rate, separated by stable and drift regimes.', 'F5*.png')
+    view=st.radio('Escalation view', ['Five-day interactive explorer','F5 · Review–coverage curves','T6 · Operating-point table'], horizontal=True, key='stage_esc_view')
+    if view.startswith('Five-day'):
+        render_escalation_explorer(ROOT)
+    elif view.startswith('F5'):
+        render_f5()
+    else:
+        render_t6()
     insight('Ethical implication:', 'Escalation trades automation against human workload. A safeguard is meaningful only if its achieved coverage and review burden can be measured.')
 
 elif page == STAGES[6]:
     stage_header('STAGE 07 · T7 · F6', 'Does the choice of drift trigger change downstream outcomes?',
                  'Compare Team 42 and Team 41 on a shared experimental protocol, separating trigger behaviour from other experimental differences.')
     note('<strong>Cross-team experimental design:</strong> Both trigger approaches are assessed with aligned forecasting models, features, data splits, seeds and retraining budgets so that trigger effects can be isolated.')
-    future_output('T7','Cross-team trigger comparison',
-        'Cross-team drift MAE, worst 24-hour coverage, review rate, detector alerts and retraining counts.', 'T7*.csv')
+    render_t7()
     future_output('F6','Trigger disagreement timeline',
         'Detection timelines for both trigger methods, including periods of disagreement.', 'F6*.png')
     insight('Research significance:', 'The comparison connects trigger behaviour to downstream drift MAE, worst-window coverage, review workload and retraining frequency.')
@@ -620,7 +1465,7 @@ elif page == STAGES[7]:
         ('Unnecessary detector alerts','Spurious triggers can waste computational resources or create false confidence in model changes.','Compare matched and unmatched detections, constrain false alarms and use a retraining refractory period.','Implemented evaluation controls; operational alert policy is future work.'),
         ('Regional generalisation','A strategy evaluated on SA1 may not behave similarly in NSW1 or new market regimes.','Report regional results separately; validate transfer before using one region as evidence for another.','Region-specific reporting is available.'),
         ('Corrupt or missing measurements','Data integrity problems could affect both forecasts and drift-triggered retraining.','Validate ordering and missingness; retain auditable experiment outputs and monitor input quality.','Input-integrity monitoring is not part of the current research prototype.'),
-        ('Overconfident forecasts','A nominal 90% interval can still fail badly during short periods of change.','Monitor rolling and worst-case coverage alongside interval width; evaluate human escalation rules.','T5/T6 and F4/F5 are still being finalised.'),
+        ('Overconfident forecasts','A nominal 90% interval can still fail badly during short periods of change.','Monitor rolling and worst-case coverage alongside interval width; evaluate human escalation rules.','T5/T6 and F4/F5 outputs are available for review; operational evaluation remains future work.'),
     ]
     for idx,(title,risk,mitigation,status) in enumerate(risks,1):
         with st.expander(f'{idx:02d} · {title}',expanded=True):
@@ -635,10 +1480,10 @@ elif page == STAGES[8]:
         ('Detection','Synthetic tests characterise responsiveness and false alarms. Documented AEMO events provide useful but incomplete context for real-world drift matching.'),
         ('Adaptation','The four-arm comparison evaluates whether drift-triggered retraining can justify its accuracy gains relative to periodic retraining and the cost of updates.'),
         ('Uncertainty','Static and adaptive conformal intervals are evaluated against a 90% target; regime-specific and worst-window results will provide a more stringent view of reliability.'),
-        ('Human review and cross-team comparison','T6/F5 will quantify the human workload of escalation. T7/F6 will examine whether differing triggers change downstream forecasting outcomes.')]:
+        ('Human review and cross-team comparison','T6/F5 quantify the experimental human-review workload. T7/F6 will examine whether differing triggers change downstream forecasting outcomes.')]:
         note(f'<strong>{title}:</strong> {body}')
     section('Current limitations and next steps')
-    st.write('Event annotations are incomplete reference data, not exhaustive changepoint truth. The generality of results beyond SA1 and NSW1 has not been established. Upcoming required outputs **T5–T7 and F4–F6** will strengthen regime-level reliability, escalation and cross-team comparison.')
+    st.write('Event annotations are incomplete reference data, not exhaustive changepoint truth. The generality of results beyond SA1 and NSW1 has not been established. Remaining cross-team deliverables **T7/F6** will strengthen regime-level reliability, escalation and cross-team comparison.')
     with st.expander('Supporting experiment outputs and figure gallery'):
         render_8()
     insight('Overall conclusion:', 'Useful adaptation cannot be determined from detection counts alone. Forecast accuracy, retraining effort, interval reliability and human-review requirements together determine the practical value of the approach.')
