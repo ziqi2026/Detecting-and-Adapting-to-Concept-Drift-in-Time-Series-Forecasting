@@ -1,0 +1,127 @@
+{
+  "region": "NSW1",
+  "selection_protocol": "2018-2019 historical validation only",
+  "fit_range": [
+    "2018-01-01 00:30:00",
+    "2019-09-30 23:30:00"
+  ],
+  "validation_range": [
+    "2019-10-01 00:00:00",
+    "2019-12-31 23:30:00"
+  ],
+  "calibration_test_used": false,
+  "window_halfhours": 336,
+  "seeds_stochastic": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "seeds_deterministic": [
+    0
+  ],
+  "primary_metric": "mean validation MAE (MW)",
+  "secondary_metric": "mean 7-day rolling MAE (MW)",
+  "selection_rule": "minimum mean validation MAE with optional runtime eligibility; runtime tiebreak",
+  "max_seconds": null,
+  "selected_model": "sarimax",
+  "comparison_complete": true,
+  "aggregated": [
+    {
+      "model": "seasonal_naive",
+      "status": "ok",
+      "seeds": 1,
+      "expected_seeds": 1,
+      "mae_mw_mean": 449.6978509963768,
+      "mae_mw_sd": 0.0,
+      "rolling_7d_mae_mw_mean": 457.59327918431524,
+      "rolling_7d_mae_mw_sd": 0.0,
+      "fit_seconds_mean": 5.58304600417614e-06,
+      "fit_seconds_sd": 0.0,
+      "predict_seconds_mean": 0.0002982919104397297,
+      "predict_seconds_sd": 0.0,
+      "total_seconds_mean": 0.00030387495644390583,
+      "total_seconds_sd": 0.0
+    },
+    {
+      "model": "sarimax",
+      "status": "ok",
+      "seeds": 1,
+      "expected_seeds": 1,
+      "mae_mw_mean": 92.5192181421064,
+      "mae_mw_sd": 0.0,
+      "rolling_7d_mae_mw_mean": 90.97935615912417,
+      "rolling_7d_mae_mw_sd": 0.0,
+      "fit_seconds_mean": 16.189755791798234,
+      "fit_seconds_sd": 0.0,
+      "predict_seconds_mean": 0.024885250022634864,
+      "predict_seconds_sd": 0.0,
+      "total_seconds_mean": 16.21464104182087,
+      "total_seconds_sd": 0.0
+    },
+    {
+      "model": "gradient_boosted",
+      "status": "ok",
+      "seeds": 5,
+      "expected_seeds": 5,
+      "mae_mw_mean": 324.22330449587105,
+      "mae_mw_sd": 3.7663542843908004,
+      "rolling_7d_mae_mw_mean": 326.9776198832849,
+      "rolling_7d_mae_mw_sd": 3.631283061256181,
+      "fit_seconds_mean": 0.1996543502435088,
+      "fit_seconds_sd": 0.09933745466599915,
+      "predict_seconds_mean": 0.00565721639432013,
+      "predict_seconds_sd": 9.567901521184614e-05,
+      "total_seconds_mean": 0.20531156663782896,
+      "total_seconds_sd": 0.09943103419097196
+    },
+    {
+      "model": "patchtst",
+      "status": "ok",
+      "seeds": 5,
+      "expected_seeds": 5,
+      "mae_mw_mean": 117.20130422487121,
+      "mae_mw_sd": 11.422231429928704,
+      "rolling_7d_mae_mw_mean": 116.5398943450216,
+      "rolling_7d_mae_mw_sd": 11.905495632932734,
+      "fit_seconds_mean": 18.095497182989494,
+      "fit_seconds_sd": 1.8628898230047404,
+      "predict_seconds_mean": 0.1298281249590218,
+      "predict_seconds_sd": 0.00856782853609576,
+      "total_seconds_mean": 18.225325307948516,
+      "total_seconds_sd": 1.8670339588903795
+    }
+  ],
+  "candidate_configs": {
+    "seasonal_naive": {
+      "season": 48
+    },
+    "sarimax": {},
+    "gradient_boosted": {
+      "feature_mode": "calendar+lags",
+      "lags": [
+        48,
+        336
+      ],
+      "seed": 0
+    },
+    "patchtst": {
+      "context_length": 336,
+      "patch_length": 16,
+      "patch_stride": 8,
+      "d_model": 64,
+      "n_heads": 4,
+      "n_layers": 2,
+      "dim_feedforward": 128,
+      "dropout": 0.1,
+      "epochs": 20,
+      "batch_size": 128,
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "patience": 3,
+      "validation_fraction": 0.1,
+      "seed": 0
+    }
+  }
+}

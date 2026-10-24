@@ -1,0 +1,43 @@
+{
+  "source": "results/series/escalation_lag1_nonconformity_full_post7/escalation_sweep.csv",
+  "source_sha256": "960b72b790e440f7bca84497be3a054412008a6b6d279e8be43337d8d50650d7",
+  "score_label": "30-minute nonconformity",
+  "max_review": 0.25,
+  "regimes": [
+    "pre-drift",
+    "drift",
+    "post-drift"
+  ],
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "detectors": [
+    "adwin",
+    "kswin",
+    "page_hinkley"
+  ],
+  "regions": [
+    "SA1",
+    "NSW1"
+  ],
+  "figure_count": 6,
+  "outputs": [
+    "F5_SA1_adwin.png",
+    "F5_SA1_kswin.png",
+    "F5_SA1_page_hinkley.png",
+    "F5_NSW1_adwin.png",
+    "F5_NSW1_kswin.png",
+    "F5_NSW1_page_hinkley.png"
+  ],
+  "layout": "four arm rows by three regime columns",
+  "D_arm": "180 days only",
+  "crossing_definition": "minimum displayed observed five-seed mean review rate achieving at least 0.90 coverage; no interpolation",
+  "crossings_file": "F5_90pct_crossings.csv",
+  "aggregation": "mean and sample SD at matching tau_quantile over 5 seeds",
+  "selection": "no threshold selection for plots; test-sweep operating points",
+  "warning": "Descriptive offline curve; no prospective threshold guarantee"
+}

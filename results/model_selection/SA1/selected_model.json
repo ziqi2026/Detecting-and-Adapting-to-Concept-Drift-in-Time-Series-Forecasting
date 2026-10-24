@@ -1,0 +1,51 @@
+{
+  "region": "SA1",
+  "project_data_loader": "drift_lab.data_loader",
+  "project_forecasters": "drift_lab.forecasters",
+  "raw_data_path": "data/raw",
+  "fit_dates": [
+    "2018-01-01 00:30:00",
+    "2019-09-30 23:30:00"
+  ],
+  "validation_dates": [
+    "2019-10-01 00:00:00",
+    "2019-12-31 23:30:00"
+  ],
+  "calibration_and_test_used": false,
+  "prediction_protocol": "causal one-step ahead; SARIMAX uses fitted state directly, other forecasters receive fit as history_df",
+  "selection_rule": "lowest validation MAE among models within any predeclared runtime limit",
+  "max_seconds": null,
+  "complete_four_model_comparison": true,
+  "provisional_winner": "patchtst",
+  "selected_model": "patchtst",
+  "results": [
+    {
+      "model": "seasonal_naive",
+      "status": "ok",
+      "validation_mae": 179.56832201086962,
+      "runtime_seconds": 0.0005,
+      "error": ""
+    },
+    {
+      "model": "sarimax",
+      "status": "ok",
+      "validation_mae": 38.91866786849628,
+      "runtime_seconds": 30.7555,
+      "error": ""
+    },
+    {
+      "model": "gradient_boosted",
+      "status": "ok",
+      "validation_mae": 175.2656361415236,
+      "runtime_seconds": 0.1821,
+      "error": ""
+    },
+    {
+      "model": "patchtst",
+      "status": "ok",
+      "validation_mae": 36.96537807575171,
+      "runtime_seconds": 28.1296,
+      "error": ""
+    }
+  ]
+}

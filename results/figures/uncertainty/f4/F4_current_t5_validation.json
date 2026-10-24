@@ -1,0 +1,24 @@
+{
+  "status": "passed_against_current_t5",
+  "figure_checks": {
+    "figures": 6,
+    "audited_streams": 80,
+    "detectors": [
+      "adwin",
+      "kswin",
+      "page_hinkley"
+    ],
+    "configurations": 8
+  },
+  "t5_checks": {
+    "matched_metrics": 2880,
+    "matched_groups": 720,
+    "t5_source": "results/tables/uncertainty/t5_agaci_full_post7/t5_seed_metrics.csv",
+    "t5_source_sha256": "4c71aba3a8cdb5a9ef869af643e856a3150443b7d7ec8e3bdfaa08d0c17217f2",
+    "comparison_csv": "F4_current_t5_validation.csv",
+    "comparison_csv_sha256": "9f0411f7f2c67506de97d0c2979934d9b0b6fa3ff0e9ed530a9be263ce3bb351"
+  },
+  "t5_dir": "results/tables/uncertainty/t5_agaci_full_post7",
+  "canonical_runs_log": "not_checked; current T5 cross-check only",
+  "generator_report": "results/figures/uncertainty/f4/F4_validation.json"
+}
