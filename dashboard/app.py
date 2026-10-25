@@ -37,7 +37,7 @@ def table(df, name):
 
 def show_image(path, caption=None):
     if path.is_file():
-        st.image(str(path), caption=caption or path.name, use_column_width=True)
+        st.image(str(path), caption=caption or path.name, width="stretch")
     else:
         st.info(f'Figure not available: {path.name}')
 
@@ -406,6 +406,33 @@ def render_5():
     df = filter_region(load(RESULTS / 'tables/adaptation/revised/pgs242_128_five_seed_final/summary_all_seeds.csv'), region)
     if not df.empty:
         df = df[(df['arm'].isin(['A','B'])) | (df['detector'].astype(str)==detector)]
+        selected_configs = ['A', 'B', f'C_{detector}', f'D_180d_{detector}']
+        comparison = df[df['configuration'].isin(selected_configs)].copy()
+
+        summary = comparison.groupby('configuration').agg(
+            seeds=('seed', 'nunique'),
+            mae_mean=('overall_mae', 'mean'),
+            mae_sd=('overall_mae', 'std'),
+            retrains_mean=('n_retrains', 'mean'),
+        ).reindex(selected_configs)
+
+        summary.index.name = 'Configuration'
+        summary = summary.rename(columns={
+            'seeds': 'Seeds available',
+            'mae_mean': 'Mean overall MAE (MW)',
+            'mae_sd': 'MAE SD (MW)',
+            'retrains_mean': 'Mean retrains',
+        })
+
+        st.subheader('Four-arm summary · matching the figure')
+        st.dataframe(summary.round(2), use_container_width=True)
+        st.caption(
+            'Overall test-period MAE: mean and sample SD across available seeds. '
+            'Lower MAE means smaller prediction errors. '
+            'The figure shows 7-day rolling MAE. Arm D uses 180 days here. '
+            'Other recent-window configurations remain in the detailed table below.'
+        )
+
         st.subheader('Five-seed experiment rows for selected detector')
         table(df, 'f3_five_seed_'+region+'_'+detector)
 
