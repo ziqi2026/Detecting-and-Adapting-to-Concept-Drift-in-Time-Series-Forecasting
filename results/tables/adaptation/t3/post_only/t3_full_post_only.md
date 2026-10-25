@@ -1,0 +1,14 @@
+# T3 — full-stream forecast accuracy by regime (buffer mode: post_only)
+
+Drift window = documented event + 7 days after it (`[event_start, event_end + 1 day + 7 days)`); pre-drift = everything before the first drift window; post-drift = everything after it outside the union of drift windows.
+
+| arm | region | MAE pre-drift | MAE drift | MAE post-drift | pinball loss | seeds |
+| --- | --- | --- | --- | --- | --- | --- |
+| A · never retrain | NSW1 | 284.8 ± 4.4 | 366.4 ± 1.4 | 371.8 ± 1.4 | 76.6 ± 1.0 | 5 |
+| B · periodic 30d | NSW1 | 284.8 ± 4.4 | 334.9 ± 1.0 | 344.7 ± 0.3 | 75.1 ± 1.0 | 5 |
+| C · drift + full history (KSWIN) | NSW1 | 284.8 ± 4.4 | 336.6 ± 1.0 | 346.0 ± 0.8 | 75.2 ± 1.1 | 5 |
+| D · drift + 180d window (Page-Hinkley) | NSW1 | 284.8 ± 4.4 | 430.6 ± 0.6 | 449.9 ± 0.3 | 83.8 ± 0.7 | 5 |
+| A · never retrain | SA1 | 145.4 ± 5.6 | 155.5 ± 0.9 | 143.6 ± 0.4 | 26.9 ± 0.3 | 5 |
+| B · periodic 30d | SA1 | 145.4 ± 5.6 | 145.6 ± 0.3 | 133.2 ± 0.4 | 26.2 ± 0.3 | 5 |
+| C · drift + full history (KSWIN) | SA1 | 145.4 ± 5.6 | 146.0 ± 0.4 | 133.4 ± 0.3 | 26.1 ± 0.3 | 5 |
+| D · drift + 180d window (Page-Hinkley) | SA1 | 145.4 ± 5.6 | 186.5 ± 0.0 | 179.4 ± 0.0 | 31.1 ± 0.0 | 5 |

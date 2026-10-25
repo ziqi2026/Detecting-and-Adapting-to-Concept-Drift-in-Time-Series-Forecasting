@@ -4,12 +4,32 @@ Generate T3 — Forecast Accuracy by Regime.
 This script:
 - loads timestamp-level PGS242-128 forecast streams;
 - uses shared event-aware regime utilities from drift_lab.evaluation;
+- labels the full-stream regimes with a selectable buffer convention
+  (--buffer-mode post_only | symmetric, see below);
 - computes MAE by pre-drift, drift, and post-drift regime;
 - computes a 336-observation rolling MAE;
 - computes 90% interval pinball loss with shared functions;
 - aggregates seed-level results as mean ± sample standard deviation.
 
+Buffer modes (full-stream scope; buffer length --regime-days = 7):
+
+    post_only (default, supervisor 20 Oct)
+        drift = [event_start, event_end + 1 day + 7 days)
+    symmetric (earlier +/- 7-day convention, kept reproducible)
+        drift = [event_start - 7 days, event_end + 1 day + 7 days)
+
+    pre-drift = everything before the first drift window; post-drift =
+    everything after it that is outside the union of drift windows. The
+    event-local scope has its own fixed 7-day pre/post windows and is not
+    affected by --buffer-mode.
+
 T3 is generated from experiment outputs, never manually entered.
+
+Run from the repository root, once per mode:
+    python experiments/adaptation/generate_t3_forecast_accuracy.py \
+        --buffer-mode post_only --scopes full
+    python experiments/adaptation/generate_t3_forecast_accuracy.py \
+        --buffer-mode symmetric --scopes full
 """
 
 from __future__ import annotations
@@ -30,6 +50,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from drift_lab.evaluation import (
+    FULL_STREAM_BUFFER_MODES,
     assign_full_stream_forecast_regimes,
     assign_forecast_regimes,
     build_forecast_event_windows,
@@ -38,6 +59,12 @@ from drift_lab.evaluation import (
     calculate_rolling_mae,
 )
 
+
+DEFAULT_RUN_DIR = (
+    ROOT / "results/tables/adaptation/revised/pgs242_128_five_seed_final"
+)
+DEFAULT_OUTPUT_ROOT = ROOT / "results/tables/adaptation/t3"
+DEFAULT_BUFFER_MODE = "post_only"
 
 REGIONS = ("SA1", "NSW1")
 ROLLING_WINDOW = 48 * 7
@@ -58,13 +85,36 @@ DISPLAY_ARM_LABELS = {
 }
 
 
+BUFFER_MODE_NOTES = {
+    "post_only": (
+        "Drift window = documented event + 7 days after it "
+        "(`[event_start, event_end + 1 day + 7 days)`); pre-drift = "
+        "everything before the first drift window; post-drift = "
+        "everything after it outside the union of drift windows."
+    ),
+    "symmetric": (
+        "Drift window = 7 days before + documented event + 7 days after "
+        "(`[event_start - 7 days, event_end + 1 day + 7 days)`); "
+        "pre-drift = everything before the first drift window; "
+        "post-drift = everything after it outside the union of drift "
+        "windows."
+    ),
+}
+
+LOCAL_NOTE = (
+    "Event-local windows: 7 days pre, documented event as drift, 7 days "
+    "post; timestamps outside every window are excluded. Independent of "
+    "the full-stream buffer mode."
+)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument(
         "--run-dir",
         type=Path,
-        required=True,
+        default=DEFAULT_RUN_DIR,
         help="Parent directory containing seed_<n> outputs.",
     )
 
@@ -79,7 +129,28 @@ def parse_args():
         "--output-dir",
         type=Path,
         default=None,
-        help="Default: <run-dir>/t3",
+        help="Default: results/tables/adaptation/t3/<buffer-mode>",
+    )
+
+    parser.add_argument(
+        "--buffer-mode",
+        choices=FULL_STREAM_BUFFER_MODES,
+        default=DEFAULT_BUFFER_MODE,
+        help=(
+            "Full-stream regime convention: post_only = buffer after the "
+            "event only (default); symmetric = buffer before and after."
+        ),
+    )
+
+    parser.add_argument(
+        "--scopes",
+        nargs="+",
+        choices=("full", "local"),
+        default=["full", "local"],
+        help=(
+            "Which T3 scopes to write. The local scope does not depend on "
+            "--buffer-mode."
+        ),
     )
 
     parser.add_argument(
@@ -94,7 +165,7 @@ def parse_args():
         "--regime-days",
         type=int,
         default=7,
-        help="Days before/after each documented event.",
+        help="Buffer length in days (fixed at the agreed 7).",
     )
 
     parser.add_argument(
@@ -259,7 +330,13 @@ def load_seed_forecasts(run_dir, seed):
     ).reset_index(drop=True)
 
 
-def add_regimes(forecasts, events, regime_days, scope="full"):
+def add_regimes(
+    forecasts,
+    events,
+    regime_days,
+    scope="full",
+    buffer_mode=DEFAULT_BUFFER_MODE,
+):
     """Attach either full-stream or event-local regime labels."""
     if scope not in {"full", "local"}:
         raise ValueError("scope must be 'full' or 'local'.")
@@ -283,6 +360,7 @@ def add_regimes(forecasts, events, regime_days, scope="full"):
             assignments = assign_full_stream_forecast_regimes(
                 timestamps,
                 windows,
+                buffer_mode=buffer_mode,
             )
         else:
             assignments = assign_forecast_regimes(
@@ -543,7 +621,14 @@ def main():
     if len(set(args.seeds)) != len(args.seeds):
         raise ValueError("--seeds must be unique.")
 
-    output_dir = args.output_dir or (args.run_dir / "t3_full_and_local")
+    scopes = tuple(dict.fromkeys(args.scopes))
+    buffer_mode = args.buffer_mode
+
+    def tag(scope):
+        """File-name tag: full-stream files carry the buffer mode."""
+        return f"{scope}_{buffer_mode}" if scope == "full" else scope
+
+    output_dir = args.output_dir or (DEFAULT_OUTPUT_ROOT / buffer_mode)
     if output_dir.exists() and any(output_dir.iterdir()):
         raise FileExistsError(
             f"Output folder is not empty: {output_dir}. "
@@ -554,7 +639,7 @@ def main():
     events = pd.read_csv(args.events)
     radii = load_seed_radii(args.run_dir, args.seeds)
 
-    metrics_by_scope = {"full": [], "local": []}
+    metrics_by_scope = {scope: [] for scope in scopes}
     audits = {}
     counts = []
 
@@ -568,12 +653,13 @@ def main():
             alpha=args.alpha,
         )
 
-        for scope in ("full", "local"):
+        for scope in scopes:
             labelled = add_regimes(
                 forecasts,
                 events,
                 regime_days=args.regime_days,
                 scope=scope,
+                buffer_mode=buffer_mode,
             )
 
             # Preserve all local assignments in the audit, including
@@ -587,7 +673,7 @@ def main():
             if scope not in audits:
                 audits[scope] = audit
                 audit.to_csv(
-                    output_dir / f"regime_assignment_{scope}.csv",
+                    output_dir / f"regime_assignment_{tag(scope)}.csv",
                     index=False,
                 )
             else:
@@ -638,7 +724,7 @@ def main():
 
         del forecasts
 
-    for scope in ("full", "local"):
+    for scope in scopes:
         seed_metrics = pd.concat(
             metrics_by_scope[scope],
             ignore_index=True,
@@ -663,17 +749,25 @@ def main():
         ]
 
         table.to_csv(
-            output_dir / f"t3_{scope}.csv",
+            output_dir / f"t3_{tag(scope)}.csv",
             index=False,
         )
         seed_metrics.to_csv(
-            output_dir / f"t3_seed_metrics_{scope}.csv",
+            output_dir / f"t3_seed_metrics_{tag(scope)}.csv",
             index=False,
         )
 
         headers = list(table.columns)
+        title = (
+            f"T3 — full-stream forecast accuracy by regime "
+            f"(buffer mode: {buffer_mode})"
+            if scope == "full"
+            else "T3 — event-local forecast accuracy by regime"
+        )
         lines = [
-            f"# T3 — {scope} forecast accuracy by regime",
+            f"# {title}",
+            "",
+            BUFFER_MODE_NOTES[buffer_mode] if scope == "full" else LOCAL_NOTE,
             "",
             "| " + " | ".join(headers) + " |",
             "| " + " | ".join(["---"] * len(headers)) + " |",
@@ -683,16 +777,21 @@ def main():
                 "| " + " | ".join(map(str, values)) + " |"
             )
 
-        (output_dir / f"t3_{scope}.md").write_text(
+        (output_dir / f"t3_{tag(scope)}.md").write_text(
             "\n".join(lines) + "\n",
             encoding="utf-8",
         )
 
-        print(f"\nT3 — {scope}")
+        print(f"\nT3 — {tag(scope)}")
         print(table.to_string(index=False))
 
+    counts_name = (
+        f"regime_observation_counts_{buffer_mode}.csv"
+        if "full" in scopes
+        else "regime_observation_counts.csv"
+    )
     pd.DataFrame(counts).to_csv(
-        output_dir / "regime_observation_counts.csv",
+        output_dir / counts_name,
         index=False,
     )
 
@@ -701,19 +800,28 @@ def main():
     manifest = {
         "seeds": args.seeds,
         "regime_days": args.regime_days,
+        "buffer_mode": buffer_mode,
+        "scopes": list(scopes),
         "timezone": "Etc/GMT-10",
         "boundary": "left_closed_right_open",
         "full_rule": (
-            "pre before first buffered window; drift inside union "
-            "of buffered windows; post elsewhere after first window"
+            "pre before first drift window; drift inside union of "
+            "drift windows; post elsewhere after first window"
         ),
+        "full_drift_window": {
+            "post_only": "[event_start, event_end + 1 day + 7 days)",
+            "symmetric": (
+                "[event_start - 7 days, event_end + 1 day + 7 days)"
+            ),
+        }[buffer_mode],
         "event_selection": (
             "NEM plus region-specific events; full-stream buffered "
             "windows must overlap evaluated stream"
         ),
         "local_rule": (
             "7-day pre; documented event drift; 7-day post; "
-            "outside excluded; priority drift > pre > post"
+            "outside excluded; priority drift > pre > post "
+            "(independent of buffer_mode)"
         ),
         "pinball_scope": {
             "full": "all test timestamps",
@@ -742,12 +850,12 @@ def main():
         ),
     }
 
-    (output_dir / "t3_manifest.json").write_text(
+    (output_dir / f"t3_manifest_{buffer_mode}.json").write_text(
         json.dumps(manifest, indent=2) + "\n",
         encoding="utf-8",
     )
 
-    print(f"\nBoth T3 tables saved to: {output_dir}")
+    print(f"\nT3 ({buffer_mode}) saved to: {output_dir}")
 
 
 if __name__ == "__main__":

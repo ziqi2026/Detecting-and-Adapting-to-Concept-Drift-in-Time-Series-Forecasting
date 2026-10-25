@@ -1566,22 +1566,47 @@ def calculate_adaptation_gain(arm_drift_mae, arm_a_drift_mae, n_retrains):
         "drift_mae_difference_per_retrain": float(difference_per_retrain),
     }
 
-def assign_full_stream_forecast_regimes(timestamps, event_windows):
+FULL_STREAM_BUFFER_MODES = ("symmetric", "post_only")
+
+
+def assign_full_stream_forecast_regimes(
+    timestamps,
+    event_windows,
+    buffer_mode="post_only",
+):
     """
     Assign every timestamp to pre-drift, drift, or post-drift.
 
-    Buffered drift windows:
-        [event_start, event_end + 1 day + 7 days)
+    ``buffer_mode`` selects where the buffered drift window starts
+    (``regime_days`` is the buffer length used to build ``event_windows``):
 
-    Uses the drift_start and post_drift_end columns produced by
-    build_forecast_event_windows(). Only windows overlapping the
-    evaluated stream are applicable.
+    ``"post_only"`` (default, supervisor's 20 Oct definition)
+        [event_start, event_end + 1 day + regime_days)
+        The buffer is applied after the event only.
 
-    Overlapping windows are classified as a union.
+    ``"symmetric"`` (earlier +/- buffer definition, kept for comparison)
+        [event_start - regime_days, event_end + 1 day + regime_days)
+
+    Uses the drift_start / pre_drift_start and post_drift_end columns
+    produced by build_forecast_event_windows(). Only windows overlapping
+    the evaluated stream are applicable.
+
+    Everything before the first window is pre-drift, everything inside the
+    union of windows is drift, and everything after the first window that
+    lies outside the union is post-drift.
     """
+    if buffer_mode not in FULL_STREAM_BUFFER_MODES:
+        raise ValueError(
+            f"buffer_mode must be one of {FULL_STREAM_BUFFER_MODES}; "
+            f"got {buffer_mode!r}."
+        )
+    start_column = (
+        "pre_drift_start" if buffer_mode == "symmetric" else "drift_start"
+    )
+
     required = {
         "event_id",
-        "drift_start",
+        start_column,
         "post_drift_end",
     }
     missing = required - set(event_windows.columns)
@@ -1602,7 +1627,7 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
         timestamps = timestamps.tz_convert(AEMO_TIMEZONE)
 
     windows = event_windows.copy()
-    for column in ("drift_start", "post_drift_end"):
+    for column in (start_column, "post_drift_end"):
         values = pd.DatetimeIndex(
             pd.to_datetime(windows[column], errors="raise")
         )
@@ -1613,7 +1638,7 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
         windows[column] = values
 
     if (
-        windows["post_drift_end"] <= windows["drift_start"]
+        windows["post_drift_end"] <= windows[start_column]
     ).any():
         raise ValueError("Buffered event windows must have positive duration.")
 
@@ -1622,8 +1647,8 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
 
     windows = windows[
         (windows["post_drift_end"] > stream_start)
-        & (windows["drift_start"] <= stream_last)
-    ].sort_values(["drift_start", "event_id"])
+        & (windows[start_column] <= stream_last)
+    ].sort_values([start_column, "event_id"])
 
     if windows.empty:
         raise ValueError(
@@ -1631,7 +1656,7 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
             "Check catalogue dates and stream coverage."
         )
 
-    first_window_start = windows["drift_start"].min()
+    first_window_start = windows[start_column].min()
 
     labels = np.where(
         timestamps < first_window_start,
@@ -1643,7 +1668,7 @@ def assign_full_stream_forecast_regimes(timestamps, event_windows):
 
     for event in windows.itertuples(index=False):
         mask = (
-            (timestamps >= event.drift_start)
+            (timestamps >= getattr(event, start_column))
             & (timestamps < event.post_drift_end)
         )
         labels[mask] = "drift"
