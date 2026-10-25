@@ -23,18 +23,28 @@ drift_lab.evaluation.calculate_adaptation_gain():
   * Sign check against the supervisor's worked example: arm D with drift
     MAE 54.3, 2 retrains, gain -34.0 -> gain per retrain -17.0.
 
+Buffer mode (PGS242-169): the drift-regime MAE comes from T3, so T4 is
+generated per T3 regime convention. --buffer-mode post_only (default, event +
+7 days after) or symmetric (7 days before and after) selects which T3 seed
+metrics are read and where the outputs go. Retrain counts, training samples
+and wall-clock do not depend on the regime labels; only the MAE gain and the
+gain per retrain do.
+
 Inputs (final five-seed outputs, no re-run needed):
-  results/tables/adaptation/t3/t3_seed_metrics_full.csv -> revised full mae_drift
+  results/tables/adaptation/t3/<mode>/t3_seed_metrics_full_<mode>.csv
+                                          -> full-stream mae_drift
   <run_dir>/summary_all_seeds.csv         -> n_retrains, train_samples_total,
                                              retraining_wall_clock_s
 
-Outputs (results/tables/adaptation/t4/):
-  t4_seed_level_metrics.csv          every configuration x region x seed
-  t4_all_configurations.csv          mean +/- sd for all 17 configurations
-  t4_adaptation_cost.csv             headline table, same arms as final T3
+Outputs (results/tables/adaptation/t4/<mode>/), CSV + markdown:
+  t4_seed_level_metrics_<mode>.csv        every configuration x region x seed
+  t4_all_configurations_<mode>.*          mean +/- sd, all 17 configurations
+  t4_representative_per_arm_<mode>.*      one configuration per arm (A-D)
 
 Run from the repository root:
     python experiments/adaptation/generate_t4_adaptation_cost.py
+    python experiments/adaptation/generate_t4_adaptation_cost.py \
+        --buffer-mode symmetric
 """
 
 from __future__ import annotations
@@ -55,9 +65,20 @@ if str(SRC) not in sys.path:
 
 from drift_lab.evaluation import calculate_adaptation_gain  # noqa: E402
 
-DEFAULT_RUN_DIR = ROOT / "results/tables/adaptation/pgs242_128_five_seed_final"
-DEFAULT_T3_FILE = ROOT / "results/tables/adaptation/t3/t3_seed_metrics_full.csv"
-DEFAULT_OUTPUT_DIR = ROOT / "results/tables/adaptation/t4"
+BUFFER_MODES = ("post_only", "symmetric")
+DEFAULT_BUFFER_MODE = "post_only"
+DEFAULT_RUN_DIR = ROOT / "results/tables/adaptation/revised/pgs242_128_five_seed_final"
+T3_ROOT = ROOT / "results/tables/adaptation/t3"
+T4_ROOT = ROOT / "results/tables/adaptation/t4"
+
+
+def default_t3_file(buffer_mode):
+    return T3_ROOT / buffer_mode / f"t3_seed_metrics_full_{buffer_mode}.csv"
+
+
+def default_output_dir(buffer_mode):
+    return T4_ROOT / buffer_mode
+
 
 # Same headline configurations as the final T3 table.
 HEADLINE = {
@@ -65,6 +86,10 @@ HEADLINE = {
     "B": "B · periodic 30d",
     "C_kswin": "C · drift + full history (KSWIN)",
     "D_180d_page_hinkley": "D · drift + 180d window (Page-Hinkley)",
+}
+BUFFER_NOTES = {
+    "post_only": "drift = event + 7 days after it",
+    "symmetric": "drift = 7 days before + event + 7 days after",
 }
 REFERENCE = "A"
 KEYS = ["configuration", "region", "seed"]
@@ -160,6 +185,11 @@ def format_table(stats: pd.DataFrame, labels: dict | None) -> pd.DataFrame:
         df = df.sort_values(["region", "_order"])
     else:
         df["arm_label"] = df["configuration"]
+        # A, B, C_<detector>, D_30d..D_180d (numeric window), then detector.
+        window = df["configuration"].str.extract(r"^D_(\d+)d_")[0].astype(float)
+        df["_arm"] = df["arm"].map({"A": 0, "B": 1, "C": 2, "D": 3})
+        df["_window"] = window.fillna(0)
+        df = df.sort_values(["region", "_arm", "_window", "configuration"])
 
     return pd.DataFrame(
         {
@@ -184,27 +214,58 @@ def format_table(stats: pd.DataFrame, labels: dict | None) -> pd.DataFrame:
     ).reset_index(drop=True)
 
 
+def to_markdown(table: pd.DataFrame, title: str, note: str) -> str:
+    headers = [c for c in table.columns if c != "arm"]
+    lines = [f"# {title}", "", note, "",
+             "| " + " | ".join(headers) + " |",
+             "| " + " | ".join(["---"] * len(headers)) + " |"]
+    for _, row in table[headers].iterrows():
+        lines.append("| " + " | ".join(str(v) for v in row) + " |")
+    return "\n".join(lines) + "\n"
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate T4 adaptation cost table")
+    parser.add_argument("--buffer-mode", choices=BUFFER_MODES, default=DEFAULT_BUFFER_MODE,
+                        help="T3 regime convention the drift MAE comes from "
+                             "(post_only = default, symmetric = +/- 7 days)")
     parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR,
                         help="Original five-seed adaptation results containing summary_all_seeds.csv")
-    parser.add_argument("--t3-file", type=Path, default=DEFAULT_T3_FILE,
-                        help="Revised full T3 seed-level metrics (NOT the local T3 file)")
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--t3-file", type=Path, default=None,
+                        help="Full-stream T3 seed-level metrics (NOT the local T3 file). "
+                             "Default: t3/<buffer-mode>/t3_seed_metrics_full_<buffer-mode>.csv")
+    parser.add_argument("--output-dir", type=Path, default=None,
+                        help="Default: t4/<buffer-mode>")
     args = parser.parse_args()
 
+    mode = args.buffer_mode
+    t3_file = args.t3_file or default_t3_file(mode)
+    out_dir = args.output_dir or default_output_dir(mode)
     cost_file = args.run_dir / "summary_all_seeds.csv"
-    print(f"Using revised full T3 metrics: {args.t3_file}")
+    print(f"Buffer mode: {mode}")
+    print(f"Using full-stream T3 metrics: {t3_file}")
     print(f"Using unchanged retraining costs: {cost_file}")
-    seed_level = load_seed_level(args.t3_file, cost_file)
+    seed_level = load_seed_level(t3_file, cost_file)
     stats = aggregate(seed_level)
 
-    out_dir = args.output_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    seed_level.to_csv(out_dir / "t4_seed_level_metrics.csv", index=False)
-    format_table(stats, None).to_csv(out_dir / "t4_all_configurations.csv", index=False)
+    seed_level.to_csv(out_dir / f"t4_seed_level_metrics_{mode}.csv", index=False)
+
+    note = (
+        f"Regime convention: `{mode}` ({BUFFER_NOTES[mode]}). Mean ± sample SD over "
+        "5 seeds; MAE gain vs arm A = MAE_drift(arm) − MAE_drift(A), paired on "
+        "region and seed (negative = better); gain per retrain = gain / retrains "
+        "(computed per seed, then averaged; — when there are no retrains)."
+    )
+    full = format_table(stats, None)
     headline = format_table(stats, HEADLINE)
-    headline.to_csv(out_dir / "t4_adaptation_cost.csv", index=False)
+    for name, table, title in (
+        ("t4_all_configurations", full, "T4 — adaptation cost, all 17 configurations"),
+        ("t4_representative_per_arm", headline, "T4 — adaptation cost, representative configuration per arm"),
+    ):
+        table.to_csv(out_dir / f"{name}_{mode}.csv", index=False)
+        (out_dir / f"{name}_{mode}.md").write_text(
+            to_markdown(table, f"{title} ({mode})", note), encoding="utf-8")
 
     print(headline.to_string(index=False))
     print(f"\nWrote T4 outputs to {out_dir}")
