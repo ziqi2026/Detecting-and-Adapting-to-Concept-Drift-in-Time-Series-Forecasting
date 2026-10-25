@@ -1,0 +1,131 @@
+{
+  "created_at": "2026-10-25T09:40:06.822710+00:00",
+  "protocol": {
+    "protocol_id": "aemo_t1_7day_one_to_one_v2",
+    "point_window_days": 7,
+    "interval_grace_days": 7,
+    "regime_days": 7,
+    "timezone": "Etc/GMT-10",
+    "assignment": "tier_then_start_then_event_id_first_unused",
+    "multiple_detections_per_event": false,
+    "boundary": "both_closed"
+  },
+  "source_sha256": {
+    "results/tables/detection/aemo_detection_changepoints.csv": "f429755770c1e917244fe6406ccce352c4e00603bd5f68749366996cccc7e8d1",
+    "data/events.csv": "7f8981ef7495d8374a01ef2fae5e3fb58f228de6973a4dcecc948f6103f49225",
+    "docs/aemo_matching_protocol.json": "378eee3827e1f703c422fb62dba5acc42549adb9fa37457c3d16da4694c19b7c",
+    "docs/aemo_matching_protocol.md": "27e8059695767973585aaf514d8bbf2ce93bda5fe694cb0ca6b2f8339b3778cd",
+    "docs/event_tiering_criteria.md": "8f108ed94a7344819a41a0f25cab4606a0e1851ba2c4d9b79b5f871a6c72ad4f",
+    "experiments/detection/run_aemo_t2_evaluation.py": "6b1ec1b730f177823c87c4b00f7cc05bb3d5a3c5ca6a1335932fadb50ef14c07",
+    "src/drift_lab/evaluation.py": "edc7f22acc3eea3e29762b91ca0b76646ddc20abff86407c4a1e0f8ef15332b8",
+    "src/drift_lab/run_logger.py": "5d4b2fad100d63b0b8d59f292c9ffeef4c77f570edf03f65a6c9a39e9dfb58aa",
+    "src/drift_lab/data_loader.py": "b49689292340a9db59ab3a476e72c4dc0ee98d392d7b702c13d8bd1b93eb3074",
+    "src/drift_lab/detectors.py": "7b76d0a1f0d79cb1f4243b114edba930c9227dca91958f776da3678e93e2ba23",
+    "experiments/detection/run_aemo_drift_detection.py": "28d0635cd387f4849e268c8b7ebb3b739aa5b1dcf283abc1d0c2749a7ceee437",
+    "experiments/detection/run_synthetic_drift_detection.py": "2d5d8e4699f19ae1a77a4d7ee81f12d876843bb3be9155dc12d3afa5c18aee68"
+  },
+  "configurations": [
+    {
+      "detector": "adwin",
+      "region": "SA1",
+      "train_samples": 35039,
+      "calibration_samples": 2880,
+      "detector_config": {
+        "delta": 1e-07
+      },
+      "seed": 0,
+      "test_samples": 67249,
+      "test_start": "2020-03-01 00:00:00+10:00",
+      "test_end": "2024-01-01 00:00:00+10:00",
+      "config_hash": "5ff2d8d7c63d3c0b9b522482574ada1f81b1aaca44154fa0de4b44d8756716b7"
+    },
+    {
+      "detector": "page_hinkley",
+      "region": "SA1",
+      "train_samples": 35039,
+      "calibration_samples": 2880,
+      "detector_config": {
+        "min_instances": 30,
+        "delta": 0.001,
+        "threshold": 700,
+        "alpha": 0.999,
+        "mode": "both"
+      },
+      "seed": 0,
+      "test_samples": 67249,
+      "test_start": "2020-03-01 00:00:00+10:00",
+      "test_end": "2024-01-01 00:00:00+10:00",
+      "config_hash": "8f7222c3b98e0bf37e79c06478cd61c420eb4de7f05b905bcb58231bf6714659"
+    },
+    {
+      "detector": "kswin",
+      "region": "SA1",
+      "train_samples": 35039,
+      "calibration_samples": 2880,
+      "detector_config": {
+        "alpha": 5e-08,
+        "window_size": 480,
+        "stat_size": 120,
+        "seed": 12
+      },
+      "seed": 12,
+      "test_samples": 67249,
+      "test_start": "2020-03-01 00:00:00+10:00",
+      "test_end": "2024-01-01 00:00:00+10:00",
+      "config_hash": "6c07696d2ec12145549e774a3b64a5f1c6475857b7d5470dfee526b888d1c48e"
+    },
+    {
+      "detector": "adwin",
+      "region": "NSW1",
+      "train_samples": 35039,
+      "calibration_samples": 2880,
+      "detector_config": {
+        "delta": 1e-07
+      },
+      "seed": 0,
+      "test_samples": 67249,
+      "test_start": "2020-03-01 00:00:00+10:00",
+      "test_end": "2024-01-01 00:00:00+10:00",
+      "config_hash": "377f6f48b30161f7c2686077b042ee404a04c82673bc95fb54d6861cf2caff11"
+    },
+    {
+      "detector": "page_hinkley",
+      "region": "NSW1",
+      "train_samples": 35039,
+      "calibration_samples": 2880,
+      "detector_config": {
+        "min_instances": 30,
+        "delta": 0.001,
+        "threshold": 700,
+        "alpha": 0.999,
+        "mode": "both"
+      },
+      "seed": 0,
+      "test_samples": 67249,
+      "test_start": "2020-03-01 00:00:00+10:00",
+      "test_end": "2024-01-01 00:00:00+10:00",
+      "config_hash": "90ad48617e0a72cf0e026d0ecf09297eab3bd771e076f9e28dc2db0777c8fa26"
+    },
+    {
+      "detector": "kswin",
+      "region": "NSW1",
+      "train_samples": 35039,
+      "calibration_samples": 2880,
+      "detector_config": {
+        "alpha": 5e-08,
+        "window_size": 480,
+        "stat_size": 120,
+        "seed": 12
+      },
+      "seed": 12,
+      "test_samples": 67249,
+      "test_start": "2020-03-01 00:00:00+10:00",
+      "test_end": "2024-01-01 00:00:00+10:00",
+      "config_hash": "28464f3c808a4f009176aeee78d87a030ea7cd6e0c6824702be291c398695ff9"
+    }
+  ],
+  "runs_path": "results/verification/t2_20261025_201004_648972/runs.csv",
+  "group": "aemo_t2",
+  "split_id": "aemo_fixed_train2018_2019_test202003_task120_t2_t1rule",
+  "notes": "Stored Task 120 runs only; no model fitting, detector reruns, or inferred multi-seed uncertainty."
+}

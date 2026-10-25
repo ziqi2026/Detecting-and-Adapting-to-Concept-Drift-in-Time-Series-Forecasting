@@ -16,9 +16,10 @@ def stream(actual):
     frame = pd.DataFrame({"SETTLEMENTDATE": pd.date_range("2020-03-01", periods=len(actual), freq="30min"),
                           "y_true": actual})
     for method in f4.METHODS:
-        frame[f"{method}_lower_90"] = 0.
-        frame[f"{method}_upper_90"] = 1.
-        frame[f"{method}_covered_90"] = frame.y_true.between(0, 1)
+        frame[f"{method}_lower"] = 0.
+        frame[f"{method}_upper"] = 1.
+        frame[f"{method}_width"] = 1.
+        frame[f"{method}_covered"] = frame.y_true.between(0, 1)
     return frame
 
 
@@ -31,7 +32,7 @@ class TestF4(unittest.TestCase):
         changed = frame.copy()
         changed.loc[5, "y_true"] = 100.
         for method in f4.METHODS:
-            changed.loc[5, f"{method}_covered_90"] = False
+            changed.loc[5, f"{method}_covered"] = False
         _, after, _ = f4.check_stream(changed, 3, 48)
         pd.testing.assert_series_equal(rolling.static_coverage.iloc[:5], after.static_coverage.iloc[:5])
 
@@ -45,9 +46,17 @@ class TestF4(unittest.TestCase):
 
     def test_bad_flag_is_rejected(self):
         frame = stream([0, 1, 2])
-        frame.loc[0, "static_covered_90"] = False
+        frame.loc[0, "static_covered"] = False
         with self.assertRaises(ValueError):
             f4.check_stream(frame, 3, 48)
+
+    def test_stored_width_mismatch_is_rejected(self):
+        for method in f4.METHODS:
+            with self.subTest(method=method):
+                frame = stream([0., 1., 2.])
+                frame.loc[0, f"{method}_width"] = 2.
+                with self.assertRaisesRegex(AssertionError, "Stored width mismatch"):
+                    f4.check_stream(frame, 3, 48)
 
     def test_sample_sd_and_seed_alignment(self):
         _, one, _ = f4.check_stream(stream([0, 0, 0, 0]), 3, 48)
@@ -92,12 +101,12 @@ class TestT5Integration(unittest.TestCase):
         protocol["minimum_complete_24h_windows"] = 14
         self.assertTrue(np.isnan(f4.t5_regime_metrics(frame, labels, "static", self.ev, protocol, "SA1")[0]["worst_24h_coverage"]))
         before = self.ev.calculate_rolling_24h_coverage(frame.SETTLEMENTDATE, frame.y_true,
-            frame.static_lower_90, frame.static_upper_90, cadence="30min", regimes=labels.regime,
+            frame.static_lower, frame.static_upper, cadence="30min", regimes=labels.regime,
             boundary_policy="within_regime")
         changed = frame.y_true.copy()
         changed.iloc[-1] = 99.
         after = self.ev.calculate_rolling_24h_coverage(frame.SETTLEMENTDATE, changed,
-            frame.static_lower_90, frame.static_upper_90, cadence="30min", regimes=labels.regime,
+            frame.static_lower, frame.static_upper, cadence="30min", regimes=labels.regime,
             boundary_policy="within_regime")
         np.testing.assert_allclose(before.iloc[:-1], after.iloc[:-1], equal_nan=True)
         self.assertTrue(np.isnan(before.iloc[106]))
