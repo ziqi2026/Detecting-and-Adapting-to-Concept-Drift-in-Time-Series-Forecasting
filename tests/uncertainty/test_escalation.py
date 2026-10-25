@@ -323,7 +323,9 @@ def test_invalid_inputs_are_rejected(call):
 
 # Runner on synthetic PGS242-160 fixtures
 
-TEST_SIZE = 48 * 14  # 2020-03-01 to 2020-03-14: pre-drift then drift (EVT-2020-02).
+# Keep the required March 1 TEST origin; extend through COVID onset on March 16.
+TEST_START = "2020-03-01"
+TEST_SIZE = 48 * 28
 
 
 def write_fixture(run_dir, *, seed=1, region="SA1", truth_shift=0.0):
@@ -340,7 +342,7 @@ def write_fixture(run_dir, *, seed=1, region="SA1", truth_shift=0.0):
          "upstream_run_id": f"synthetic_seed{seed}", "split_id": split_id}))
 
     residuals = rng.normal(0.0, 30.0, size=480)
-    timestamps = pd.date_range("2020-03-01", periods=TEST_SIZE, freq="30min")
+    timestamps = pd.date_range(TEST_START, periods=TEST_SIZE, freq="30min")
     y_true = 1300.0 + 200.0 * np.sin(np.arange(TEST_SIZE) / 48 * 2 * np.pi)
     y_true = y_true + rng.normal(0.0, 30.0, size=TEST_SIZE)
     y_true[TEST_SIZE // 2:] += truth_shift
@@ -383,6 +385,14 @@ def run_fixture(tmp_path, run_dir, name, **kwargs):
                    t5_manifest=tmp_path / "no_t5_manifest.json", seeds=(1,))
     options.update(kwargs)
     return escalation_runner.run_sweep(**options)
+
+
+def test_runner_fixture_crosses_event_start_without_pre_event_buffer():
+    timestamps = pd.date_range(TEST_START, periods=TEST_SIZE, freq="30min")
+    labels = escalation_runner.assign_regimes(timestamps, ROOT / "data/events.csv", "SA1")
+    assert list(labels[:48 * 15]) == ["pre-drift"] * (48 * 15)
+    assert timestamps[48 * 15] == pd.Timestamp("2020-03-16")
+    assert list(labels[48 * 15:]) == ["drift"] * (48 * 13)
 
 
 def test_runner_end_to_end_schema_and_static_collapse(tmp_path):
