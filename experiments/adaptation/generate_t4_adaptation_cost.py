@@ -41,10 +41,17 @@ Outputs (results/tables/adaptation/t4/<mode>/), CSV + markdown:
   t4_all_configurations_<mode>.*          mean +/- sd, all 17 configurations
   t4_representative_per_arm_<mode>.*      one configuration per arm (A-D)
 
+Forecasters (PGS242-169): --forecaster selects which forecaster's T3 seed
+metrics and four-arm run are read. The default, gradient_boosted, keeps the
+original paths and schema. Any other forecaster reads t3/<forecaster>/<mode>/,
+writes t4/<forecaster>/<mode>/, and adds a leading `forecaster` column.
+
 Run from the repository root:
     python experiments/adaptation/generate_t4_adaptation_cost.py
     python experiments/adaptation/generate_t4_adaptation_cost.py \
         --buffer-mode symmetric
+    python experiments/adaptation/generate_t4_adaptation_cost.py \
+        --forecaster seasonal_naive
 """
 
 from __future__ import annotations
@@ -68,16 +75,46 @@ from drift_lab.evaluation import calculate_adaptation_gain  # noqa: E402
 BUFFER_MODES = ("post_only", "symmetric")
 DEFAULT_BUFFER_MODE = "post_only"
 DEFAULT_RUN_DIR = ROOT / "results/tables/adaptation/revised/pgs242_128_five_seed_final"
+DEFAULT_FORECASTER = "gradient_boosted"
+FORECASTER_RUN_DIRS = {
+    DEFAULT_FORECASTER: DEFAULT_RUN_DIR,
+    "seasonal_naive": ROOT / "results/tables/adaptation/revised/seasonal_naive_five_seed",
+}
 T3_ROOT = ROOT / "results/tables/adaptation/t3"
 T4_ROOT = ROOT / "results/tables/adaptation/t4"
 
 
-def default_t3_file(buffer_mode):
-    return T3_ROOT / buffer_mode / f"t3_seed_metrics_full_{buffer_mode}.csv"
+def _forecaster_dir(root, forecaster, buffer_mode):
+    """Legacy layout <root>/<mode> for the default; <root>/<forecaster>/<mode> else."""
+    if forecaster == DEFAULT_FORECASTER:
+        return root / buffer_mode
+    return root / forecaster / buffer_mode
 
 
-def default_output_dir(buffer_mode):
-    return T4_ROOT / buffer_mode
+def default_t3_file(buffer_mode, forecaster=DEFAULT_FORECASTER):
+    return (_forecaster_dir(T3_ROOT, forecaster, buffer_mode)
+            / f"t3_seed_metrics_full_{buffer_mode}.csv")
+
+
+def default_output_dir(buffer_mode, forecaster=DEFAULT_FORECASTER):
+    return _forecaster_dir(T4_ROOT, forecaster, buffer_mode)
+
+
+FORECASTER_NOTES = {
+    "seasonal_naive": (
+        "Seasonal-naive has no fitted state: `fit()` is a no-op and `predict()` "
+        "reads the observation 48 half-hours (one day) earlier. A retrain "
+        "therefore changes no forecast. `retrains` and `cumulative train samples` "
+        "are the schedule's bookkeeping (the refit data selection is unchanged) "
+        "and `wall clock` is the cost of an empty `fit()`."
+    ),
+}
+
+
+def seed_invariant(seed_level: pd.DataFrame) -> bool:
+    """True when every seed gives the same drift MAE (deterministic model)."""
+    spread = seed_level.groupby(["configuration", "region"])["mae_drift"].std(ddof=1)
+    return bool((spread.fillna(0.0).abs() < 1e-9).all())
 
 
 # Same headline configurations as the final T3 table.
@@ -229,27 +266,44 @@ def main():
     parser.add_argument("--buffer-mode", choices=BUFFER_MODES, default=DEFAULT_BUFFER_MODE,
                         help="T3 regime convention the drift MAE comes from "
                              "(post_only = default, symmetric = +/- 7 days)")
-    parser.add_argument("--run-dir", type=Path, default=DEFAULT_RUN_DIR,
-                        help="Original five-seed adaptation results containing summary_all_seeds.csv")
+    parser.add_argument("--forecaster", choices=sorted(FORECASTER_RUN_DIRS),
+                        default=DEFAULT_FORECASTER,
+                        help="Forecaster to report. Non-default forecasters get a "
+                             "`forecaster` column and their own folder.")
+    parser.add_argument("--run-dir", type=Path, default=None,
+                        help="Five-seed adaptation results containing summary_all_seeds.csv. "
+                             "Default: the run saved for --forecaster")
     parser.add_argument("--t3-file", type=Path, default=None,
                         help="Full-stream T3 seed-level metrics (NOT the local T3 file). "
                              "Default: t3/<buffer-mode>/t3_seed_metrics_full_<buffer-mode>.csv")
     parser.add_argument("--output-dir", type=Path, default=None,
-                        help="Default: t4/<buffer-mode>")
+                        help="Default: t4/<buffer-mode>, or t4/<forecaster>/<buffer-mode>")
     args = parser.parse_args()
 
     mode = args.buffer_mode
-    t3_file = args.t3_file or default_t3_file(mode)
-    out_dir = args.output_dir or default_output_dir(mode)
-    cost_file = args.run_dir / "summary_all_seeds.csv"
+    forecaster = args.forecaster
+    legacy = forecaster == DEFAULT_FORECASTER
+    t3_file = args.t3_file or default_t3_file(mode, forecaster)
+    out_dir = args.output_dir or default_output_dir(mode, forecaster)
+    run_dir = args.run_dir or FORECASTER_RUN_DIRS[forecaster]
+    cost_file = run_dir / "summary_all_seeds.csv"
+    print(f"Forecaster: {forecaster}")
     print(f"Buffer mode: {mode}")
     print(f"Using full-stream T3 metrics: {t3_file}")
     print(f"Using unchanged retraining costs: {cost_file}")
     seed_level = load_seed_level(t3_file, cost_file)
     stats = aggregate(seed_level)
 
+    def label(frame):
+        """Non-default forecasters carry their name as the first column."""
+        if legacy:
+            return frame
+        frame = frame.copy()
+        frame.insert(0, "forecaster", forecaster)
+        return frame
+
     out_dir.mkdir(parents=True, exist_ok=True)
-    seed_level.to_csv(out_dir / f"t4_seed_level_metrics_{mode}.csv", index=False)
+    label(seed_level).to_csv(out_dir / f"t4_seed_level_metrics_{mode}.csv", index=False)
 
     note = (
         f"Regime convention: `{mode}` ({BUFFER_NOTES[mode]}). Mean ± sample SD over "
@@ -257,12 +311,19 @@ def main():
         "region and seed (negative = better); gain per retrain = gain / retrains "
         "(computed per seed, then averaged; — when there are no retrains)."
     )
+    if not legacy:
+        note += f" Forecaster: `{forecaster}`."
+        if seed_invariant(seed_level):
+            note += (" Deterministic forecaster: all five seeds give identical results, "
+                     "so sd = 0.0 reflects no seed variation, not independent replicates.")
+        note += " " + FORECASTER_NOTES.get(forecaster, "")
     full = format_table(stats, None)
     headline = format_table(stats, HEADLINE)
     for name, table, title in (
         ("t4_all_configurations", full, "T4 — adaptation cost, all 17 configurations"),
         ("t4_representative_per_arm", headline, "T4 — adaptation cost, representative configuration per arm"),
     ):
+        table = label(table)
         table.to_csv(out_dir / f"{name}_{mode}.csv", index=False)
         (out_dir / f"{name}_{mode}.md").write_text(
             to_markdown(table, f"{title} ({mode})", note), encoding="utf-8")

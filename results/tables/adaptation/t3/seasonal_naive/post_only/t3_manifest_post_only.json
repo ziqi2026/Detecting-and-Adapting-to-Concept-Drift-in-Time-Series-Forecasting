@@ -1,0 +1,39 @@
+{
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "regime_days": 7,
+  "buffer_mode": "post_only",
+  "scopes": [
+    "full"
+  ],
+  "timezone": "Etc/GMT-10",
+  "boundary": "left_closed_right_open",
+  "full_rule": "pre before first drift window; drift inside union of drift windows; post elsewhere after first window",
+  "full_drift_window": "[event_start, event_end + 1 day + 7 days)",
+  "event_selection": "NEM plus region-specific events; full-stream buffered windows must overlap evaluated stream",
+  "local_rule": "7-day pre; documented event drift; 7-day post; outside excluded; priority drift > pre > post (independent of buffer_mode)",
+  "pinball_scope": {
+    "full": "all test timestamps",
+    "local": "union of included local timestamps"
+  },
+  "interval_method": "seed-specific fixed regional conformal radius transferred to each adaptation point forecast",
+  "alpha": 0.1,
+  "standard_deviation": "sample, ddof=1",
+  "primary_configurations": {
+    "A": "A",
+    "B": "B",
+    "C": "C_kswin",
+    "D": "D_180d_page_hinkley"
+  },
+  "selection_note": "Primary configurations retained from previous analysis; not newly selected using these regime results.",
+  "events_sha256": "7f8981ef7495d8374a01ef2fae5e3fb58f228de6973a4dcecc948f6103f49225",
+  "generator_sha256": "5ff0645bbd105adcd185746b71b8e772d8314a698934b1c2d2d317df4d5aed86",
+  "rolling_mae": "Not regenerated; rolling errors do not change when only regime labels change.",
+  "forecaster": "seasonal_naive",
+  "run_dir": "results/tables/adaptation/revised/seasonal_naive_five_seed"
+}

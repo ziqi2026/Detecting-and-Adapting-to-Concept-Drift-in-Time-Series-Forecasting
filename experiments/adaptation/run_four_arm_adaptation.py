@@ -27,12 +27,14 @@ sys.path.insert(0, str(ROOT / "src"))
 from drift_lab.adaptation import adaptive_forecast_stream, validate_adaptation_changepoints
 from drift_lab.data_loader import load_and_split_aemo
 from drift_lab.evaluation import calculate_mae
-from drift_lab.forecasters import MODEL_REGISTRY
+from drift_lab.forecasters import MODEL_REGISTRY, frozen_error_stream
 from drift_lab.run_logger import log_run
+from drift_lab.uncertainty import DEFAULT_ALPHA, conformal_radius
 
 REGIONS = ("SA1", "NSW1")
 WINDOW_DAYS = (30, 60, 120, 180)
 DEFAULT_FORECAST_SEEDS = (1, 2, 3, 4, 5)
+DEFAULT_FORECASTER = "gradient_boosted"
 SUPPORTED_DETECTORS = ("adwin", "page_hinkley", "kswin")
 DETECTOR_REFRACTORY_DAYS = 14
 DETECTOR_WARMUP_SAMPLES = 2880
@@ -51,6 +53,43 @@ EVENT_COLUMNS = [
 
 def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def forecaster_spec(forecaster, seed):
+    """Registry entry and constructor config for one forecaster and seed.
+
+    Only forecasters that expose a ``seed`` option receive the run seed, so
+    gradient_boosted keeps its original ``{**config, "seed": seed}``. A
+    forecaster without one (seasonal_naive) is deterministic: the seed only
+    labels the run and cannot change its output.
+    """
+    if forecaster not in MODEL_REGISTRY:
+        raise ValueError(f"forecaster must be one of {sorted(MODEL_REGISTRY)}")
+    spec = MODEL_REGISTRY[forecaster]
+    config = dict(spec["config"])
+    if "seed" in config:
+        config["seed"] = seed
+    return spec, config
+
+
+def conformal_radius_summary(model_factory, train, calibration, arm_a, *, region):
+    """90% split-conformal radius for a forecaster, from calibration only.
+
+    Same procedure as experiments/uncertainty/run_aemo_uncertainty.py
+    (PGS242-141): fit on train, absolute residuals on the calibration frame
+    with train as lag history, ``conformal_radius`` at alpha = 0.10. Coverage
+    and width are read off arm A (the frozen model) with that fixed radius.
+    """
+    model = model_factory().fit(train)
+    residuals = frozen_error_stream(model, calibration, history_df=train)["error"]
+    radius = conformal_radius(residuals.to_numpy(dtype=float), alpha=DEFAULT_ALPHA)
+    covered = (arm_a.y_true - arm_a.y_pred).abs() <= radius
+    return {
+        "region": region, "alpha": DEFAULT_ALPHA,
+        "target_coverage": 1.0 - DEFAULT_ALPHA, "calibration_size": len(residuals),
+        "conformal_radius": radius, "test_size": len(arm_a),
+        "empirical_coverage": float(covered.mean()), "mean_interval_width": 2 * radius,
+    }
 
 
 def configurations(windows=WINDOW_DAYS):
@@ -243,7 +282,8 @@ def run_four_arm_adaptation_experiment(
         *, detections_path, decisions_path, run_id, detectors=SUPPORTED_DETECTORS,
         seed=0, windows=WINDOW_DAYS, data_path=ROOT / "data/raw",
         output_root=ROOT / "results/tables/adaptation/revised",
-        shared_runs=ROOT / "results/tables/runs.csv"):
+        shared_runs=ROOT / "results/tables/runs.csv",
+        forecaster=DEFAULT_FORECASTER):
     """Run the four-arm experiment across regions for one forecasting seed.
 
     The function intentionally has no event-catalogue parameter: Arms C/D
@@ -274,10 +314,14 @@ def run_four_arm_adaptation_experiment(
     for region in REGIONS:
         sources.extend(sorted((Path(data_path) / region).glob("*.csv")))
     hashes = {str(path.resolve()): sha256(path) for path in sources}
-    spec = MODEL_REGISTRY["gradient_boosted"]
-    model_config = {**spec["config"], "seed": seed}
+    spec, model_config = forecaster_spec(forecaster, seed)
+    # gradient_boosted radii come from the PGS242-141 uncertainty runner; any
+    # other forecaster is calibrated here so T3 can score its pinball loss.
+    calibrate_radius = forecaster != DEFAULT_FORECASTER
+    run_group = (ADAPTATION_RUN_GROUP if not calibrate_radius
+                 else f"{ADAPTATION_RUN_GROUP}_{forecaster}")
     identity = {
-        "source_sha256": hashes, "model_config": model_config,
+        "source_sha256": hashes, "forecaster": forecaster, "model_config": model_config,
         "detectors": list(detectors), "windows": list(windows),
         "split_id": ADAPTATION_SPLIT_ID, "upstream_detection_artifact": str(detections_path),
         "decisions_file": str(decisions_path), "execution_design":
@@ -294,12 +338,13 @@ def run_four_arm_adaptation_experiment(
     split = f"{ADAPTATION_SPLIT_ID}|run={run_id}"
     if Path(shared_runs).exists():
         previous = pd.read_csv(shared_runs, usecols=["group", "split_id"])
-        if (previous.group.eq(ADAPTATION_RUN_GROUP) & previous.split_id.eq(split)).any():
+        if (previous.group.eq(run_group) & previous.split_id.eq(split)).any():
             raise ValueError("This PR #29 run ID already exists in the shared log")
     output.mkdir(parents=True, exist_ok=False)
     manifest = {
         **identity, "run_id": run_id, "config_hash": config_hash, "status": "running",
-        "model": "gradient_boosted", "seed": seed,
+        "model": forecaster, "seed": seed,
+        "seed_affects_model": "seed" in spec["config"],
         "python": platform.python_version(), "numpy": np.__version__,
         "pandas": pd.__version__, "sklearn": sklearn.__version__,
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -326,7 +371,7 @@ def run_four_arm_adaptation_experiment(
     manifest_path = output / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     started = perf_counter()
-    summaries, all_events = [], []
+    summaries, all_events, radii = [], [], []
     try:
         for region, train, calibration, test in prepared:
             forecasts, events, summary = run_regional_four_arm_comparison(
@@ -341,10 +386,18 @@ def run_four_arm_adaptation_experiment(
                              compression={"method": "gzip", "mtime": 0})
             summaries.append(summary)
             all_events.append(events)
+            if calibrate_radius:
+                radii.append(conformal_radius_summary(
+                    lambda: spec["class"](**model_config), train, calibration,
+                    forecasts[forecasts.configuration.eq("A")], region=region))
         summary = pd.concat(summaries, ignore_index=True)
         events = pd.concat(all_events, ignore_index=True).reindex(columns=EVENT_COLUMNS)
         events.to_csv(output / "retraining_events.csv", index=False)
         summary.to_csv(output / "summary.csv", index=False)
+        if radii:
+            (output / "uncertainty").mkdir()
+            pd.DataFrame(radii).to_csv(
+                output / "uncertainty/aemo_prediction_intervals_90_summary.csv", index=False)
         summary.loc[summary.arm.eq("D")].to_csv(output / "window_sensitivity.csv", index=False)
         summary.loc[summary.arm.isin(["C", "D"])].to_csv(
             output / "detector_comparison.csv", index=False)
@@ -353,7 +406,7 @@ def run_four_arm_adaptation_experiment(
         for record in summary.to_dict("records"):
             common = dict(
                 method=record["configuration"], dataset="AEMO_TOTALDEMAND",
-                region=record["region"], group=ADAPTATION_RUN_GROUP, regime="full-test",
+                region=record["region"], group=run_group, regime="full-test",
                 seed=seed, config_hash=config_hash, split_id=split,
                 train_samples=record["train_samples_total"],
                 n_retrains=record["n_retrains"], wall_clock_s=record["arm_wall_clock_s"],
@@ -388,6 +441,7 @@ def run_multi_seed_adaptation_experiment(
     data_path=ROOT / "data/raw",
     output_root=ROOT / "results/tables/adaptation/revised",
     shared_runs=ROOT / "results/tables/runs.csv",
+    forecaster=DEFAULT_FORECASTER,
 ):
     """
     Run the four-arm adaptation experiment once for each forecasting seed.
@@ -437,6 +491,7 @@ def run_multi_seed_adaptation_experiment(
                 data_path=data_path,
                 output_root=parent_output,
                 shared_runs=shared_runs,
+                forecaster=forecaster,
             )
 
             seed_output = parent_output / seed_run_id
@@ -472,6 +527,7 @@ def run_multi_seed_adaptation_experiment(
 
         manifest = {
             "run_id": run_id,
+            "forecaster": forecaster,
             "seeds": list(seeds),
             "seed_run_ids": [
                 f"{run_id}_seed{seed}"
@@ -508,6 +564,9 @@ def main():
                         default=list(SUPPORTED_DETECTORS),
                         help="Frozen PR #29 detector scenarios for C/D")
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--forecaster", choices=sorted(MODEL_REGISTRY),
+                        default=DEFAULT_FORECASTER,
+                        help="Registered forecaster to adapt. Default: gradient_boosted.")
     parser.add_argument("--decisions", type=Path, required=True,
                         help="Shared PR #29 decisions.md")
     parser.add_argument("--seeds",nargs="+", type=int, default=list(DEFAULT_FORECAST_SEEDS), help="Forecast model seeds. Default: 1 2 3 4 5.")
@@ -524,6 +583,7 @@ def main():
     windows=tuple(args.windows),
     data_path=args.data_path,
     output_root=args.output_root,
+    forecaster=args.forecaster,
 )
 
 

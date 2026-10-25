@@ -1,0 +1,19 @@
+{
+  "run_id": "seasonal_naive_five_seed",
+  "forecaster": "seasonal_naive",
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "seed_run_ids": [
+    "seasonal_naive_five_seed_seed1",
+    "seasonal_naive_five_seed_seed2",
+    "seasonal_naive_five_seed_seed3",
+    "seasonal_naive_five_seed_seed4",
+    "seasonal_naive_five_seed_seed5"
+  ],
+  "status": "complete"
+}

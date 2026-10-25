@@ -23,6 +23,12 @@ Buffer modes (full-stream scope; buffer length --regime-days = 7):
     event-local scope has its own fixed 7-day pre/post windows and is not
     affected by --buffer-mode.
 
+Forecasters (PGS242-169): --forecaster selects which saved run to score.
+The default, gradient_boosted, reads the original five-seed run and writes to
+t3/<buffer-mode>/ with the original schema (unchanged). Any other forecaster
+reads its own run directory, writes to t3/<forecaster>/<buffer-mode>/, and
+adds a leading `forecaster` column to its tables.
+
 T3 is generated from experiment outputs, never manually entered.
 
 Run from the repository root, once per mode:
@@ -65,6 +71,13 @@ DEFAULT_RUN_DIR = (
 )
 DEFAULT_OUTPUT_ROOT = ROOT / "results/tables/adaptation/t3"
 DEFAULT_BUFFER_MODE = "post_only"
+DEFAULT_FORECASTER = "gradient_boosted"
+FORECASTER_RUN_DIRS = {
+    DEFAULT_FORECASTER: DEFAULT_RUN_DIR,
+    "seasonal_naive": (
+        ROOT / "results/tables/adaptation/revised/seasonal_naive_five_seed"
+    ),
+}
 
 REGIONS = ("SA1", "NSW1")
 ROLLING_WINDOW = 48 * 7
@@ -112,10 +125,23 @@ def parse_args():
     parser = argparse.ArgumentParser(description=__doc__)
 
     parser.add_argument(
+        "--forecaster",
+        choices=sorted(FORECASTER_RUN_DIRS),
+        default=DEFAULT_FORECASTER,
+        help=(
+            "Forecaster whose saved four-arm run is scored. Non-default "
+            "forecasters get a `forecaster` column and their own folder."
+        ),
+    )
+
+    parser.add_argument(
         "--run-dir",
         type=Path,
-        default=DEFAULT_RUN_DIR,
-        help="Parent directory containing seed_<n> outputs.",
+        default=None,
+        help=(
+            "Parent directory containing seed_<n> outputs. "
+            "Default: the run saved for --forecaster."
+        ),
     )
 
     parser.add_argument(
@@ -129,7 +155,10 @@ def parse_args():
         "--output-dir",
         type=Path,
         default=None,
-        help="Default: results/tables/adaptation/t3/<buffer-mode>",
+        help=(
+            "Default: results/tables/adaptation/t3/<buffer-mode>, or "
+            "t3/<forecaster>/<buffer-mode> for a non-default forecaster."
+        ),
     )
 
     parser.add_argument(
@@ -547,6 +576,18 @@ def format_mean_sd(series):
     )
 
 
+def seed_invariant(seed_metrics):
+    """True when every metric is identical across seeds (deterministic model)."""
+    metrics = [
+        column for column in seed_metrics.columns
+        if column.startswith("mae_") or column == "pinball_loss"
+    ]
+    spread = seed_metrics.groupby(
+        ["configuration", "region"]
+    )[metrics].std(ddof=1)
+    return bool((spread.fillna(0.0).abs() < 1e-9).all().all())
+
+
 def aggregate_t3(seed_metrics, expected_seeds):
     """Aggregate seed-level metrics into display-ready T3 rows."""
     selected = seed_metrics[
@@ -623,12 +664,19 @@ def main():
 
     scopes = tuple(dict.fromkeys(args.scopes))
     buffer_mode = args.buffer_mode
+    forecaster = args.forecaster
+    legacy = forecaster == DEFAULT_FORECASTER
+    run_dir = args.run_dir or FORECASTER_RUN_DIRS[forecaster]
 
     def tag(scope):
         """File-name tag: full-stream files carry the buffer mode."""
         return f"{scope}_{buffer_mode}" if scope == "full" else scope
 
-    output_dir = args.output_dir or (DEFAULT_OUTPUT_ROOT / buffer_mode)
+    output_dir = args.output_dir or (
+        DEFAULT_OUTPUT_ROOT / buffer_mode
+        if legacy
+        else DEFAULT_OUTPUT_ROOT / forecaster / buffer_mode
+    )
     if output_dir.exists() and any(output_dir.iterdir()):
         raise FileExistsError(
             f"Output folder is not empty: {output_dir}. "
@@ -637,7 +685,15 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     events = pd.read_csv(args.events)
-    radii = load_seed_radii(args.run_dir, args.seeds)
+    radii = load_seed_radii(run_dir, args.seeds)
+
+    def label(frame):
+        """Non-default forecasters carry their name as the first column."""
+        if legacy:
+            return frame
+        frame = frame.copy()
+        frame.insert(0, "forecaster", forecaster)
+        return frame
 
     metrics_by_scope = {scope: [] for scope in scopes}
     audits = {}
@@ -646,7 +702,7 @@ def main():
     for seed in args.seeds:
         print(f"Processing seed {seed}...", flush=True)
 
-        forecasts = load_seed_forecasts(args.run_dir, seed)
+        forecasts = load_seed_forecasts(run_dir, seed)
         forecasts = make_intervals(
             forecasts,
             radii=radii,
@@ -748,11 +804,12 @@ def main():
             ]
         ]
 
+        table = label(table)
         table.to_csv(
             output_dir / f"t3_{tag(scope)}.csv",
             index=False,
         )
-        seed_metrics.to_csv(
+        label(seed_metrics).to_csv(
             output_dir / f"t3_seed_metrics_{tag(scope)}.csv",
             index=False,
         )
@@ -764,11 +821,19 @@ def main():
             if scope == "full"
             else "T3 — event-local forecast accuracy by regime"
         )
+        notes = [BUFFER_MODE_NOTES[buffer_mode] if scope == "full" else LOCAL_NOTE]
+        if not legacy:
+            notes.append(f"Forecaster: `{forecaster}`.")
+            if seed_invariant(seed_metrics):
+                notes.append(
+                    "Deterministic forecaster: all five seeds give identical "
+                    "results, so sd = 0.0 reflects no seed variation, not "
+                    "independent replicates."
+                )
         lines = [
             f"# {title}",
             "",
-            BUFFER_MODE_NOTES[buffer_mode] if scope == "full" else LOCAL_NOTE,
-            "",
+            *[line for note in notes for line in (note, "")],
             "| " + " | ".join(headers) + " |",
             "| " + " | ".join(["---"] * len(headers)) + " |",
         ]
@@ -790,7 +855,7 @@ def main():
         if "full" in scopes
         else "regime_observation_counts.csv"
     )
-    pd.DataFrame(counts).to_csv(
+    label(pd.DataFrame(counts)).to_csv(
         output_dir / counts_name,
         index=False,
     )
@@ -849,6 +914,13 @@ def main():
             "only regime labels change."
         ),
     }
+    if not legacy:
+        manifest["forecaster"] = forecaster
+        manifest["run_dir"] = (
+            str(run_dir.resolve().relative_to(ROOT))
+            if run_dir.resolve().is_relative_to(ROOT)
+            else str(run_dir)
+        )
 
     (output_dir / f"t3_manifest_{buffer_mode}.json").write_text(
         json.dumps(manifest, indent=2) + "\n",

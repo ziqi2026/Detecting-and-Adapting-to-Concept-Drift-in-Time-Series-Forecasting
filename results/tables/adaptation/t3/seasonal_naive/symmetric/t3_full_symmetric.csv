@@ -1,0 +1,9 @@
+forecaster,arm,region,MAE pre-drift,MAE drift,MAE post-drift,pinball loss,seeds
+seasonal_naive,A · never retrain,NSW1,519.3 ± 0.0,441.1 ± 0.0,442.1 ± 0.0,89.0 ± 0.0,5
+seasonal_naive,B · periodic 30d,NSW1,519.3 ± 0.0,441.1 ± 0.0,442.1 ± 0.0,89.0 ± 0.0,5
+seasonal_naive,C · drift + full history (KSWIN),NSW1,519.3 ± 0.0,441.1 ± 0.0,442.1 ± 0.0,89.0 ± 0.0,5
+seasonal_naive,D · drift + 180d window (Page-Hinkley),NSW1,519.3 ± 0.0,441.1 ± 0.0,442.1 ± 0.0,89.0 ± 0.0,5
+seasonal_naive,A · never retrain,SA1,121.5 ± 0.0,160.8 ± 0.0,153.6 ± 0.0,29.9 ± 0.0,5
+seasonal_naive,B · periodic 30d,SA1,121.5 ± 0.0,160.8 ± 0.0,153.6 ± 0.0,29.9 ± 0.0,5
+seasonal_naive,C · drift + full history (KSWIN),SA1,121.5 ± 0.0,160.8 ± 0.0,153.6 ± 0.0,29.9 ± 0.0,5
+seasonal_naive,D · drift + 180d window (Page-Hinkley),SA1,121.5 ± 0.0,160.8 ± 0.0,153.6 ± 0.0,29.9 ± 0.0,5

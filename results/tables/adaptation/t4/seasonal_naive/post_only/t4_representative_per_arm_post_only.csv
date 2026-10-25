@@ -1,0 +1,9 @@
+forecaster,arm,arm_label,region,retrains,cumulative train samples,wall clock (s),MAE gain vs arm A,gain per retrain,seeds
+seasonal_naive,A,A · never retrain,NSW1,0,"35,039",0.0 ± 0.0,0.0 ± 0.0,—,5
+seasonal_naive,B,B · periodic 30d,NSW1,46,"3,203,519",0.0 ± 0.0,0.0 ± 0.0,0.00 ± 0.00,5
+seasonal_naive,C,C · drift + full history (KSWIN),NSW1,25,"1,662,579",0.0 ± 0.0,0.0 ± 0.0,0.00 ± 0.00,5
+seasonal_naive,D,D · drift + 180d window (Page-Hinkley),NSW1,5,"78,244",0.0 ± 0.0,0.0 ± 0.0,0.00 ± 0.00,5
+seasonal_naive,A,A · never retrain,SA1,0,"35,039",0.0 ± 0.0,0.0 ± 0.0,—,5
+seasonal_naive,B,B · periodic 30d,SA1,46,"3,203,519",0.0 ± 0.0,0.0 ± 0.0,0.00 ± 0.00,5
+seasonal_naive,C,C · drift + full history (KSWIN),SA1,17,"1,182,004",0.0 ± 0.0,0.0 ± 0.0,0.00 ± 0.00,5
+seasonal_naive,D,D · drift + 180d window (Page-Hinkley),SA1,5,"75,364",0.0 ± 0.0,0.0 ± 0.0,0.00 ± 0.00,5
