@@ -536,6 +536,23 @@ def _parse_mean_sd(values):
 
 def _render_t5_main():
     st.header('T5 · Uncertainty coverage and interval width')
+    with st.expander('How to interpret the 90% prediction intervals', expanded=True):
+        st.markdown(
+            '**Why uncertainty?** A point forecast gives one demand estimate but does not '
+            'communicate the range of plausible outcomes. Prediction intervals make that '
+            'uncertainty visible.\n\n'
+            '**Static split conformal:** Uses a fixed quantile of absolute calibration '
+            'residuals to form a 90% interval around each forecast; the radius does not '
+            'learn from future TEST observations.\n\n'
+            '**Adaptive conformal (ACI):** Starts from the static calibration information '
+            'and adjusts the miscoverage level chronologically. Each interval is issued '
+            'before the current observation is used to update the next interval.\n\n'
+            '**AgACI-BOA:** A later team extension that aggregates adaptive candidates; '
+            'it is distinct from the original ACI implementation.\n\n'
+            '**Reading the results:** 90% is the *nominal target*, not a guaranteed '
+            'empirical result. Compare observed coverage with interval width (MW), and '
+            'check worst 24-hour coverage for short periods of poor reliability.'
+        )
     directories = _t5_directories()
     if not directories:
         st.warning('No real-data T5 tables containing Static, ACI and AgACI were found. Browse the simulation in the adjacent tab.')
@@ -558,10 +575,19 @@ def _render_t5_main():
     necessary=['UQ method','regime','coverage','mean width','normalised width','worst 24h coverage']
     if original.empty or not set(necessary).issubset(original):
         st.error('Selected T5 table is missing expected columns.'); return
-    methods=original['UQ method'].dropna().unique().tolist()
+    method_names={
+        'static_conformal':'Static split conformal',
+        'adaptive_conformal':'Adaptive conformal (ACI)',
+        'agaci_boa':'AgACI-BOA (team extension)',
+    }
+    methods=sorted(original['UQ method'].dropna().unique().tolist(),
+        key=lambda method: (list(method_names).index(method)
+            if method in method_names else len(method_names), str(method)))
     if not any('agaci' in str(m).lower() for m in methods):
         st.warning('This is an older T5 dataset: AgACI-BOA is NOT included. Select the three-method AgACI evaluation above.')
-    selected=st.multiselect('Uncertainty methods',methods,default=methods,key='t5_methods_updated')
+    selected=st.multiselect('Uncertainty methods',methods,default=methods,
+        format_func=lambda method: method_names.get(str(method),str(method)),
+        key='t5_methods_updated')
     data=original[original['UQ method'].isin(selected)].copy()
     if data.empty: st.info('Choose at least one method.');return
     for metric in necessary[2:]:
@@ -586,7 +612,7 @@ def _render_t5_main():
             rows=data[data['UQ method']==method].sort_values('regime')
             factor=100 if percentage else 1
             fig.add_trace(go.Bar(x=rows['regime'].astype(str),y=rows[metric]*factor,
-                name=str(method),marker_color=colour(method),
+                name=method_names.get(str(method),str(method)),marker_color=colour(method),
                 error_y=dict(type='data',array=rows[metric+'_sd']*factor,visible=True),
                 hovertemplate='%{x}<br>%{y:.2f}'+('%' if percentage else '')+'<extra>%{fullData.name}</extra>'))
         if target: fig.add_hline(y=90,line_dash='dash',line_color='#a45555',annotation_text='90% nominal target')
@@ -600,7 +626,7 @@ def _render_t5_main():
     x,y=st.columns(2)
     with x: chart('mean width','Mean prediction-interval width (MW)')
     with y: chart('normalised width','Normalised interval width')
-    st.caption('Values come directly from the selected T5 five-seed tables. Compare coverage together with interval width; the 90% line is a nominal target, not a guarantee.')
+    st.caption('Values come directly from the selected T5 five-seed tables. The 90% line is a nominal target, not a guarantee. Worst 24-hour coverage reports the weakest complete within-regime 24-hour window.')
     st.subheader('T5 · Original results')
     table(original, f't5_{region}_{config}_updated')
 
