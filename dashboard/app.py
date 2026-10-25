@@ -614,18 +614,63 @@ def render_7():
 
 def render_8():
     region = region_control('gallery_region')
-    paths = sorted((RESULTS / 'figures').rglob('*.png'))
-    paths = [p for p in paths if 'archive' not in p.parts and (region in p.name or not any(r in p.name for r in ['SA1','NSW1']))]
-    category = st.selectbox('Figure category', ['All','degradation','detection','adaptation','uncertainty','diagnosis'], key='gallery_category')
-    if category != 'All':
-        paths = [p for p in paths if category in p.parts]
-    if paths:
-        selected = st.selectbox('Saved figure', range(len(paths)),
-                                format_func=lambda i: str(paths[i].relative_to(RESULTS)),
-                                key='gallery_figure')
-        show_image(paths[selected])
-    else:
-        st.info('No figures are available for this selection.')
+    figures_tab, tables_tab = st.tabs(['Figures', 'Tables'])
+
+    with figures_tab:
+        paths = sorted((RESULTS / 'figures').rglob('*.png'))
+        paths = [p for p in paths if 'archive' not in p.parts and
+                 (region in p.name or not any(r in p.name for r in ['SA1', 'NSW1']))]
+        category = st.selectbox('Figure category',
+            ['All', 'degradation', 'detection', 'adaptation', 'uncertainty', 'diagnosis'],
+            key='gallery_category')
+        if category != 'All':
+            paths = [p for p in paths if category in p.parts]
+        if paths:
+            selected = st.selectbox('Saved figure', range(len(paths)),
+                format_func=lambda i: str(paths[i].relative_to(RESULTS)),
+                key='gallery_figure')
+            show_image(paths[selected])
+        else:
+            st.info('No figures are available for this selection.')
+
+    with tables_tab:
+        # Discover repository tables rather than maintaining a manually curated list.
+        # Also include CSV result tables stored alongside figures.
+        table_paths = sorted({p for folder in (RESULTS / 'tables', RESULTS / 'figures')
+            if folder.is_dir() for pattern in ('*.csv', '*.csv.gz')
+            for p in folder.rglob(pattern) if 'archive' not in p.parts})
+        table_paths = [p for p in table_paths if
+            region in p.name or not any(r in p.name for r in ('SA1', 'NSW1'))]
+        categories = sorted({p.relative_to(RESULTS).parts[1]
+            for p in table_paths if len(p.relative_to(RESULTS).parts) > 2})
+        table_category = st.selectbox('Table category', ['All'] + categories,
+            key='gallery_table_category')
+        if table_category != 'All':
+            table_paths = [p for p in table_paths if
+                len(p.relative_to(RESULTS).parts) > 2 and
+                p.relative_to(RESULTS).parts[1] == table_category]
+        if not table_paths:
+            st.info('No result tables are available for this selection.')
+        else:
+            selected_path = st.selectbox('Saved table', table_paths,
+                format_func=lambda p: str(p.relative_to(RESULTS)),
+                key='gallery_table_file')
+            st.caption(f'Source: `results/{selected_path.relative_to(RESULTS)}`')
+            try:
+                # Preview a bounded number of rows so large seed-level output files
+                # do not exhaust memory or delay the dashboard.
+                preview = pd.read_csv(selected_path, nrows=500)
+                st.dataframe(preview, use_container_width=True, hide_index=True)
+                st.caption('Preview shows up to 500 rows from the selected repository table.')
+                if selected_path.stat().st_size <= 20 * 1024 * 1024:
+                    st.download_button('Download selected table',
+                        data=selected_path.read_bytes(), file_name=selected_path.name,
+                        mime='application/gzip' if selected_path.name.endswith('.gz') else 'text/csv',
+                        key='gallery_table_download')
+                else:
+                    st.caption('Large source file: open the path above in the GitHub repository to obtain the complete data.')
+            except (OSError, ValueError, pd.errors.ParserError) as exc:
+                st.warning(f'Unable to preview selected table: {exc}')
 
 
 
@@ -659,8 +704,8 @@ def render_escalation_explorer(repo_root=None) -> None:
     root = Path(repo_root) if repo_root is not None else _repo_root()
     interval_dir = root / "results/tables/uncertainty/agaci_boa_fixed_calibration"
 
-    st.subheader("Escalation · Five-day review explorer")
-    st.caption("Move through actual forecast observations in five-day windows. Compare which points are reviewed and how retained forecast coverage changes.")
+    st.subheader("Five-day analysis of forecast review decisions")
+    st.caption("Examine review prioritisation, prediction-interval coverage and retained forecasts across historical five-day evaluation windows.")
 
     a, b, c = st.columns([1, 1, 1])
     with a:
@@ -929,10 +974,18 @@ def render_t6():
     kinds=list(dict.fromkeys(x[0] for x in sources))
     a,b=st.columns(2)
     with a: region=region_control('t6_region_new')
-    with b: kind=st.selectbox('Escalation signal',kinds,key='t6_signal_new')
+    with b:
+        preferred_signal='Lagged nonconformity (previous 30-minute error)'
+        kind=st.selectbox('Escalation signal',kinds,
+            index=kinds.index(preferred_signal) if preferred_signal in kinds else 0,
+            key='t6_signal_new')
     matching=[folder for label,folder in sources if label==kind]
-    folder=st.selectbox('T6 experiment',matching,
-        format_func=lambda p:str(p.relative_to(RESULTS)),key='t6_folder_new')
+    # Select the final available results for this signal without a redundant experiment dropdown.
+    folder=sorted(matching, key=lambda p: (
+        'post7' not in str(p).lower(),
+        't6_nonconformity_30min' not in str(p).lower() if kind.startswith('Lagged')
+        else 't6_width' not in str(p).lower(),
+        str(p)))[0]
     agg_path=folder/'t6_aggregate_audit.csv'
     if agg_path.exists():
         aggregate=filter_region(load(agg_path),region)
@@ -947,10 +1000,17 @@ def render_t6():
     if not configs:
         st.warning('No T6 configurations for this region in this experiment.');return
     c1,c2=st.columns(2)
-    with c1: config=st.selectbox('Adaptation configuration',configs,key='t6_config_new')
+    with c1:
+        preferred_config='D_180d_page_hinkley'
+        config=st.selectbox('Adaptation configuration',configs,
+            index=configs.index(preferred_config) if preferred_config in configs else 0,
+            key='t6_config_new')
     with c2:
         if methods:
-            method=st.selectbox('Uncertainty method',methods,key='t6_method_new')
+            preferred_method=next((m for m in methods if 'agaci' in m.lower()),None)
+            method=st.selectbox('Uncertainty method',methods,
+                index=methods.index(preferred_method) if preferred_method is not None else 0,
+                key='t6_method_new')
         else: method=None
     st.caption('Operating points are measured on retained forecasts, without assuming a human corrected escalated predictions. Budget columns use the evaluated discrete thresholds.')
     if not aggregate.empty:
@@ -983,238 +1043,578 @@ def render_t6():
 # T7 — CROSS-TEAM TRIGGER COMPARISON (PROVISIONAL)
 # ============================================================
 
+
+# F6: compare accepted detector timestamps, never summary counts or synthetic alarms.
+def render_f6(region):
+    # Each region has its own two-row accepted-detection timeline.
+    tolerance_h = 24
+    highlight = True
+
+    own_path = RESULTS / 'tables/detection/aemo_detection_changepoints.csv'
+    if not own_path.is_file():
+        st.warning('Team 42 timestamp-level detections are missing: results/tables/detection/aemo_detection_changepoints.csv')
+        return
+
+    # Load Team 41's timestamp-level Page-Hinkley outputs from the repository.
+    # Their published CSV schema is timestamp, day, label; region is in the filename.
+    cross_team = RESULTS / 'tables/cross_team'
+    named = f'page_hinkley_standard_half_hourly_post_tune_{region}.csv'
+    candidates = [cross_team / named,
+                  RESULTS / 'tables/detection' / named,
+                  cross_team / 'team41_accepted_detections.csv',
+                  RESULTS / 'tables/detection/team41_accepted_detections.csv']
+    candidate = next((p for p in candidates if p.is_file()), None)
+    if candidate is None:
+        # Search the existing GitHub results tree, without requiring a custom
+        # location or mixing in archived/older experiment versions.
+        hits = sorted(p for p in RESULTS.rglob(named) if 'archive' not in p.parts) if RESULTS.exists() else []
+        candidate = hits[0] if hits else None
+    if candidate is not None:
+        other = pd.read_csv(candidate)
+        source_description = str(candidate.relative_to(ROOT))
+    else:
+        uploaded = st.file_uploader(
+            f'Team 41 · Page-Hinkley accepted detections ({region})',
+            type=['csv'], key=f'f6_team41_upload_{region}')
+        if uploaded is None:
+            st.info('Team 41 detection file not found in GitHub results. Add '
+                    f'`results/tables/cross_team/{named}` (original timestamp/day/label CSV). '
+                    'Alternatively upload the file here for this session.')
+            return
+        other = pd.read_csv(uploaded)
+        source_description = uploaded.name
+
+    own = pd.read_csv(own_path)
+    def standardise(raw, team, source=''):
+        aliases = {
+            'region': ('region', 'REGION', 'Region'),
+            'time': ('SETTLEMENTDATE', 'detected_timestamp', 'detection_timestamp',
+                     'detection_time', 'timestamp', 'alarm_timestamp',
+                     'changepoint_timestamp', 'detected_at', 'datetime'),
+            'detector': ('detector', 'method', 'detector_name'),
+        }
+        # Case-insensitive aliases also tolerate incidental surrounding spaces.
+        lookup = {str(c).strip().lower(): c for c in raw.columns}
+        found = {key: next((lookup.get(name.lower()) for name in names
+                            if name.lower() in lookup), None)
+                 for key, names in aliases.items()}
+        if found['time'] is None:
+            st.error(f'{team}: no detection timestamp column found. Columns: {list(raw.columns)}')
+            return None
+        d = raw.copy()
+        if found['region'] is not None:
+            d = d[d[found['region']].astype(str).str.strip().str.upper().eq(region)].copy()
+        elif team == 'Team 41':
+            # Region is unambiguous in the team's original filename.
+            # Reject files that do not identify a region instead of assigning one.
+            src = source.upper()
+            if region not in src or any(r in src for r in ({'SA1','NSW1'} - {region})):
+                st.error(f'Team 41: file has no region column; select the {region} filename, '
+                         'or use a consolidated file with an explicit region column.')
+                return None
+        else:
+            st.error('Team 42: region column is required.')
+            return None
+        if 'accepted' in d.columns:
+            a = d['accepted'].astype(str).str.strip().str.lower()
+            d = d[a.isin(['true','1','yes','accepted'])].copy()
+        if 'status' in d.columns:
+            statuses = d['status'].astype(str).str.strip().str.lower()
+            if statuses.isin(['accepted','suppressed','rejected','raw']).any():
+                d = d[statuses.eq('accepted')].copy()
+      
+        if found['detector'] is not None:
+            detector_values = (d[found['detector']].astype(str).str.strip().str.lower()
+                               .str.replace('-', '_', regex=False)
+                               .str.replace(' ', '_', regex=False))
+            d = d[detector_values.isin(['page_hinkley', 'pagehinkley', 'ph'])].copy()
+        elif team == 'Team 42':
+            st.error('Team 42: a detector column is required to verify Page-Hinkley timestamps.')
+            return None
+        # Team 41's supplied file has no detector column; its original file
+        # is explicitly a Page-Hinkley export. Reject ambiguous filenames.
+        elif 'page_hinkley' not in source.lower() and 'team41_accepted_detections' not in source.lower():
+            st.error('Team 41: expected the Page-Hinkley detection export.')
+            return None
+        d['f6_time'] = pd.to_datetime(d[found['time']], errors='coerce')
+        return (d.dropna(subset=['f6_time']).sort_values('f6_time')
+                .drop_duplicates('f6_time').reset_index(drop=True))
+
+    a = standardise(other, 'Team 41', source_description)
+    b = standardise(own, 'Team 42')
+    if a is None or b is None:
+        return
+    if a.empty or b.empty:
+        st.warning(f'No accepted timestamps for {region}: Team 41={len(a)}, Team 42={len(b)}.')
+        return
+    # Verify against the accepted-alarm counts in Team 41's T7 summary.
+    expected_team41 = {'SA1': 15, 'NSW1': 18}
+    if len(a) != expected_team41[region]:
+        st.warning(f'Team 41 file contains {len(a)} alarms, whereas its latest T7 summary reports '
+                   f'{expected_team41[region]}. Check that the source is the final accepted-detector run.')
+
+    # Greedy one-to-one nearest-timestamp pairing within the selected tolerance.
+    # An accepted alarm cannot be paired with multiple alarms from the other team.
+    hours = pd.Timedelta(hours=tolerance_h)
+    pairs = []
+    for i, t1 in enumerate(a['f6_time']):
+        for j, t2 in enumerate(b['f6_time']):
+            delta = abs(t1 - t2)
+            if delta <= hours:
+                pairs.append((delta, i, j))
+    pairs.sort(key=lambda v: (v[0], v[1], v[2]))
+    used_a, used_b, matches = set(), set(), []
+    for delta, i, j in pairs:
+        if i not in used_a and j not in used_b:
+            used_a.add(i); used_b.add(j); matches.append((i, j, delta))
+    a['matched'] = [i in used_a for i in range(len(a))]
+    b['matched'] = [i in used_b for i in range(len(b))]
+
+    earliest = min(a['f6_time'].min(), b['f6_time'].min()).date()
+    latest = max(a['f6_time'].max(), b['f6_time'].max()).date()
+    start = pd.Timestamp(earliest); end = pd.Timestamp(latest) + pd.Timedelta(days=1)
+    av = a[a['f6_time'].between(start, end, inclusive='left')]
+    bv = b[b['f6_time'].between(start, end, inclusive='left')]
+    c = st.columns(3)
+    c[0].metric('Team 41 accepted alarms', len(av))
+    c[1].metric('Team 42 accepted alarms', len(bv))
+    c[2].metric('Unmatched alarms in window', int((~av['matched']).sum() + (~bv['matched']).sum()))
+
+    fig = go.Figure()
+    for label, frame, pos, color in [('Team 41 · distribution shift',av,1,'#397ca0'),
+                                      ('Team 42 · forecast error',bv,0,'#23816a')]:
+        colors = ['#bd7231' if highlight and not m else color for m in frame['matched']]
+        fig.add_trace(go.Scatter(x=frame['f6_time'], y=[pos]*len(frame),
+            mode='markers', name=label, marker=dict(color=colors, size=13, symbol='line-ns-open', line=dict(width=2)),
+            customdata=frame[['matched']].astype(str).to_numpy(),
+            hovertemplate='%{x|%d %b %Y %H:%M}<br>Matched within tolerance: %{customdata[0]}<extra>%{fullData.name}</extra>'))
+    fig.update_layout(height=380, title=f'{region} · Accepted Page–Hinkley detections',
+        yaxis=dict(tickvals=[0,1], ticktext=['Team 42','Team 41'], range=[-.6,1.6], zeroline=False),
+        xaxis_title='AEMO settlement date', hovermode='closest', plot_bgcolor='white',
+        legend=dict(orientation='h',y=-.27), margin=dict(l=30,r=20,t=60,b=100))
+    st.plotly_chart(fig, use_container_width=True)
+    st.caption('Amber markers indicate accepted alarms without a one-to-one corresponding alarm within the selected time tolerance. Correspondence describes temporal proximity, not causal equivalence or matching to documented AEMO events. This is a retrospective historical comparison, not a live detector execution.')
+    with st.expander('Accepted alarms and correspondence audit'):
+        audit = pd.concat([av.assign(team='Team 41'), bv.assign(team='Team 42')], ignore_index=True)
+        table(audit[['team','f6_time','matched']].sort_values('f6_time'), 'f6_accepted_detection_audit_'+region)
+    st.download_button('Download F6 interactive figure (HTML)', fig.to_html(include_plotlyjs='cdn'),
+                       file_name=f'F6_{region}_trigger_disagreement.html', mime='text/html', key=f'f6_html_export_{region}')
+
+
+def _t7_display_coverage(value):
+    """Compact mean ± SD, preserving the underlying five-seed summary."""
+    import re
+    parts = re.split(r'\s*±\s*', str(value).strip())
+    try:
+        return ' ± '.join(f'{float(part):.3f}' for part in parts)
+    except (ValueError, TypeError):
+        return str(value)
+
+
+def _t7_display_review_rate(value):
+    """Show the mean review percentage only; don't display seed variability."""
+    import re
+    mean = re.split(r'\s*±\s*', str(value).strip())[0].strip()
+    if mean.lower() in ('unreachable', '—', 'nan', ''):
+        return '—' if mean.lower() in ('nan', '') else mean
+    if mean.endswith('%'):
+        try:
+            return f'{float(mean[:-1]):.1f}%'
+        except ValueError:
+            return mean
+    return mean
+
+
 def render_t7():
-    section('T7 · Cross-team trigger comparison')
-    st.write('Team 41: distribution-shift trigger. Team 42: forecast-error-based trigger.')
-    left, right = st.columns(2)
-    with left:
-        region = region_control('t7_region_selected')
-    with right:
-        detector = st.selectbox('Team 42 error detector', ['page_hinkley','adwin','kswin'],
-            format_func=lambda x: {'page_hinkley':'Page–Hinkley (closest algorithm match)','adwin':'ADWIN','kswin':'KSWIN'}[x],
-            key='t7_error_detector')
-    arm = st.selectbox(
-        'Team 42 adaptation arm', ['C', 'D'],
-        format_func=lambda x: 'Arm D · Recent 180-day window' if x == 'D' else 'Arm C · Full history',
-        key='t7_adaptation_arm',
-    )
-    configuration = f'D_180d_{detector}' if arm == 'D' else f'C_{detector}'
-    arm_description = ('a 180-day recent window' if arm == 'D' else 'full available history')
-    st.caption(f'Team 42: **{configuration}** — drift-triggered retraining using {arm_description}; seeds 1–5.')
-    if detector != 'page_hinkley':
-        st.info('ADWIN/KSWIN are useful sensitivity checks, but Team 41 currently uses Page–Hinkley. Select Page–Hinkley for the closest detector alignment.')
+    """Fixed, provenance-aware T7 comparison with both regions shown together."""
+    section('Trigger comparison')
+    st.caption('A comparative assessment of forecast-error and distribution-shift triggers under the reported Arm D protocol. Team 41 figures are transcribed from its shared T7 summary; Team 42 figures are read from this repository.')
 
-    t4_path = RESULTS / 'tables/adaptation/t4/t4_seed_level_metrics.csv'
-    if not t4_path.is_file():
-        st.error('T7 requires results/tables/adaptation/t4/t4_seed_level_metrics.csv')
-        return
-    t4 = pd.read_csv(t4_path)
-    expected = {'region','configuration','seed','mae_drift','n_retrains'}
-    if not expected.issubset(t4):
-        st.error(f'T4 source missing columns: {sorted(expected-set(t4.columns))}')
-        return
-    sample = t4.loc[(t4.region.astype(str).str.upper()==region)&
-                    (t4.configuration.astype(str)==configuration)].copy()
-    if sample.empty:
-        st.warning(f'No matching Team 42 seed results found for {configuration}.')
-        return
-    n_seeds = sample.seed.nunique()
-    if n_seeds != 5:
-        st.warning(f'Expected five seeds; found {n_seeds}.')
+    configuration = 'D_180d_page_hinkley'
+    st.subheader('Experimental configuration and comparability')
+    design = pd.DataFrame([
+        ['Drift trigger', 'Distribution shift', 'Forecast error', 'Primary variable: distribution shift vs forecast error'],
+        ['Detector', 'Page–Hinkley', 'Page–Hinkley', 'Consistent Page–Hinkley detection algorithm'],
+        ['Forecasting model', 'XGBoost', 'HistGradientBoostingRegressor', 'Same gradient-boosting family; different model implementations'],
+        ['Adaptation policy', 'Arm D · recent 180 days', 'Arm D · recent 180 days', 'Common Arm D, 180-day retraining window'],
+        ['Dataset/Regions', 'SA1 and NSW1', 'SA1 and NSW1', 'Identical AEMO datasets (SA1 and NSW1) and evaluation periods'],
+        ['Experiment seeds', '1–5', '1–5', 'Five-seed experimental protocol'],
+        ['UQ method', 'AgACI', 'AgACI', 'AgACI-based methods; implementation equivalence unverified'],
+        ['Escalation signals', 'Interval width; lagged nonconformity', 'Interval width; lagged 30-minute error', 'Comparable review criteria; methodological differences remain'],
+        ['Regime definition', 'Documented events + 7-day post-event buffer', 'Documented events + 7-day post-event buffer', 'Consistent event-based definition with a seven-day buffer'],
+    ], columns=['Setting', 'Team 41', 'Team 42', 'Comparison status'])
+    st.dataframe(design, use_container_width=True, hide_index=True)
 
-    def format_number(series, unit='', digits=2):
-        numeric = pd.to_numeric(series,errors='coerce').dropna()
-        if numeric.empty: return '—'
-        mean = numeric.mean()
-        sd = numeric.std(ddof=1) if len(numeric)>1 else float('nan')
-        return f'{mean:,.{digits}f} ± {sd:,.{digits}f}{unit}' if len(numeric)>1 else f'{mean:,.{digits}f}{unit}'
-
-  
-    audited_counts = {
-        ('SA1', 'adwin'): (15, 2, 13),
-        ('SA1', 'kswin'): (22, 5, 17),
-        ('SA1', 'page_hinkley'): (5, 0, 5),
-        ('NSW1', 'adwin'): (17, 1, 16),
-        ('NSW1', 'kswin'): (27, 2, 25),
-        ('NSW1', 'page_hinkley'): (5, 0, 5),
-    }  # (raw alerts, suppressed, accepted), matched to official T2 output
-    raw_count, suppressed_count, accepted_count = audited_counts[(region, detector)]
-    audit_path = RESULTS / 'tables/detection/T2_raw_alerts_refractory_audit.csv'
-    if audit_path.is_file():
-        audit = pd.read_csv(audit_path)
-        required_audit = {'region', 'detector', 'raw_alerts',
-                          'suppressed_refractory', 'accepted_detections'}
-        if required_audit.issubset(audit.columns):
-            matching = audit.loc[
-                audit['region'].astype(str).str.upper().eq(region) &
-                audit['detector'].astype(str).str.lower().eq(detector)
-            ]
-            if len(matching) == 1:
-                values = matching.iloc[0]
-                candidate = tuple(int(values[c]) for c in
-                    ['raw_alerts', 'suppressed_refractory', 'accepted_detections'])
-                if candidate[0] == candidate[1] + candidate[2]:
-                    raw_count, suppressed_count, accepted_count = candidate
-                else:
-                    st.warning('T2 raw-alert audit does not balance; using verified reference counts.')
-
-    # Guard against silently displaying raw counts from a different T2 run.
-    t2_path = RESULTS / 'tables/detection/T2_aemo_detection.csv'
-    if t2_path.is_file():
-        t2 = pd.read_csv(t2_path)
-        if {'region', 'detector', 'detections'}.issubset(t2.columns):
-            matching = t2.loc[
-                t2['region'].astype(str).str.upper().eq(region) &
-                t2['detector'].astype(str).str.lower().str.replace('-', '_', regex=False).eq(detector)
-            ]
-            if len(matching) == 1:
-                official_count = int(matching.iloc[0]['detections'])
-                if official_count != accepted_count:
-                    st.warning('T2 official accepted count differs from the raw-alert audit. Review source versions before comparison.')
-
-    b_values = {
-        'MAE during drift': format_number(sample['mae_drift'], ' MW'),
-        'Worst 24h coverage': '—',
-        'Review rate for 0.90 coverage (interval width)': '—',
-        'Review rate for 0.90 coverage (nonconformity, 30 min)': '—',
-        'Detections raised': str(accepted_count),
-        'Retrains triggered': format_number(sample['n_retrains'],digits=1),
+    team41 = {
+        'SA1': {'MAE during drift': '281 ± 16 MW',
+                'Worst 24h coverage': '0.71 ± 0.03',
+                'Review rate for 0.90 coverage (interval width)': '0.0%',
+                'Review rate for 0.90 coverage (nonconformity, 30 min)': '0.0%',
+                'Detections raised': '15', 'Retrains triggered': '15'},
+        'NSW1': {'MAE during drift': '907 ± 36 MW',
+                 'Worst 24h coverage': '0.73 ± 0.02',
+                 'Review rate for 0.90 coverage (interval width)': '0.0%',
+                 'Review rate for 0.90 coverage (nonconformity, 30 min)': '0.0%',
+                 'Detections raised': '18', 'Retrains triggered': '18'},
     }
-    # T4 retrain counts are independent experimental results, not inferred
-    # from the raw alert tally.
+    metric_names = list(team41['SA1'])
+    st.subheader('T7 · Comparison outcomes (SA1 and NSW1)')
 
-    st.subheader('Match uncertainty and human-review settings')
-    a,b = st.columns(2)
-    with a:
-        uq = st.selectbox('Common uncertainty method',
-            ['agaci_boa','static_conformal','adaptive_conformal','Not agreed'],
-            key='t7_uq', help='Team 41 reports AgACI 90% intervals. Confirm matching implementation and calibration details.')
-    with b:
-        signals = st.multiselect('Common escalation signals',
-            ['Interval width', 'Lagged 30-minute nonconformity'],
-            default=['Interval width', 'Lagged 30-minute nonconformity'],
-            key='t7_escalation_signals',
-            help='Select both signals to populate both human-review rows independently.')
+    def format_mean_sd(series, unit=''):
+        values = pd.to_numeric(series, errors='coerce').dropna()
+        if values.empty:
+            return '—'
+        sd = values.std(ddof=1) if len(values) > 1 else None
+        result = f'{values.mean():,.2f}'
+        if sd is not None:
+            result += f' ± {sd:,.2f}'
+        return result + unit
 
-    # Optional explicit, provenance-labelled T5/T6 values. No silent folder matching.
-    with st.expander('Populate Team 42 uncertainty results from matching T5/T6 outputs'):
-        st.write('Choose the actual five-seed results for the same configuration, UQ method and escalation signal. No values are inferred from a different experiment.')
-        base_uq = RESULTS / 'tables/uncertainty'
-        if uq != 'Not agreed':
-            t5_files = sorted(p for p in base_uq.rglob(f'T5_{region}_{configuration}.csv')
-                if 'archive' not in p.parts and 'simulation' not in str(p).lower() and 't5_aemo' not in str(p).lower()) if base_uq.exists() else []
-            if t5_files:
-                chosen_t5 = st.selectbox('T5 source', t5_files, format_func=lambda p: str(p.relative_to(RESULTS)), key='t7_t5_file')
-                st.caption('T5 is a coverage source; select a matching drift-regime row. T5 worst-24h values are not substituted if the method or configuration is absent.')
-                d5 = pd.read_csv(chosen_t5)
-                if {'UQ method','regime','worst 24h coverage'}.issubset(d5.columns):
-                    matches = d5[(d5['regime'].astype(str)=='drift') &
-                        (d5['UQ method'].astype(str).str.lower().str.replace(' ','_',regex=False).str.contains(
-                            'agaci' if uq=='agaci_boa' else ('adaptive' if uq=='adaptive_conformal' else 'static'), na=False))]
-                    if len(matches)==1:
-                        b_values['Worst 24h coverage']=str(matches.iloc[0]['worst 24h coverage'])
-                    else:
-                        st.info('No unique T5 drift row for this method; worst-24h coverage remains blank.')
+    def load_team42_region(region):
+        team42 = {name: '—' for name in metric_names}
+        provenance = {}
+        issues = []
+
+        t4_path = RESULTS / 'tables/adaptation/t4/t4_seed_level_metrics.csv'
+        if t4_path.is_file():
+            t4 = read_csv(str(t4_path))
+            needed = {'region', 'configuration', 'seed', 'mae_drift', 'n_retrains'}
+            if needed.issubset(t4.columns):
+                sel = t4.loc[t4['region'].astype(str).str.upper().eq(region) &
+                             t4['configuration'].astype(str).eq(configuration)].copy()
+                if not sel.empty:
+                    per_seed = sel.groupby('seed', as_index=False)[['mae_drift', 'n_retrains']].mean()
+                    team42['MAE during drift'] = format_mean_sd(per_seed['mae_drift'], ' MW')
+                    retrains = pd.to_numeric(per_seed['n_retrains'], errors='coerce')
+                    team42['Retrains triggered'] = str(int(round(retrains.mean()))) if retrains.notna().any() else '—'
+                    provenance[f'{region} · MAE and retrains'] = t4_path
+                    if per_seed['seed'].nunique() != 5:
+                        issues.append(f'{region}: T4 contains {per_seed["seed"].nunique()} seeds rather than five.')
                 else:
-                    st.info('Selected T5 file does not have the expected columns.')
+                    issues.append(f'{region}: T4 has no {configuration} rows.')
             else:
-                st.info('No matching T5 table found for this D-180d configuration.')
-        if uq != 'Not agreed':
-            candidates = _t6_sources()
-            for signal in signals:
-                kind = 'Lagged nonconformity' if signal.startswith('Lagged') else 'Interval width'
-                folders = [folder for label, folder in candidates if kind.lower() in label.lower()]
-                review_label = ('Review rate for 0.90 coverage (nonconformity, 30 min)'
-                                if signal.startswith('Lagged') else 'Review rate for 0.90 coverage (interval width)')
-                if folders:
-                    selected_folder = st.selectbox(f'T6 source · {signal}', folders,
-                        format_func=lambda p: str(p.relative_to(RESULTS)),
-                        key='t7_t6_folder_' + ('lagged' if signal.startswith('Lagged') else 'width'))
-                    audit_path = selected_folder / 't6_aggregate_audit.csv'
-                    if audit_path.exists():
-                        t6 = pd.read_csv(audit_path)
-                        needed = {'region', 'configuration', 'uq_method', 'regime', 'metric', 'display'}
-                        if needed.issubset(t6.columns):
-                            matches = t6.loc[
-                                t6.region.astype(str).eq(region) &
-                                t6.configuration.astype(str).eq(configuration) &
-                                t6.uq_method.astype(str).eq(uq) &
-                                t6.regime.astype(str).eq('drift') &
-                                t6.metric.astype(str).eq('review rate for 0.90')]
-                            if len(matches) == 1:
-                                b_values[review_label] = str(matches.iloc[0]['display'])
-                            else:
-                                st.info(f'No unique matching T6 drift operating point for {signal}; its row remains blank.')
-                        else:
-                            st.info(f'T6 audit for {signal} lacks expected columns.')
+                issues.append(f'{region}: T4 metrics file is missing expected columns.')
+        else:
+            issues.append(f'{region}: T4 seed-level metrics are not present.')
+
+        cp_path = RESULTS / 'tables/detection/aemo_detection_changepoints.csv'
+        if cp_path.is_file():
+            cp = read_csv(str(cp_path))
+            if {'region', 'detector', 'SETTLEMENTDATE'}.issubset(cp.columns):
+                alarms = cp.loc[cp['region'].astype(str).str.upper().eq(region) &
+                                cp['detector'].astype(str).str.lower().str.replace('-', '_', regex=False).eq('page_hinkley')]
+                team42['Detections raised'] = str(alarms['SETTLEMENTDATE'].dropna().nunique())
+                provenance[f'{region} · Accepted detections'] = cp_path
+            else:
+                issues.append(f'{region}: The changepoint CSV lacks region, detector, or SETTLEMENTDATE.')
+        else:
+            issues.append(f'{region}: T2 timestamp-level accepted detections are unavailable.')
+
+        uq_base = RESULTS / 'tables/uncertainty'
+        if uq_base.is_dir():
+            t5_paths = [path for path in uq_base.rglob(f'T5_{region}_{configuration}.csv')
+                        if not any(x in str(path).lower() for x in ('archive', 'simulation', 't5_aemo'))]
+            post7_paths = [path for path in t5_paths if 'post7' in str(path).lower()]
+            candidates = post7_paths if post7_paths else t5_paths
+            if len(candidates) == 1:
+                df5 = read_csv(str(candidates[0]))
+                required = {'UQ method', 'regime', 'worst 24h coverage'}
+                if required.issubset(df5.columns):
+                    rows = df5.loc[df5['regime'].astype(str).str.lower().eq('drift') &
+                                   df5['UQ method'].astype(str).str.lower().str.contains('agaci', na=False)]
+                    if len(rows) == 1:
+                        team42['Worst 24h coverage'] = _t7_display_coverage(rows.iloc[0]['worst 24h coverage'])
+                        provenance[f'{region} · Worst 24h coverage'] = candidates[0]
                     else:
-                        st.info(f'No five-seed T6 aggregate audit for {signal}.')
+                        issues.append(f'{region}: T5 does not have exactly one AgACI drift-regime result.')
                 else:
-                    st.info(f'No T6 folder found for {signal}.')
+                    issues.append(f'{region}: T5 file does not contain the worst-24h coverage schema.')
+            elif len(candidates) > 1:
+                issues.append(f'{region}: Multiple current T5 sources exist; worst-24h coverage omitted.')
+            else:
+                issues.append(f'{region}: No matching T5 post-event table was found.')
 
-    st.subheader('Headline T7 — Team 41 vs Team 42')
-    st.caption('Team 41 values are transcribed from its shared T7 table; Team 42 values are preliminary until experimental alignment is confirmed.')
-    # Team 41's shared T7 results 
-    # Its reported values remain provisional until source/protocol alignment is verified.
-    group_a_t7 = {
-        'SA1': {
-            'MAE during drift': '281 ± 16 MW',
-            'Worst 24h coverage': '0.71 ± 0.03',
-            'Review rate for 0.90 coverage (interval width)': '0.0%',
-            'Review rate for 0.90 coverage (nonconformity, 30 min)': '0.0%',
-            'Detections raised': '15',
-            'Retrains triggered': '15',
-        },
-        'NSW1': {
-            'MAE during drift': '907 ± 36 MW',
-            'Worst 24h coverage': '0.73 ± 0.02',
-            'Review rate for 0.90 coverage (interval width)': '0.0%',
-            'Review rate for 0.90 coverage (nonconformity, 30 min)': '0.0%',
-            'Detections raised': '18',
-            'Retrains triggered': '18',
-        },
-    }
-    a_values = group_a_t7[region]
-    headline=pd.DataFrame({
-        'Metric':list(b_values),
-        'Team 41 · distribution shift':[a_values.get(x, '—') for x in b_values],
-        'Team 42 · forecast error':[b_values[x] for x in b_values],
+            sources = _t6_sources()
+            for signal, key in [('Interval width', 'Review rate for 0.90 coverage (interval width)'),
+                                ('Lagged nonconformity', 'Review rate for 0.90 coverage (nonconformity, 30 min)')]:
+                matching = [folder for kind, folder in sources if kind.lower().startswith(signal.lower())
+                            and (folder / 't6_aggregate_audit.csv').is_file()]
+                post7 = [folder for folder in matching if 'post7' in str(folder).lower()]
+                if post7:
+                    matching = post7
+                if len(matching) != 1:
+                    issues.append(f'{region}: {signal}: {len(matching)} unambiguous T6 audit sources; metric left blank.')
+                    continue
+                p6 = matching[0] / 't6_aggregate_audit.csv'
+                df6 = read_csv(str(p6))
+                required = {'region', 'configuration', 'uq_method', 'regime', 'metric', 'display'}
+                if not required.issubset(df6.columns):
+                    issues.append(f'{region}: {signal} T6 audit lacks expected fields.')
+                    continue
+                uq = df6['uq_method'].astype(str).str.lower().str.replace('-', '_', regex=False)
+                rows = df6.loc[df6['region'].astype(str).str.upper().eq(region) &
+                               df6['configuration'].astype(str).eq(configuration) &
+                               uq.str.contains('agaci', na=False) &
+                               df6['regime'].astype(str).str.lower().eq('drift') &
+                               df6['metric'].astype(str).eq('review rate for 0.90')]
+                if len(rows) == 1:
+                    team42[key] = _t7_display_review_rate(rows.iloc[0]['display'])
+                    provenance[f'{region} · {signal}'] = p6
+                else:
+                    issues.append(f'{region}: {signal}: no unique AgACI drift operating point.')
+
+        return team42, provenance, issues
+
+    team42_sa1, prov_sa1, issues_sa1 = load_team42_region('SA1')
+    team42_nsw1, prov_nsw1, issues_nsw1 = load_team42_region('NSW1')
+    provenance = {**prov_sa1, **prov_nsw1}
+    issues = issues_sa1 + issues_nsw1
+
+    comparison = pd.DataFrame({
+        'Outcome': metric_names,
+        'Team 41 · SA1': [team41['SA1'][m] for m in metric_names],
+        'Team 41 · NSW1': [team41['NSW1'][m] for m in metric_names],
+        'Team 42 · SA1': [team42_sa1[m] for m in metric_names],
+        'Team 42 · NSW1': [team42_nsw1[m] for m in metric_names],
     })
-    st.dataframe(headline, use_container_width=True, hide_index=True)
-    st.caption('Both teams report accepted detector alarms after the 14-day refractory filter. Team 42 retraining counts remain sourced independently from T4.')
-    st.download_button('Download provisional T7 table', headline.to_csv(index=False),
-        file_name=f'T7_provisional_{region}_{configuration}.csv', mime='text/csv',key='t7_download')
+    st.dataframe(comparison, use_container_width=True, hide_index=True)
+    st.download_button('Download T7 comparison (CSV)', comparison.to_csv(index=False).encode(),
+                       file_name='T7_both_regions_fixed_page_hinkley_armD.csv',
+                       mime='text/csv', key='t7_fixed_download')
+    
+    with st.expander('Data provenance and evaluation caveats'):
+        st.write('**Fixed configuration:** Arm D (180 days), Page–Hinkley, seeds 1–5, AgACI-BOA and separate interval-width / lagged-error escalation metrics.')
+        for label, path in provenance.items():
+            st.caption(f'{label}: `{path.relative_to(ROOT)}`')
+        for issue in issues:
+            st.caption('Source check: ' + issue)
 
-    with st.expander('Configuration alignment audit',expanded=True):
-        alignment=pd.DataFrame([
-            ['Trigger approach','Distribution shift','Forecast error','Intended comparison variable'],
-            ['Detector','Page–Hinkley','Page–Hinkley available','Same algorithm only when Page–Hinkley selected'],
-            ['Forecaster','XGBoost (gradient boosting)','HistGradientBoostingRegressor (gradient boosting)','Same gradient-boosting family, but different algorithms and implementations'],
-            ['Adaptation','Arm D · 180 days',
-             'Arm D · 180 days' if arm == 'D' else 'Arm C · full history',
-             'Aligned: Arm D · 180 days selected' if arm == 'D' else 'NOT aligned: Team 42 selected Arm C'],
-            ['Dataset / regions','SA1 and NSW1','SA1 and NSW1','Aligned: both regions reported separately'],
-            ['Seeds','1–5','1–5','Match seed identities and test setup'],
-            ['UQ method','AgACI','AgACI available',
-             'AgACI selected; verify identical calibration/implementation' if uq == 'agaci_boa' else 'NOT aligned: select AgACI'],
-            ['Escalation signals','Interval width, Lagged 30-minute nonconformity',
-             ', '.join(signals) if signals else 'None selected',
-             'Both signal types selected; confirm scoring/threshold grid' if len(signals) == 2 else 'NOT aligned: select both signal types'],
-            ['Regime definition','Documented event + 7-day post-event buffer','Documented event + 7-day post-event buffer','Aligned: same 7-day post-event buffer'],
-        ],columns=['Setting','Team 41','Team 42','Status'])
-        st.dataframe(alignment,use_container_width=True,hide_index=True)
-     
+
+# Conclusion-page integrated historical replay; all observations come from repository files.
+@st.cache_data(show_spinner=False)
+def _demo_read_configuration(path, configuration):
+    pieces = []
+    for chunk in pd.read_csv(path, chunksize=75000):
+        selected = chunk[chunk['configuration'].astype(str).eq(configuration)]
+        if not selected.empty:
+            pieces.append(selected)
+    return pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
+
+
+def render_integrated_prototype():
+    section('Integrated live prototype · historical stream replay')
+    st.caption('A chronological replay of saved AEMO predictions and causal review signals; not a live AEMO feed. All data is read from experiment output files.')
+    base = RESULTS / 'tables/uncertainty/agaci_boa_fixed_calibration'
+    seed_dirs = sorted([d for d in base.glob('seed_*') if d.is_dir() and d.name[5:].isdigit()],
+                       key=lambda d: int(d.name[5:])) if base.exists() else []
+    if not seed_dirs:
+        st.warning('No seed folders found in results/tables/uncertainty/agaci_boa_fixed_calibration/.')
+        return
+    a,b,c = st.columns(3)
+    with a: seed_dir = st.selectbox('Experiment seed', seed_dirs, format_func=lambda d: d.name, key='conclusion_demo_seed')
+    with b: region = st.selectbox('AEMO region', ['SA1','NSW1'], key='conclusion_demo_region')
+    with c: method = st.selectbox('Uncertainty method', list(METHODS), index=2, key='conclusion_demo_method')
+    file = seed_dir / f'agaci_comparison_intervals_{region}.csv.gz'
+    if not file.is_file():
+        st.warning(f'Interval source unavailable: {file.relative_to(ROOT)}')
+        return
+    @st.cache_data(show_spinner=False)
+    def configurations(path):
+        values=set()
+        for chunk in pd.read_csv(path, usecols=['configuration'], chunksize=150000):
+            values.update(chunk['configuration'].dropna().astype(str).unique())
+        return sorted(values)
+    names = configurations(str(file))
+    if not names:
+        st.warning('No adaptation configurations in interval file.')
+        return
+    c1,c2 = st.columns(2)
+    with c1:
+        configuration = st.selectbox('Adaptation configuration', names,
+             index=names.index('C_page_hinkley') if 'C_page_hinkley' in names else 0,
+             key='conclusion_demo_config')
+    with c2:
+        detector_names=['page_hinkley','adwin','kswin']
+        fixed_detector = next((x for x in detector_names if configuration.endswith('_'+x)),None)
+        if fixed_detector:
+            st.text_input('Detector used by adaptation arm', value=fixed_detector, disabled=True, key='conclusion_demo_detector_fixed')
+            detector=fixed_detector
+        else:
+            detector=st.selectbox('Detector overlay (not a retraining trigger for this arm)',
+                        detector_names, key='conclusion_demo_detector')
+    df = _demo_read_configuration(str(file), configuration)
+    if df.empty:
+        st.warning('No observations for the selected configuration.')
+        return
+    df['SETTLEMENTDATE']=pd.to_datetime(df['SETTLEMENTDATE'],errors='coerce')
+    df=df.dropna(subset=['SETTLEMENTDATE']).sort_values('SETTLEMENTDATE').reset_index(drop=True)
+    lo,hi=METHODS[method]
+    needed=['SETTLEMENTDATE','y_true','point_forecast',lo,hi]
+    if not set(needed).issubset(df.columns):
+        st.error('Interval source is missing: '+', '.join(set(needed)-set(df.columns)))
+        return
+    for col in needed[1:]: df[col]=pd.to_numeric(df[col],errors='coerce')
+    df=df.dropna(subset=needed[1:]).copy()
+    if df.empty:
+        st.warning('No valid forecast/interval observations.'); return
+    df['covered']=df['y_true'].between(df[lo],df[hi])
+    df['width']=df[hi]-df[lo]
+    # Shift across the COMPLETE selected series, not merely the displayed window.
+    df['lagged_error']=(df['y_true']-df['point_forecast']).abs().shift(1)
+    first_date=df['SETTLEMENTDATE'].min().normalize()
+    last_date=df['SETTLEMENTDATE'].max().normalize()
+    max_offset=max(0,(last_date-first_date).days-4)
+    r1,r2=st.columns(2)
+    with r1: signal=st.radio('Review-prioritisation signal', ['Lagged 30-minute error','Interval width'],
+                             horizontal=True,key='conclusion_demo_signal')
+    scores=df['lagged_error'] if signal.startswith('Lagged') else df['width']
+    valid=scores.replace([np.inf,-np.inf],np.nan).dropna()
+    if valid.empty:
+        st.warning('No valid review scores available.');return
+    with r2:
+        percentile=st.slider('Exploratory review threshold · score percentile', 0,100,80,
+                            key='conclusion_demo_percentile')
+    tau=float(valid.quantile(percentile/100))
+    df['review']=scores>tau
+    # Use an actual calendar date rather than an opaque day offset.
+    date_key=f'conclusion_demo_date_{seed_dir.name}_{region}'
+    min_start=first_date.date()
+    max_start=(first_date+pd.Timedelta(days=max_offset)).date()
+    if date_key not in st.session_state:
+        st.session_state[date_key]=min_start
+    st.session_state[date_key]=min(max(st.session_state[date_key],min_start),max_start)
+    prev,centre,nxt=st.columns([1,5,1])
+    with prev:
+        if st.button('◀ Previous 5d',key='conclusion_demo_prev',
+                     disabled=st.session_state[date_key]<=min_start):
+            st.session_state[date_key]=max(min_start,
+                st.session_state[date_key]-pd.Timedelta(days=5))
+    with nxt:
+        if st.button('Next 5d ▶',key='conclusion_demo_next',
+                     disabled=st.session_state[date_key]>=max_start):
+            st.session_state[date_key]=min(max_start,
+                st.session_state[date_key]+pd.Timedelta(days=5))
+    with centre:
+        st.date_input('Select historical replay date (start of five-day window)',
+                      min_value=min_start,max_value=max_start,key=date_key,
+                      format='DD/MM/YYYY')
+    start=pd.Timestamp(st.session_state[date_key])
+    end=start+pd.Timedelta(days=5)
+    st.caption(f'Displaying {start:%d %b %Y} – {end-pd.Timedelta(days=1):%d %b %Y}')
+    view=df[(df['SETTLEMENTDATE']>=start)&(df['SETTLEMENTDATE']<end)].copy()
+    if view.empty:
+        st.info('No observations in this window.');return
+    cp_path=RESULTS/'tables/detection/aemo_detection_changepoints.csv'
+    alarms=pd.DataFrame()
+    if cp_path.is_file():
+        cp=read_csv(str(cp_path))
+        required={'region','detector','SETTLEMENTDATE'}
+        if required.issubset(cp.columns):
+            alarms=cp[cp['region'].astype(str).str.upper().eq(region)&
+                      cp['detector'].astype(str).str.lower().eq(detector)].copy()
+            alarms['SETTLEMENTDATE']=pd.to_datetime(alarms['SETTLEMENTDATE'],errors='coerce')
+            alarms=alarms[(alarms['SETTLEMENTDATE']>=start)&(alarms['SETTLEMENTDATE']<end)]
+    else:
+        st.info('Detection markers require results/tables/detection/aemo_detection_changepoints.csv.')
+    # Exact adaptation events for the selected seed, region and configuration.
+    # Never infer model updates from detector alarms or summary counts.
+    retrain_path = (RESULTS / 'tables/adaptation/revised/pgs242_128_five_seed_final'
+                    / seed_dir.name / 'retraining_events.csv')
+    retrains = pd.DataFrame()
+    if retrain_path.is_file():
+        event_log = read_csv(str(retrain_path))
+        expected_events = {'region', 'configuration', 'retrain_timestamp',
+                           'first_forecast_timestamp'}
+        if expected_events.issubset(event_log.columns):
+            match = (event_log['region'].astype(str).str.upper().eq(region) &
+                     event_log['configuration'].astype(str).eq(configuration))
+            if 'seed' in event_log.columns:
+                match &= pd.to_numeric(event_log['seed'], errors='coerce').eq(int(seed_dir.name[5:]))
+            retrains = event_log.loc[match].copy()
+            for date_col in ('retrain_timestamp', 'first_forecast_timestamp'):
+                retrains[date_col] = pd.to_datetime(retrains[date_col], errors='coerce')
+            retrains = retrains.dropna(subset=['retrain_timestamp'])
+            retrains = retrains[(retrains['retrain_timestamp'] >= start) &
+                                (retrains['retrain_timestamp'] < end)].copy()
+        else:
+            st.warning('Retraining event log is missing required timestamp or configuration columns.')
+    elif configuration != 'A':
+        st.info('Retraining timeline unavailable: no matching seed-level retraining_events.csv in the adaptation results.')
+    keep=view[~view['review']]
+    metrics=st.columns(5)
+    metrics[0].metric('Window MAE',f"{(view['y_true']-view['point_forecast']).abs().mean():.1f} MW")
+    metrics[1].metric('Window coverage',f"{view['covered'].mean():.1%}")
+    metrics[2].metric('Human-review flags',f"{view['review'].mean():.1%}")
+    metrics[3].metric('Accepted detector alarms',str(len(alarms)))
+    metrics[4].metric('Model retrains',str(len(retrains)))
+    fig=go.Figure()
+    fig.add_trace(go.Scatter(x=view['SETTLEMENTDATE'],y=view[hi],mode='lines',
+                             line=dict(width=0),hoverinfo='skip',showlegend=False))
+    fig.add_trace(go.Scatter(x=view['SETTLEMENTDATE'],y=view[lo],mode='lines',
+                             fill='tonexty',fillcolor='rgba(45,122,167,.16)',
+                             line=dict(width=0),name='90% interval'))
+    fig.add_trace(go.Scatter(x=view['SETTLEMENTDATE'],y=view['y_true'],mode='lines',
+                             line=dict(color='#23394b',width=2),name='Actual incoming demand'))
+    fig.add_trace(go.Scatter(x=view['SETTLEMENTDATE'],y=view['point_forecast'],mode='lines',
+                             line=dict(color='#1684a1',width=2),name='Point forecast'))
+    missed=view[~view['covered']]
+    if not missed.empty:
+        fig.add_trace(go.Scatter(x=missed['SETTLEMENTDATE'],y=missed['y_true'],mode='markers',
+                      marker=dict(symbol='circle-open',color='#c44a50',size=9),name='Interval misses (retrospective)'))
+    reviewed=view[view['review']]
+    if not reviewed.empty:
+        fig.add_trace(go.Scatter(x=reviewed['SETTLEMENTDATE'],y=reviewed['point_forecast'],
+                      mode='markers',marker=dict(symbol='diamond',color='#bd762a',size=7),name='Escalation flag'))
+    for timestamp in alarms['SETTLEMENTDATE'] if not alarms.empty else []:
+        fig.add_vline(x=timestamp,line_color='#b34547',line_dash='dash',line_width=1.5)
+    if not alarms.empty:
+        fig.add_trace(go.Scatter(x=alarms['SETTLEMENTDATE'],
+            y=[view['y_true'].max()]*len(alarms),mode='markers',
+            marker=dict(symbol='triangle-down',color='#b34547',size=12),
+            name='Accepted detector changepoint'))
+    if not retrains.empty:
+        for timestamp in retrains['retrain_timestamp']:
+            fig.add_vline(x=timestamp, line_color='#25835a', line_dash='dot', line_width=2)
+        fig.add_trace(go.Scatter(
+            x=retrains['retrain_timestamp'],
+            y=[view['y_true'].max() * 1.055] * len(retrains),
+            mode='markers', marker=dict(symbol='square', color='#25835a', size=11),
+            customdata=retrains[['first_forecast_timestamp']].astype(str).to_numpy(),
+            hovertemplate='Model retrained: %{x}<br>First updated forecast: %{customdata[0]}<extra></extra>',
+            name='Model retrained'))
+        updated = retrains.dropna(subset=['first_forecast_timestamp']).copy()
+        updated = updated[(updated['first_forecast_timestamp'] >= start) &
+                          (updated['first_forecast_timestamp'] < end)]
+        if not updated.empty:
+            forecast_lookup = view.set_index('SETTLEMENTDATE')['point_forecast']
+            updated['forecast_value'] = updated['first_forecast_timestamp'].map(forecast_lookup)
+            updated = updated.dropna(subset=['forecast_value'])
+            if not updated.empty:
+                fig.add_trace(go.Scatter(
+                    x=updated['first_forecast_timestamp'], y=updated['forecast_value'],
+                    mode='markers', marker=dict(symbol='star', color='#25835a', size=12,
+                                                line=dict(color='white', width=1)),
+                    name='First forecast after retraining',
+                    hovertemplate='First forecast after retraining<br>%{x}<br>%{y:.1f} MW<extra></extra>'))
+    fig.update_layout(height=550,title=f'{region} · {configuration} · {seed_dir.name} · {start:%d %b %Y}–{end-pd.Timedelta(days=1):%d %b %Y}',
+                      xaxis_title='Settlement date',yaxis_title='Demand (MW)',hovermode='x unified',
+                      legend=dict(orientation='h',y=-.2),margin=dict(b=120))
+    st.plotly_chart(fig,use_container_width=True)
+    st.caption('Red dashed lines = accepted T2 changepoints; green dotted lines/squares = actual model retraining; green stars = first available forecast after retraining. For Arm A there are no retrains. Review thresholds are exploratory, interval misses retrospective, and human interventions are not simulated. Retraining markers are read from the selected seed-level adaptation log, never inferred from alarm counts.')
+    with st.expander('Inspect current window observations and review decisions'):
+        cols=['SETTLEMENTDATE','y_true','point_forecast',lo,hi,'covered','width','lagged_error','review']
+        table(view[cols],f'integrated_replay_{region}_{seed_dir.name}_{configuration}')
 
 STAGES = [
     '01 · Project Overview',
-    '02 · Forecast Degradation',
-    '03 · Drift Detection',
-    '04 · Forecast Adaptation',
-    '05 · Uncertainty & Reliability',
-    '06 · Human Escalation',
-    '07 · Trigger Comparison',
-    '08 · Ethics & Limitations',
-    '09 · Conclusions & Future Work',
+    '02 · Ethical Considerations',
+    '03 · Forecast Degradation',
+    '04 · Drift Detection',
+    '05 · Forecast Adaptation',
+    '06 · Uncertainty & Reliability',
+    '07 · Human Escalation',
+    '08 · Trigger Comparison',
+    '09 · Integrated System & Research Synthesis',
 ]
 
 st.markdown("""<style>
@@ -1306,7 +1706,7 @@ page = st.sidebar.radio('Explore the research', STAGES, label_visibility='collap
 st.sidebar.divider()
 with st.sidebar.expander('Research outputs index'):
     st.caption('F1 · Degradation  |  T1–T2 / F2 · Detection  |  T3–T4 / F3 · Adaptation  |  T5–T6 / F4–F5 · Uncertainty and review  |  T7 / F6 · Trigger comparison')
-    st.caption('Results are read from the local experiment repository.')
+    st.caption("All experimental results, figures, and tables are sourced from the project's GitHub repository.")
 
 if page == STAGES[0]:
     stage_header('ADELAIDE UNIVERSITY · ICT CAPSTONE · TEAM 42 · 2026',
@@ -1390,14 +1790,72 @@ if page == STAGES[0]:
             st.caption('Experiment-level logs are not included in this local dashboard copy.')
 
 elif page == STAGES[1]:
-    stage_header('STAGE 02 · F1', 'Why does forecasting performance degrade?',
+    stage_header('STAGE 02 · ETHICAL, SOCIETAL & SECURITY ANALYSIS',
+                 'Ethical and Security Implications of Concept-Drift Adaptation',
+                 'Concept-drift adaptation introduces a fundamental trade-off between responsiveness to changing data and the stability of forecasting decisions. This study considers the ethical and security implications of that trade-off, particularly unreliable drift alarms, unnecessary model updates, uncertainty miscalibration and limitations in human oversight.')
+
+    section('Ethical significance of the research')
+    st.write(
+        'Electricity-demand forecasting is consequential because inaccurate or poorly communicated predictions may affect planning decisions. '
+        'Within this study, ethical responsibility concerns not only forecast error but also **the interpretation of drift alarms, '
+        'the justification for model updates, the reliability of uncertainty estimates and the consistency of forecasting reliability '
+        'across the evaluated regions**. These questions are investigated through historical experiments rather than claims about operational outcomes.'
+    )
+
+    section('Research-grounded ethical and security considerations')
+    cases = [
+        ('01 · False certainty about detected change',
+         'An alarm from ADWIN, KSWIN or Page–Hinkley signals a potential change according to the detector’s statistical criterion, '
+         'but does not independently establish its cause or correspondence with a documented real-world event. '
+         'Equating an unmatched detection with a confirmed false alarm—or a matched detection with proof of causation—would overstate the evidence.',
+         'T2 event matching and chance-baseline analysis distinguish detector behaviour from incomplete historical event annotations. '
+         'This supports transparent interpretation without treating the AEMO event catalogue as exhaustive ground truth.'),
+        ('02 · The consequences of unnecessary adaptation',
+         'Retraining after accepted alarms may consume computational resources without proportionate gains in predictive accuracy, '
+         'while leaving a model unchanged may allow forecasting performance to deteriorate. This raises questions of resource stewardship '
+         'and whether automated updates justify their computational expenditure and changes in model behaviour.',
+         'Arms A–D compare no retraining, periodic updates, drift-triggered full-history retraining and drift-triggered recent-window retraining. '
+         'T3 and T4 assess forecasting error alongside update frequency, training volume and runtime, making the benefit–cost trade-off explicit.'),
+        ('03 · Misleading confidence and limits of human oversight',
+         'A nominal 90% prediction interval can conceal poor coverage over shorter periods, creating misleading confidence during changing demand conditions. '
+         'Human-review prioritisation adds a further trade-off: flagging more forecasts increases the potential oversight workload, '
+         'without demonstrating that those forecasts were corrected by a person.',
+         'T5 and F4 evaluate Static, ACI and AgACI-BOA through empirical coverage, interval width and temporal reliability. '
+         'T6 and F5 quantify retained-forecast coverage against review rates. These are retrospective evaluations of proposed review flags, '
+         'not measurements of actual human intervention or its effectiveness.'),
+        ('04 · Data integrity and regional context',
+         'Missing, out-of-order, corrupted or deliberately manipulated demand observations could affect lagged forecasting features '
+         'and drift-monitoring decisions. SA1 and NSW1 also exhibit different demand conditions, so a common adaptation policy '
+         'need not achieve comparable forecasting reliability in both regions.',
+         'Chronological splits, documented preprocessing, experiment logs and region-specific evaluation support traceability '
+         'and prevent regional differences from being hidden in pooled results. These methodological measures do not constitute '
+         'a defence against adversarial data manipulation. Input-integrity validation and adversarial stress-testing are plausible '
+         'additional safeguards, but were not evaluated in this study; nor was fairness across population groups.')
+    ]
+    for heading, issue, response in cases:
+        with st.expander(heading, expanded=True):
+            st.markdown(f'**Ethical, societal or security concern:** {issue}')
+            st.markdown(f'**Analytical response and supporting evidence:** {response}')
+
+    section('Synthesis of the ethical analysis')
+    st.write(
+        'The central implication of this analysis is that **reliable drift detection, model adaptation and nominal uncertainty '
+        'calibration do not individually establish forecasting trustworthiness**. Their ethical significance lies in how statistical '
+        'evidence informs model-update decisions, how uncertainty is communicated, and how reliability is balanced against computational '
+        'and human-review costs. Evaluating these components jointly provides an auditable basis for assessing adaptive forecasting '
+        'on historical SA1 and NSW1 data, while recognising the limits of the evidence concerning security robustness, regional '
+        'generalisation and effective human intervention.'
+    )
+
+elif page == STAGES[2]:
+    stage_header('STAGE 03 · F1', 'Why does forecasting performance degrade?',
                  'Use the rolling forecast error of frozen baseline models to establish the problem and its relationship to documented demand events.')
     note('<strong>Research purpose:</strong> A sustained or abrupt increase in rolling MAE motivates monitoring, but does not by itself establish the cause of the change.')
     render_0()
     insight('Research significance:', 'Rolling MAE tracks how prediction error changes over time. Event annotations offer historical context, but do not establish that an event caused an increase in error.')
 
-elif page == STAGES[2]:
-    stage_header('STAGE 03 · T1 · T2 · F2', 'Can meaningful changes be detected?',
+elif page == STAGES[3]:
+    stage_header('STAGE 04 · T1 · T2 · F2', 'Can meaningful changes be detected?',
                  'First test the algorithms against known synthetic changepoints, then evaluate their alignment with documented real-world AEMO events.')
     mode=st.radio('Evidence', ['T1 · Synthetic benchmark', 'T2 / F2 · AEMO event matching'], horizontal=True, key='stage_detect')
     if mode.startswith('T1'):
@@ -1409,8 +1867,8 @@ elif page == STAGES[2]:
         render_2()
         insight('Research significance:', 'Event matching describes how often alerts coincide with documented changes; unmatched detections remain distinct from confirmed false alarms because the event catalogue is not exhaustive.')
 
-elif page == STAGES[3]:
-    stage_header('STAGE 04 · F3 · T3 · T4', 'When is retraining worthwhile?',
+elif page == STAGES[4]:
+    stage_header('STAGE 05 · F3 · T3 · T4', 'When is retraining worthwhile?',
                  'Compare frozen, periodic and drift-triggered forecasting on the same test stream, then examine regime-specific accuracy and computational cost.')
     note('<strong>Four-arm design:</strong> A — never retrain; B — every 30 days; C — on detected drift using full history; D — on detected drift using a recent window. Arms A and B are essential controls.')
     mode=st.radio('Explore adaptation', ['Interactive forecasts', 'F3 · Four-arm comparison', 'T3 · Forecast accuracy', 'T4 · Adaptation cost', 'Model selection'], horizontal=True, key='stage_adapt')
@@ -1429,17 +1887,16 @@ elif page == STAGES[3]:
     else:
         render_model_selection()
 
-elif page == STAGES[4]:
-    stage_header('STAGE 05 · T5 · F4', 'Do prediction intervals remain reliable during drift?',
+elif page == STAGES[5]:
+    stage_header('STAGE 06 · T5 · F4', 'Do prediction intervals remain reliable during drift?',
                  'Study static and adaptive conformal uncertainty, including interval coverage, width and how calibration changes over time.')
     render_7()
     insight('Research significance:', 'Coverage measures how often observed demand falls inside prediction intervals; width captures their precision. Rolling and worst-window coverage reveal failures that may be hidden by full-period averages.')
     render_f4()
 
-elif page == STAGES[5]:
-    stage_header('STAGE 06 · T6 · F5', 'When should forecasts be escalated for human review?',
-                 'Evaluate the trade-off between the fraction of cases referred for review and the coverage achieved at different operating points.')
-    note('<strong>Human-review operating points:</strong> Review rate measures the proportion of forecasts referred for intervention. A target coverage level can be unreachable at some review budgets.')
+elif page == STAGES[6]:
+    stage_header('STAGE 07 · T6 · F5', 'Evaluating Human-Review Escalation in Adaptive Forecasting',
+                 'Assess review-prioritisation strategies by examining prediction-interval coverage, review rates and their trade-offs across operating thresholds.')
     view=st.radio('Escalation view', ['Five-day interactive explorer','F5 · Review–coverage curves','T6 · Operating-point table'], horizontal=True, key='stage_esc_view')
     if view.startswith('Five-day'):
         render_escalation_explorer(ROOT)
@@ -1449,41 +1906,35 @@ elif page == STAGES[5]:
         render_t6()
     insight('Ethical implication:', 'Escalation trades automation against human workload. A safeguard is meaningful only if its achieved coverage and review burden can be measured.')
 
-elif page == STAGES[6]:
-    stage_header('STAGE 07 · T7 · F6', 'Does the choice of drift trigger change downstream outcomes?',
-                 'Compare Team 42 and Team 41 on a shared experimental protocol, separating trigger behaviour from other experimental differences.')
-    note('<strong>Cross-team experimental design:</strong> Both trigger approaches are assessed with aligned forecasting models, features, data splits, seeds and retraining budgets so that trigger effects can be isolated.')
+elif page == STAGES[7]:
+    stage_header('STAGE 08 · T7 · F6 · COMPARATIVE ANALYSIS',
+                 'How does drift-trigger selection influence adaptive forecasting?',
+                 'Team 41 and Team 42 evaluate distribution-shift and forecast-error triggers, respectively. The comparison examines drift-period accuracy, uncertainty reliability, review workload and retraining behaviour, while explicitly accounting for methodological differences between the experimental pipelines.')
     render_t7()
-    future_output('F6','Trigger disagreement timeline',
-        'Detection timelines for both trigger methods, including periods of disagreement.', 'F6*.png')
+    section('F6 · Trigger disagreement timeline')
+    f6_region = st.radio('Region shown in F6', ['SA1', 'NSW1'], horizontal=True, key='f6_region_selector')
+    render_f6(f6_region)
     insight('Research significance:', 'The comparison connects trigger behaviour to downstream drift MAE, worst-window coverage, review workload and retraining frequency.')
 
-elif page == STAGES[7]:
-    stage_header('STAGE 08 · RESPONSIBLE AI', 'Ethical, societal and security implications',
-                 'Apply reliability, transparency, security and human-oversight lenses to specific risks identified in adaptive electricity-demand forecasting.')
-    risks=[
-        ('Unnecessary detector alerts','Spurious triggers can waste computational resources or create false confidence in model changes.','Compare matched and unmatched detections, constrain false alarms and use a retraining refractory period.','Implemented evaluation controls; operational alert policy is future work.'),
-        ('Regional generalisation','A strategy evaluated on SA1 may not behave similarly in NSW1 or new market regimes.','Report regional results separately; validate transfer before using one region as evidence for another.','Region-specific reporting is available.'),
-        ('Corrupt or missing measurements','Data integrity problems could affect both forecasts and drift-triggered retraining.','Validate ordering and missingness; retain auditable experiment outputs and monitor input quality.','Input-integrity monitoring is not part of the current research prototype.'),
-        ('Overconfident forecasts','A nominal 90% interval can still fail badly during short periods of change.','Monitor rolling and worst-case coverage alongside interval width; evaluate human escalation rules.','T5/T6 and F4/F5 outputs are available for review; operational evaluation remains future work.'),
-    ]
-    for idx,(title,risk,mitigation,status) in enumerate(risks,1):
-        with st.expander(f'{idx:02d} · {title}',expanded=True):
-            st.markdown(f'**Real-world risk:** {risk}\n\n**Justified mitigation:** {mitigation}\n\n**Current scope:** {status}')
-    insight('Responsible interpretation:', 'Historical experiment outputs support research evaluation; grid operations, automated alert handling and human-review deployment remain outside the present system.')
-
 elif page == STAGES[8]:
-    stage_header('STAGE 09 · SYNTHESIS', 'Research conclusions & future work',
-                 'Connect the experimental findings back to the research objectives, practical value, methodological limitations and responsible deployment requirements.')
-    section('What the available evidence can answer')
-    for title,body in [
-        ('Detection','Synthetic tests characterise responsiveness and false alarms. Documented AEMO events provide useful but incomplete context for real-world drift matching.'),
-        ('Adaptation','The four-arm comparison evaluates whether drift-triggered retraining can justify its accuracy gains relative to periodic retraining and the cost of updates.'),
-        ('Uncertainty','Static and adaptive conformal intervals are evaluated against a 90% target; regime-specific and worst-window results will provide a more stringent view of reliability.'),
-        ('Human review and cross-team comparison','T6/F5 quantify the experimental human-review workload. T7/F6 will examine whether differing triggers change downstream forecasting outcomes.')]:
-        note(f'<strong>{title}:</strong> {body}')
-    section('Current limitations and next steps')
-    st.write('Event annotations are incomplete reference data, not exhaustive changepoint truth. The generality of results beyond SA1 and NSW1 has not been established. Remaining cross-team deliverables **T7/F6** will strengthen regime-level reliability, escalation and cross-team comparison.')
-    with st.expander('Supporting experiment outputs and figure gallery'):
+    stage_header('STAGE 09 · SYSTEM INTEGRATION & RESEARCH SYNTHESIS',
+                 'From drift detection to reliable adaptive forecasting',
+                 'This integrated research prototype brings together forecasting, drift monitoring, model adaptation, predictive uncertainty and human-review escalation. Using timestamped outputs from the SA1 and NSW1 experiments, the replay makes the relationships between these components observable and auditable.')
+
+    # The integrated historical replay is the centrepiece of this final stage.
+    render_integrated_prototype()
+
+    section('Research synthesis')
+    st.write(
+        'The combined evaluation demonstrates why concept drift must be assessed beyond detector alarms alone. '
+        'The value of adaptation depends on whether retraining improves forecast accuracy relative to its computational cost, '
+        'while prediction-interval coverage and human-review workload provide complementary measures of reliability.'
+    )
+    st.caption(
+        'The interactive view replays recorded experimental outputs rather than rerunning the models. '
+        'Findings are based on historical SA1 and NSW1 data; wider operational generalisation requires further validation.'
+    )
+
+    # Keep the figure gallery as the final element of the Synthesis page.
+    with st.expander('Supporting experiment outputs, figures and tables'):
         render_8()
-    insight('Overall conclusion:', 'Useful adaptation cannot be determined from detection counts alone. Forecast accuracy, retraining effort, interval reliability and human-review requirements together determine the practical value of the approach.')
