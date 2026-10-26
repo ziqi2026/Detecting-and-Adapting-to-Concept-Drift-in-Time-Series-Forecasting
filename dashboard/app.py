@@ -48,6 +48,9 @@ def choice(df, col, title, key):
     vals = sorted(df[col].dropna().astype(str).unique().tolist()) if col in df else []
     return st.selectbox(title, vals, key=key) if vals else None
 
+DETECTORS = ['adwin', 'kswin', 'page_hinkley']
+DETECTOR_LABELS = {'adwin': 'ADWIN', 'kswin': 'KSWIN', 'page_hinkley': 'Page-Hinkley'}
+
 def number_chart(df, x, y, title, color=None):
     if df.empty or x not in df or y not in df:
         return
@@ -210,9 +213,17 @@ def render_3():
         st.info('No rows for the selected region.')
         return
     if 'configuration' in raw.columns:
+        # Arms A and B have no detector; C_* and D_* rows belong to the selected detector.
+        detector = st.selectbox('Drift detector', DETECTORS, index=DETECTORS.index('page_hinkley'),
+                                format_func=DETECTOR_LABELS.get, key='t3_detector')
+        names = raw['configuration'].astype(str)
+        raw = raw[names.isin(['A', 'B']) | (names.str.startswith(('C_', 'D_')) & names.str.lower().str.endswith('_' + detector))]
         opts = sorted(raw['configuration'].dropna().astype(str).unique())
-        selected = st.multiselect('Adaptation configurations', opts, default=opts, key='t3_configs')
+        selected = st.multiselect('Adaptation configurations', opts, default=opts, key=f't3_configs_{detector}')
         raw = raw[raw['configuration'].astype(str).isin(selected)]
+        if raw.empty:
+            st.info('No configurations selected for this region and detector.')
+            return
     mae_cols = [f'mae_{r}' for r in ('pre-drift','drift','post-drift')]
     available = [c for c in mae_cols if c in raw.columns]
     if available and {'configuration','seed'}.issubset(raw.columns):
@@ -264,7 +275,8 @@ def render_4():
         return
 
     # A and B are controls; C and D use the selected drift detector.
-    detector = st.selectbox('Drift detector', ['adwin', 'kswin', 'page_hinkley'], key='t4_detector')
+    detector = st.selectbox('Drift detector', DETECTORS, index=DETECTORS.index('page_hinkley'),
+                            format_func=DETECTOR_LABELS.get, key='t4_detector')
     config_values = detail[cfg_col].astype(str)
     controls = config_values.isin(['A', 'B', 'never', 'every_30_days'])
     detector_rows = config_values.str.lower().str.contains(detector, regex=False)
@@ -293,10 +305,11 @@ def render_4():
     if len(d_configs) > 1:
         preferred = next((x for x in d_configs if '180d' in x), d_configs[0])
         chosen_d = st.selectbox('Arm D window', d_configs,
-                                index=d_configs.index(preferred), key='t4_d_window')
+                                index=d_configs.index(preferred), key=f't4_d_window_{detector}')
         detail = detail[(detail['Arm'] != 'D · Drift / recent window') |
                         (detail[cfg_col].astype(str) == chosen_d)].copy()
 
+    arm_detail = detail.copy()
     present = [x for x in arm_order if x in set(detail['Arm'])]
     selected_arms = st.multiselect('Compare adaptation arms', present,
                                    default=present, key='t4_arms')
@@ -371,6 +384,12 @@ def render_4():
     numeric = detail[['Arm', seed_col] + list(dict.fromkeys(metrics.values()))].copy()
     for name in metrics.values():
         numeric[name] = pd.to_numeric(numeric[name], errors='coerce')
+    table_metrics = dict(metrics)
+    gain_key, retrain_key = metrics.get('MAE gain vs Arm A (MW)'), metrics.get('Number of retrains')
+    if gain_key and retrain_key:
+        # Per seed: gain vs Arm A / retrains (blank for Arm A); then mean ± sd across seeds.
+        numeric['gain_per_retrain'] = numeric[gain_key] / numeric[retrain_key].where(numeric[retrain_key] > 0)
+        table_metrics['Gain per retrain (MW)'] = 'gain_per_retrain'
     grouped = numeric.groupby('Arm')
     summary_rows = []
     for name in arm_order:
@@ -378,7 +397,7 @@ def render_4():
             continue
         group = grouped.get_group(name)
         row = {'Arm': name, 'Seeds': group[seed_col].nunique()}
-        for label, metric in metrics.items():
+        for label, metric in table_metrics.items():
             per_seed = group.groupby(seed_col)[metric].mean().dropna()
             if len(per_seed):
                 sd = per_seed.std(ddof=1) if len(per_seed) > 1 else 0.0
@@ -387,6 +406,23 @@ def render_4():
                 row[label] = '—'
         summary_rows.append(row)
     table(pd.DataFrame(summary_rows), f't4_arm_comparison_{region}_{detector}')
+
+    # Arm C vs Arm B: five-seed mean gain vs Arm A and mean retrains.
+    def arm_mean(arm_name, key):
+        if key is None or arm_name not in set(arm_detail['Arm']):
+            return np.nan
+        values = pd.to_numeric(arm_detail.loc[arm_detail['Arm'] == arm_name, key], errors='coerce')
+        return values.groupby(arm_detail.loc[values.index, seed_col]).mean().mean()
+
+    gain_b, gain_c = arm_mean('B · Every 30 days', gain_key), arm_mean('C · Drift / full history', gain_key)
+    retrains_b, retrains_c = arm_mean('B · Every 30 days', retrain_key), arm_mean('C · Drift / full history', retrain_key)
+    gain_share = gain_c / gain_b * 100 if gain_b < 0 else np.nan
+    retrain_share = retrains_c / retrains_b * 100 if retrains_b > 0 else np.nan
+    st.markdown('**Arm C vs Arm B**')
+    share_col, retrain_col = st.columns(2)
+    share_col.metric("Share of Arm B's MAE gain kept by Arm C", '—' if pd.isna(gain_share) else f'{gain_share:.1f}%')
+    retrain_col.metric("Arm C retrains as % of Arm B's", '—' if pd.isna(retrain_share) else f'{retrain_share:.1f}%')
+    st.caption("Five-seed means for the selected region and detector: MAE gain vs Arm A of Arm C ÷ that of Arm B, and Arm C's retrains ÷ Arm B's retrains. Shown as — when Arm B has no MAE gain or no retrains.")
 
     with st.expander('Original T4 five-seed summary'):
         official_path = RESULTS / 'tables/adaptation/t4/t4_adaptation_cost.csv'
@@ -1909,7 +1945,7 @@ elif page == STAGES[4]:
         insight('Research significance:', 'Regime-specific MAE separates pre-drift, drift and post-drift performance; repeated seeds quantify variability rather than relying on a single run.')
     elif mode.startswith('T4'):
         render_4()
-        insight('Research significance:', 'Retraining count, cumulative training samples and runtime contextualise MAE differences. More frequent retraining is not necessarily more effective or efficient.')
+        insight('Research significance:', 'Retraining count, cumulative training samples and runtime contextualise MAE differences. More frequent retraining is not necessarily more effective or efficient. Arm D (recent window only) has a higher drift MAE than Arm A in every configuration tested, across both regions, all three detectors and all four window lengths. A plausible explanation is that short windows lose seasonal structure; this is a hypothesis that was not tested here.')
     else:
         render_model_selection()
 
