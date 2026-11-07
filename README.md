@@ -152,7 +152,7 @@ flowchart TB
     class O1,O2,O3,O4,O5,Z output
 ```
 
-**Important boundaries:** Detector selection is calibrated upstream of the adaptation experiments. The adaptation runner consumes *frozen accepted alarm timestamps* instead of re-tuning detectors. Uncertainty experiments read saved forecasts, and evaluation-only table/figure generators do not retrain the model. Those boundaries help distinguish model fitting from retrospective analysis.
+**Diagram interpretation:** Cross-phase arrows summarise research dependencies and handoffs, rather than indicating that all computations execute sequentially. **Important boundaries:** Detector selection is calibrated upstream of the adaptation experiments. The adaptation runner consumes *frozen accepted alarm timestamps* instead of re-tuning detectors. Uncertainty experiments read saved forecasts, and evaluation-only table/figure generators do not retrain the model. Those boundaries help distinguish model fitting from retrospective analysis.
 
 ### Main software components
 
@@ -210,7 +210,7 @@ The repository provides a common forecasting interface, `fit(train)` and `predic
 | Seasonal Naive | Transparent reference baseline | Uses a seasonal historical observation, typically the same half-hour of the previous day |
 | SARIMAX | Classical statistical baseline | Fitted parameters are frozen during baseline test evaluation; specific leakage tests are included |
 | Gradient Boosting | Primary model in the integrated experiments | `HistGradientBoostingRegressor`-based forecaster with calendar and lag features, including 48 and 336 half-hour lags |
-| PatchTST | Optional Transformer-based exploration | Requires optional PyTorch installation; does not replace required baselines |
+| PatchTST | Transformer-based forecasting model | Evaluated in forecasting and degradation experiments; Gradient Boosting is used for the integrated drift-adaptation pipeline |
 
 A frozen-model evaluation keeps fitted parameters fixed while allowing previously observed demand to supply causal lag context. **Adaptive retraining is a separate experiment**, not an implicit part of the frozen baseline.
 
@@ -257,16 +257,9 @@ There are **17 configurations per region**: A, B, three detector-specific C conf
 
 Relevant files: [`docs/PGS242-128_README.md`](docs/PGS242-128_README.md), [`docs/PGS242-128_REVISION.md`](docs/PGS242-128_REVISION.md), [`experiments/adaptation/run_four_arm_adaptation.py`](experiments/adaptation/run_four_arm_adaptation.py).
 
-### Stored adaptation example (historical PR #29 revision)
+### Final five-seed adaptation evaluation
 
-The adaptation README reports the following **specific historical run**, not a universal final benchmark. MAE is in MW; retrains are counts for that run.
-
-| Region | Arm A MAE | Arm B MAE / retrains | Arm C–KSWIN MAE / retrains |
-| --- | ---: | ---: | ---: |
-| SA1 | 147.293 | 136.401 / 46 | 136.381 / 28 |
-| NSW1 | 372.569 | 342.286 / 46 | 341.527 / 30 |
-
-In that version, drift-triggered full-history KSWIN slightly improved MAE over periodic retraining while requiring fewer retrains. The same document reports that tested recent-window D strategies performed worse. The cited PR #29 results are a documented single-run analysis, whereas subsequent five-seed results are stored separately. See [`docs/PGS242-128_README.md`](docs/PGS242-128_README.md) and the five-seed result directory.
+The current T3 and T4 evaluations report results across **seeds 1–5** for the four adaptation policies. T3 separates forecast accuracy by drift regime, using both full-stream and event-local scopes; T4 assesses forecast error alongside retraining counts and computational cost. The results are available in the [T3 full-stream summary](results/tables/adaptation/t3/t3_full.md), [T3 event-local summary](results/tables/adaptation/t3/t3_local.md), and [T4 cost table](results/tables/adaptation/t4/t4_adaptation_cost.csv). Historical single-run results and implementation revisions remain documented in [`docs/PGS242-128_README.md`](docs/PGS242-128_README.md).
 
 ## Uncertainty quantification
 
@@ -326,25 +319,25 @@ F5 visualises the corresponding **retained-coverage versus review-rate** trade-o
 
 ## Evaluation outputs and result navigation
 
-The study reports the following complementary experimental outputs, linking each research question to its implementation and stored evidence.
+The following index links each required deliverable to its **implemented analysis** and **stored results**. Figure links lead directly to the current output images or their figure collections. The T7 and F6 comparative views are generated within the dashboard from saved source data.
 
-| Output | Question answered | Relevant entry point / artifact |
-| --- | --- | --- |
-| **F1** Baseline degradation | When do frozen forecasts degrade? | [`experiments/degradation/`](experiments/degradation/), [`results/figures/degradation/`](results/figures/degradation/) |
-| **T1** Synthetic detection | How do detectors behave under controlled drift? | [`generate_t1_detection_table.py`](experiments/detection/generate_t1_detection_table.py), [`T1 CSV`](results/tables/detection/T1_detection_on_synthetic.csv) |
-| **T2** Real-event detection | How do accepted alarms align with documented events? | [`T2 table`](results/tables/detection/T2_aemo_detection.csv), [`T2 manifest`](results/tables/detection/T2_manifest.json) |
-| **F2** Detection panels | Where do alarms fall relative to demand and events? | [`plot_f2_detection_panel.py`](experiments/detection/plot_f2_detection_panel.py) |
-| **T3** Forecast accuracy | How does MAE differ by regime and adaptation arm? | [`generate_t3_forecast_accuracy.py`](experiments/adaptation/generate_t3_forecast_accuracy.py), [`T3 summary`](results/tables/adaptation/T3_forecast_accuracy_by_regime.md) |
-| **T4** Adaptation cost | What accuracy gains come with retraining cost? | [`generate_t4_adaptation_cost.py`](experiments/adaptation/generate_t4_adaptation_cost.py), [`T4 summary`](results/tables/adaptation/T4_adaptation_cost_summary.csv) |
-| **F3** Four-arm comparison | How do A/B/C/D compare visually? | [`generate_f3_four_arm_comparison.py`](experiments/adaptation/generate_f3_four_arm_comparison.py) |
-| **T5** Interval quality | How do static conformal, ACI and AgACI-BOA compare in coverage and interval width by regime? | [`Three-method T5 results`](results/tables/uncertainty/t5_agaci_full_post7/), [`T5 manifest`](results/tables/uncertainty/t5_agaci_full_post7/t5_manifest.json) |
-| **F4** Coverage trajectory | How does rolling coverage change over time? | [`generate_f4_coverage_trajectory.py`](experiments/uncertainty/generate_f4_coverage_trajectory.py), [`F4 guide`](docs/F4_COVERAGE_TRAJECTORY.md) |
-| **T6** Review operating points | How do interval-width and lagged-nonconformity signals trade review effort against retained coverage? | [`Width-based T6`](results/tables/uncertainty/t6_interval_width/T6_operating_points.md), [`lagged-error T6`](results/tables/uncertainty/t6_nonconformity_30min/T6_operating_points.md) |
-| **F5** Escalation trade-off | How does retained coverage vary with review rate? | [`generate_f5_escalation_curve.py`](experiments/uncertainty/generate_f5_escalation_curve.py) |
-| **T7** Team comparison | How do forecast-error and demand-based triggers compare? | [`dashboard/app.py`](dashboard/app.py) integrated comparison; verify source provenance shown in the dashboard |
-| **F6** Comparative results | How are the Team 41 and Team 42 approaches visualised and compared? | [Dashboard comparison view](#dashboard); consult the displayed results and their provenance |
+| Output | Research question / analysis | Implementation | Latest results and figures |
+| --- | --- | --- | --- |
+| **F1 · Forecast degradation** | How does forecast error change across time and documented demand events? | [`run_baseline_degradation_evaluation.py`](experiments/degradation/run_baseline_degradation_evaluation.py) | [F1 SA1 figures](results/figures/degradation/F1_SA1_forecasting_degradation.png) · [F1 NSW1 figures](results/figures/degradation/F1_NSW1_forecasting_degradation.png) · [All degradation figures](results/figures/degradation/) |
+| **T1 · Synthetic drift detection** | What are detection delay, missed-change and false-alarm outcomes under known synthetic regimes? | [`generate_t1_detection_table.py`](experiments/detection/generate_t1_detection_table.py) · [`run_synthetic_drift_detection.py`](experiments/detection/run_synthetic_drift_detection.py) | [T1 detection table](results/tables/detection/T1_detection_on_synthetic.csv) · [Synthetic detection figures](results/figures/detection/) |
+| **T2 · AEMO event matching** | How do accepted drift alarms align with the documented AEMO event catalogue? | [`run_aemo_t2_evaluation.py`](experiments/detection/run_aemo_t2_evaluation.py) | [T2 result table](results/tables/detection/T2_aemo_detection.md) · [Event matches](results/tables/detection/T2_detection_matches.csv) · [Manifest](results/tables/detection/T2_manifest.json) |
+| **F2 · Detection panels** | When and where do detected changes occur in the AEMO demand stream? | [`plot_f2_detection_panel.py`](experiments/detection/plot_f2_detection_panel.py) · [`plot_f2_detection_panel_individual.py`](experiments/detection/plot_f2_detection_panel_individual.py) | [SA1 combined panel](results/figures/detection/F2_detection_panel_SA1.png) · [NSW1 combined panel](results/figures/detection/F2_detection_panel_NSW1.png) · [Individual detector panels](results/figures/detection/F2_individual/) |
+| **T3 · Forecast accuracy by regime** | How does MAE differ across adaptation configurations and pre-drift, drift and post-drift periods? | [`generate_t3_forecast_accuracy.py`](experiments/adaptation/generate_t3_forecast_accuracy.py) | [Full-stream T3 table](results/tables/adaptation/t3/t3_full.md) · [Event-local T3 table](results/tables/adaptation/t3/t3_local.md) · [Five-seed observations](results/tables/adaptation/t3/t3_seed_metrics_full.csv) · [Manifest](results/tables/adaptation/t3/t3_manifest.json) |
+| **T4 · Adaptation cost** | What changes in forecast accuracy accompany retraining counts, volume and runtime? | [`generate_t4_adaptation_cost.py`](experiments/adaptation/generate_t4_adaptation_cost.py) | [T4 cost table](results/tables/adaptation/t4/t4_adaptation_cost.csv) · [All configurations](results/tables/adaptation/t4/t4_all_configurations.csv) · [Five-seed metrics](results/tables/adaptation/t4/t4_seed_level_metrics.csv) |
+| **F3 · Four-arm comparison** | How do the four adaptation strategies differ in their forecast-error trajectories? | [`generate_f3_four_arm_comparison.py`](experiments/adaptation/generate_f3_four_arm_comparison.py) | [F3 figures — SA1 and NSW1, three detectors](results/figures/adaptation/F3_four_arms/) |
+| **T5 · Prediction-interval reliability** | How do static conformal, ACI and AgACI-BOA compare on coverage, interval width and worst-window reliability? | [`generate_t5_uncertainty_table.py`](experiments/uncertainty/generate_t5_uncertainty_table.py) · [`run_aemo_agaci.py`](experiments/uncertainty/run_aemo_agaci.py) | [Final three-method T5 tables](results/tables/uncertainty/t5_agaci_full_post7/) · [T5 manifest](results/tables/uncertainty/t5_agaci_full_post7/t5_manifest.json) |
+| **F4 · Temporal coverage trajectories** | How do rolling prediction-interval coverage and width vary over time? | [`generate_f4_coverage_trajectory.py`](experiments/uncertainty/generate_f4_coverage_trajectory.py) | [F4 figures and underlying data](results/figures/uncertainty/f4/) · [SA1 example](results/figures/uncertainty/f4/F4_SA1_page_hinkley_four_arms.png) · [NSW1 example](results/figures/uncertainty/f4/F4_NSW1_page_hinkley_four_arms.png) |
+| **T6 · Review operating points** | What review rates are required to meet coverage targets, and what coverage is achieved under fixed review budgets? | [`run_escalation_sweep.py`](experiments/uncertainty/run_escalation_sweep.py) · [`run_escalation_lag1_nonconformity.py`](experiments/uncertainty/run_escalation_lag1_nonconformity.py) · [`generate_t6_escalation_table.py`](experiments/uncertainty/generate_t6_escalation_table.py) | [Interval-width T6 tables](results/tables/uncertainty/t6_interval_width/) · [Width operating points](results/tables/uncertainty/t6_interval_width/T6_operating_points.md) · [Lagged-error T6 tables](results/tables/uncertainty/t6_nonconformity_30min/) · [Lagged-error operating points](results/tables/uncertainty/t6_nonconformity_30min/T6_operating_points.md) |
+| **F5 · Review–coverage trade-offs** | How does retained empirical coverage change with review rate under both escalation signals? | [`generate_f5_escalation_curve.py`](experiments/uncertainty/generate_f5_escalation_curve.py) | [F5 interval-width figures](results/figures/uncertainty/f5_width/) · [F5 lagged-error figures](results/figures/uncertainty/f5_nonconformity/) · [Width curve data](results/figures/uncertainty/f5_width/F5_curve_points_five_seed.csv) · [Lagged-error curve data](results/figures/uncertainty/f5_nonconformity/F5_curve_points_five_seed.csv) |
+| **T7 · Cross-team trigger comparison** | How do demand-distribution-based and forecast-error-based trigger approaches compare, accounting for different forecasters and UQ implementations? | [`dashboard/app.py` — `render_t7()`](dashboard/app.py) | [Team 42 T4 seed metrics](results/tables/adaptation/t4/t4_seed_level_metrics.csv) · [T5 three-method results](results/tables/uncertainty/t5_agaci_full_post7/) · [T6 operating points](results/tables/uncertainty/t6_interval_width/T6_operating_points.md) · [Interactive T7 comparison](#dashboard) |
+| **F6 · Trigger disagreement timeline** | Where do accepted Page-Hinkley alarm times agree or differ between Team 41 and Team 42? | [`dashboard/app.py` — `render_f6()`](dashboard/app.py) | [Team 41 accepted detections](results/tables/cross_team/team41_accepted_detections.csv) · [Team 42 accepted detections](results/tables/detection/aemo_detection_changepoints.csv) · [Interactive SA1/NSW1 F6 timeline](#dashboard) |
 
-Additional diagnostic studies and figure-generation utilities are located in the `experiments/` tree.
+**Comparative-output provenance:** T7 is assembled by the dashboard from Team 42's stored T4–T6 results and the Team 41 summary values recorded in the application; it is not a separately committed final T7 table. F6 is rendered interactively from accepted detection timestamps and can be exported from the dashboard. This distinction preserves traceability without presenting dynamically generated views as static repository artifacts.
 
 ## Installation and quick start
 
@@ -352,7 +345,7 @@ Additional diagnostic studies and figure-generation utilities are located in the
 
 - **Python 3.10 or newer** (declared in [`pyproject.toml`](pyproject.toml));
 - `pip`, an environment capable of installing the project dependencies, and sufficient disk space for the supplied AEMO data and stored forecasts;
-- Optional **PyTorch** for PatchTST only.
+- **PyTorch** for running PatchTST experiments.
 
 From the **repository root**:
 
@@ -389,7 +382,7 @@ Some advanced integration tests depend on stored experiment artifacts, pinned re
 
 ## Reproducing the experiments
 
-The experimental dependency structure is: data preparation → forecasting → synthetic detector calibration → AEMO drift detection → adaptation → uncertainty quantification → escalation evaluation → figures, tables, and dashboard.
+The experimental dependency structure is: AEMO data exploration and preparation → synthetic detector calibration → AEMO forecasting and drift detection → adaptation → uncertainty quantification → escalation evaluation → figures, tables, and dashboard.
 
 The following are documented starting points, **not** a guarantee that every experiment runs without additional pinned artifacts, protocol JSON, or specific CLI flags. Inspect `--help` and the associated docs before launching long runs.
 
@@ -514,7 +507,7 @@ Use the **Explore the research** sidebar to navigate the dashboard. The stage na
 | --- | --- |
 | **01 · Project Overview** | Research questions, AEMO regions, experimental chronology, forecasting methods, drift detectors, four adaptation arms, and the integrated methodology. |
 | **02 · Ethical Considerations** | Ethical, societal and security implications of drift alarms, retraining decisions, uncertainty calibration, data integrity and human oversight. |
-| **03 · Forecast Degradation** | F1 rolling forecast error and baseline degradation figures for SA1 and NSW1, including exploratory PatchTST results where available. |
+| **03 · Forecast Degradation** | F1 rolling forecast error and baseline degradation figures for SA1 and NSW1, including PatchTST degradation results. |
 | **04 · Drift Detection** | Switch between **T1 · Synthetic benchmark** and **T2 / F2 · AEMO event matching** to examine detector results, alarms and event-alignment figures. |
 | **05 · Forecast Adaptation** | Switch between **Interactive forecasts**, **F3 · Four-arm comparison**, **T3 · Forecast accuracy**, **T4 · Adaptation cost**, and **Model selection** to compare forecasting and retraining strategies. |
 | **06 · Uncertainty & Reliability** | T5 prediction-interval coverage and width across static conformal, ACI and AgACI-BOA, alongside F4 temporal coverage trajectories. |
@@ -560,15 +553,21 @@ The **public deployment and the repository's local app are related but distinct*
 
 ## Interpretation, limitations and responsible use
 
-1. **Event matching is contextual evidence, not causal proof.** Unmatched alarms cannot automatically be labelled false positives; historical events do not capture all potential sources of drift.
-2. **Detector sensitivity and retraining cost trade off.** More frequent alarms are not necessarily better, and matching a documented event does not guarantee improved forecast accuracy.
-3. **Temporal definitions vary by deliverable.** Seven-day matching tolerance, 14-day refractory suppression, full-stream event buffers and event-local seven-day windows serve different purposes.
-4. **Calibration and test information must remain separate.** Online updates are permitted only after the relevant forecast or interval has been issued.
-5. **Coverage is empirical, not a universal guarantee.** A nominal 90% interval does not imply 90% coverage for every drift episode or every 24-hour window.
-6. **Review-rate curves are retrospective selection analyses.** Flagging a forecast does not itself correct the model, and the metrics do not establish actual human-review performance.
-7. **AgACI-BOA is evaluated under a fixed-calibration protocol.** This implementation differs from the rolling-retrained formulation and is interpreted under its own experimental settings.
-8. **Experiment provenance is explicit.** Source hashes, seeds, split identifiers, configurations and manifests identify the particular evaluation supporting a reported result.
-9. **Deployment scope is research-focused.** The dashboard presents historical experimental evidence, without operational service-level or real-time feed guarantees.
+### Interpretation of drift evidence
+
+The synthetic benchmark provides controlled conditions in which changepoints and no-drift cases are specified. In contrast, the AEMO event catalogue offers **contextual evidence**, not exhaustive or causally established ground truth for concept drift. Consequently, a match between an accepted alarm and a documented event does not establish causation, and an unmatched alarm should not automatically be classified as a false positive. Detector sensitivity must also be interpreted alongside alarm frequency, adaptation performance, and retraining cost.
+
+### Experimental validity and uncertainty
+
+The evaluation distinguishes chronological training, calibration, and testing. Forecasting features and preprocessing are constructed to respect the information available at each prediction time; online state updates use observed outcomes only after the corresponding forecasts or intervals have been issued. The seven-day event-matching tolerance, 14-day alarm refractory period, buffered regime assignments, and event-local windows serve separate methodological purposes and should not be interpreted interchangeably.
+
+Reported **90% prediction intervals** have a nominal coverage target, not a guarantee of coverage within every regime, event or 24-hour period. Static conformal, ACI and AgACI-BOA are evaluated under their documented protocols; in particular, the implemented AgACI-BOA analysis uses fixed calibration and is not equivalent to a rolling-retrained formulation. Comparisons should therefore consider empirical coverage, interval width, worst-window reliability and protocol differences together.
+
+### Scope of escalation and reproducibility
+
+Escalation experiments evaluate threshold-based **review prioritisation** retrospectively. Review rate and retained coverage describe the subset of predictions flagged or retained under each policy; the study does not measure the effectiveness of actual human interventions or claim that flagged forecasts were corrected. The cross-team comparison likewise requires attention to differences in monitoring signals, forecasting implementations and uncertainty procedures.
+
+Reproducibility is supported by documented chronological splits, experiment configurations, seeds, manifests, and recorded result artifacts. The public dashboard visualises historical experimental outputs and should not be interpreted as a live demand feed or a validated operational forecasting service. These boundaries define the evidential scope of the reported findings and identify areas requiring further operational validation.
 
 ## Documentation and project references
 
@@ -586,6 +585,8 @@ The **public deployment and the repository's local app are related but distinct*
 | [`results/tables/uncertainty/t6_interval_width/T6_operating_points.md`](results/tables/uncertainty/t6_interval_width/T6_operating_points.md) | Interval-width escalation operating points |
 | [`results/tables/uncertainty/t6_nonconformity_30min/T6_operating_points.md`](results/tables/uncertainty/t6_nonconformity_30min/T6_operating_points.md) | Lagged nonconformity escalation operating points |
 
+## Research synthesis
 
+This project presents an integrated experimental framework for investigating concept drift in electricity-demand forecasting across **SA1 and NSW1**. By linking controlled detector assessment, historical AEMO drift monitoring, four retraining policies, conformal prediction-interval evaluation and selective-review analysis, the study examines forecasting reliability as a combination of predictive accuracy, adaptation cost and uncertainty behaviour rather than as a single performance measure. The cross-team comparison further situates forecast-error monitoring alongside demand-distribution monitoring while retaining the methodological distinctions between them.
 
-
+The principal contribution is a **reproducible, chronologically evaluated research workflow** that connects these components through documented protocols and saved experimental evidence. Its conclusions are specific to the evaluated datasets, model configurations, detection signals and retrospective review policies. 
