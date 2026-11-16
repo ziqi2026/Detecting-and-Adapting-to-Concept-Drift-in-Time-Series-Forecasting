@@ -1,6 +1,25 @@
-# Model adaptation experiments
+# Model Adaptation Experiments
+
+[Project README](../../README.md) · [Shared decisions](../../docs/decisions.md) · [Adaptation implementation notes](../../docs/PGS242-128_REVISION.md)
+
+## Purpose and scope
 
 This directory runs the four-arm forecasting comparison (PGS242-128) and generates the F3, T3 and T4 evaluation outputs. Run commands from the repository root. The shared forecaster is the `gradient_boosted` entry in `MODEL_REGISTRY` (a `HistGradientBoostingRegressor`-based forecaster); the detector is an upstream input, not a different forecasting model.
+
+## Files and responsibilities
+
+| File | Stage | Responsibility |
+| --- | --- | --- |
+| [run_four_arm_adaptation.py](run_four_arm_adaptation.py) | PGS242-128 · Ziqi Fang (runner), Pijian Sun (five-seed execution) | Run A/B/C/D with one shared forecasting model, validate frozen alarms and save forecasts, costs, events and manifests |
+| [adaptation.py](../../src/drift_lab/adaptation.py) | Shared adaptation component · Sebastian (initial), Sahar Hassan Alzahrni (subsequent refactor) | Chronological forecast and refit policies, trigger schedules and causal training-history selection |
+| [forecasters.py](../../src/drift_lab/forecasters.py) | Shared model · Sukarna Paul (Gradient Boosting) | Forecaster used for all four arms |
+| [generate_f3_four_arm_comparison.py](generate_f3_four_arm_comparison.py) | F3 · Katniss Zhang | Five-seed rolling-MAE trajectories and retraining-event marks, separately for each detector |
+| [generate_t3_forecast_accuracy.py](generate_t3_forecast_accuracy.py) | T3 · Sebastian | Forecast MAE by documented event regime, full-stream and event-local views |
+| [generate_t4_adaptation_cost.py](generate_t4_adaptation_cost.py) | T4 · Sukarna Paul | Join drift-regime MAE to retrain count, sample volume and runtime |
+| [generate_t4_cost_summary.py](generate_t4_cost_summary.py) | Earlier cost view | Historical single-run cost/accuracy summary; distinct from the final five-seed T4 table |
+| [test_four_arm_adaptation.py](../../tests/adaptation/test_four_arm_adaptation.py) | Validation | Runner, causal-ordering and input-contract checks |
+
+The [earlier PGS242-128 notes](../../docs/PGS242-128_README.md) record a historical single-seed run. The five-seed T3/T4 files below are the source for the final comparative results; their MAE scope and retrain counts should not be mixed with the earlier run.
 
 ## Design and inputs
 
@@ -47,6 +66,8 @@ The runner also appends metrics to `results/tables/runs.csv`. The per-seed `over
 
 ## Generate F3, T3 and T4
 
+F3 and T3 both consume the saved adaptation forecasts; neither depends on the other. T4 depends on T3's full-stream seed metrics and the runner's cost summary.
+
 Set `RUN_DIR` to the five-seed output directory above. F3 draws seven-day (336 half-hour observation) rolling-MAE curves and retraining timestamps for A/B/C/D. Each plot keeps C and D on the **same detector**:
 
 ```sh
@@ -79,6 +100,28 @@ python3 experiments/adaptation/generate_t4_adaptation_cost.py \
 T4 writes `t4_seed_level_metrics.csv`, `t4_all_configurations.csv` and the four-row-per-region headline `t4_adaptation_cost.csv`. Its signed `MAE gain vs arm A` is **strategy drift MAE minus Arm A drift MAE**, paired by region and seed: negative means lower error. `gain per retrain` divides that seed's signed difference by its retrain count before aggregation; Arm A has no such ratio. T4 reports retrain counts, cumulative training samples and retraining wall time alongside drift MAE differences. Its static headline uses the same mixed-detector C/D choices as headline T3; use the all-configuration/seed-level files for a single-detector comparison.
 
 The checked-in [T3 results](../../results/tables/adaptation/t3/t3_full.md), [T4 results](../../results/tables/adaptation/t4/t4_adaptation_cost.csv) and [F3 figures](../../results/figures/adaptation/F3_four_arms/) are the existing published outputs. Re-running generators into their default folders can replace files; choose another output directory when preserving those artifacts.
+
+## Saved team results and interpretation
+
+The [F3 figure collection](../../results/figures/adaptation/F3_four_arms/) plots the seven-day rolling MAE and retraining events for SA1 and NSW1, with separate ADWIN, KSWIN and Page-Hinkley panels. Its selected C and D always share a detector and update timestamps, so their error trajectories compare training-history choices at the same alarms.
+
+The [five-seed full-stream T3 table](../../results/tables/adaptation/t3/t3_full.md) reports MAE before, during and after documented event regimes. Its **headline** C row is KSWIN, while its D row is Page-Hinkley/180d. These rows are displayed summaries of chosen configurations, **not** a matched-detector C/D pair. The [full seed-level T3 file](../../results/tables/adaptation/t3/t3_seed_metrics_full.csv) includes every detector/window configuration for matched comparisons.
+
+| Region | Arm A drift MAE | Arm B drift MAE | Headline C (KSWIN) | Headline D (Page-Hinkley, 180d) |
+| --- | ---: | ---: | ---: | ---: |
+| SA1 | 155.5 ± 0.9 | 145.6 ± 0.3 | 146.0 ± 0.4 | 186.5 ± 0.0 |
+| NSW1 | 366.4 ± 1.4 | 334.9 ± 1.0 | 336.6 ± 1.0 | 430.6 ± 0.6 |
+
+Values are MAE in MW, mean ± sample SD across seeds 1–5. B has the lowest drift-regime MAE among these headline rows in both regions. C is close to B, while the displayed 180-day D is worse than A. The [T4 headline table](../../results/tables/adaptation/t4/t4_adaptation_cost.csv) pairs these drift errors with full-test refit costs; it retains the same mixed-detector headline selection.
+
+For an **internally matched Page-Hinkley comparison**, the [all-configuration T4 file](../../results/tables/adaptation/t4/t4_all_configurations.csv) gives A/B as shared controls and C/D under the same accepted Page-Hinkley alarms:
+
+| Region | B retrains / drift MAE difference vs A | C retrains / difference vs A | D 180d retrains / difference vs A |
+| --- | ---: | ---: | ---: |
+| SA1 | 46 / −9.8 ± 1.0 MW | 5 / −7.8 ± 1.5 MW | 5 / +31.0 ± 0.9 MW |
+| NSW1 | 46 / −31.6 ± 2.1 MW | 5 / −29.8 ± 1.0 MW | 5 / +64.1 ± 1.6 MW |
+
+The sign is strategy minus A: negative is a lower MAE. Under this detector, C uses 5 refits instead of B's 46 while retaining much of B's drift-error reduction. D has the same five alarm-driven refits as C but a larger drift MAE than A. This points to the **history used at a refit** as a consequential choice in these experiments; the result does not rank Page-Hinkley above the other detectors. T4's retrain count, cumulative samples and timing describe computational work over the full test stream, whereas the MAE difference compares only the drift regime.
 
 ## Validation
 
