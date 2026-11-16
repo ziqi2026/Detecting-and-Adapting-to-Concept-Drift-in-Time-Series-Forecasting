@@ -1,0 +1,242 @@
+{
+  "task": "PGS242-29",
+  "generated": "2026-11-15T19:01:18+10:30",
+  "seed": 1,
+  "detector": "page_hinkley",
+  "window_days": 180,
+  "cutoff": "2022-01-01 00:00:00",
+  "first_perturbed_half_hour": "2022-01-01 00:30:00",
+  "perturbation": {
+    "scale": 1.25,
+    "shift_mw": 300.0,
+    "raw_rows_changed": 420480
+  },
+  "environment": {
+    "python": "3.13.18",
+    "numpy": "2.5.3",
+    "pandas": "3.0.5",
+    "scikit-learn": "1.9.1",
+    "statsmodels": "0.15.0",
+    "river": "0.27.0"
+  },
+  "timings_s": {
+    "baseline": {
+      "detection": 206.1,
+      "adaptation": 70.4,
+      "uncertainty": 73.7
+    },
+    "perturbed": {
+      "detection": 164.0,
+      "adaptation": 82.8,
+      "uncertainty": 64.5
+    }
+  },
+  "n_checks": 34,
+  "n_failed": 2,
+  "checks": [
+    {
+      "group": "split SA1",
+      "check": "TRAIN < CALIBRATION < TEST, no overlap",
+      "passed": true,
+      "detail": "TRAIN ends 2019-12-31 23:30:00, CAL 2020-01-01 00:00:00\u20132020-02-29 23:30:00, TEST starts 2020-03-01 00:00:00"
+    },
+    {
+      "group": "split SA1",
+      "check": "row counts 35,039 / 2,880 / 67,249",
+      "passed": true,
+      "detail": "35039 / 2880 / 67249"
+    },
+    {
+      "group": "split SA1",
+      "check": "continuous 30-minute grid, no duplicates",
+      "passed": true,
+      "detail": "105168 rows, 2018-01-01 00:30:00 to 2024-01-01 00:00:00"
+    },
+    {
+      "group": "split SA1",
+      "check": "data/processed matches the loader output",
+      "passed": true,
+      "detail": "data/processed/SA1.csv"
+    },
+    {
+      "group": "split NSW1",
+      "check": "TRAIN < CALIBRATION < TEST, no overlap",
+      "passed": true,
+      "detail": "TRAIN ends 2019-12-31 23:30:00, CAL 2020-01-01 00:00:00\u20132020-02-29 23:30:00, TEST starts 2020-03-01 00:00:00"
+    },
+    {
+      "group": "split NSW1",
+      "check": "row counts 35,039 / 2,880 / 67,249",
+      "passed": true,
+      "detail": "35039 / 2880 / 67249"
+    },
+    {
+      "group": "split NSW1",
+      "check": "continuous 30-minute grid, no duplicates",
+      "passed": true,
+      "detail": "105168 rows, 2018-01-01 00:30:00 to 2024-01-01 00:00:00"
+    },
+    {
+      "group": "split NSW1",
+      "check": "data/processed matches the loader output",
+      "passed": true,
+      "detail": "data/processed/NSW1.csv"
+    },
+    {
+      "group": "reproducibility",
+      "check": "re-run change points match committed aemo_detection_changepoints.csv",
+      "passed": true,
+      "detail": "81 rows, max|diff| = 1.78e-15"
+    },
+    {
+      "group": "reproducibility",
+      "check": "re-run seed-1 adaptation summary matches committed (MAE, retrains, samples)",
+      "passed": true,
+      "detail": "SA1/A MAE 146.644; SA1/B MAE 137.052; SA1/C_page_hinkley MAE 137.320; SA1/D_180d_page_hinkley MAE 180.847; NSW1/A MAE 368.351; NSW1/B MAE 341.900; NSW1/C_page_hinkley MAE 344.505; NSW1/D_180d_page_hinkley MAE 443.797"
+    },
+    {
+      "group": "reproducibility",
+      "check": "SA1 static calibration width matches committed PGS242-160",
+      "passed": true,
+      "detail": "re-run 868.4158 MW, PGS242-160 868.4158 MW"
+    },
+    {
+      "group": "reproducibility (committed AgACI)",
+      "check": "SA1 static calibration width matches committed AgACI comparison",
+      "passed": false,
+      "detail": "re-run 868.4158 MW, committed AgACI 856.0968 MW (-1.42%)"
+    },
+    {
+      "group": "reproducibility",
+      "check": "NSW1 static calibration width matches committed PGS242-160",
+      "passed": true,
+      "detail": "re-run 2765.0036 MW, PGS242-160 2765.0036 MW"
+    },
+    {
+      "group": "reproducibility (committed AgACI)",
+      "check": "NSW1 static calibration width matches committed AgACI comparison",
+      "passed": false,
+      "detail": "re-run 2765.0036 MW, committed AgACI 2755.3818 MW (-0.35%)"
+    },
+    {
+      "group": "future perturbation",
+      "check": "SA1 alarms before 2022-01-01 00:30:00 unchanged",
+      "passed": true,
+      "detail": "18 rows, max|diff| = 0"
+    },
+    {
+      "group": "future perturbation",
+      "check": "SA1 alarms after the cutoff do change (sanity)",
+      "passed": true,
+      "detail": "17 vs 49 alarms"
+    },
+    {
+      "group": "future perturbation",
+      "check": "SA1 forecasts up to and including 2022-01-01 00:30:00 unchanged (all arms)",
+      "passed": true,
+      "detail": "128840 rows, max|diff| = 0"
+    },
+    {
+      "group": "future perturbation",
+      "check": "SA1 forecasts after the cutoff do change (sanity)",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "future perturbation",
+      "check": "SA1 static/ACI/AgACI intervals up to and including 2022-01-01 00:30:00 unchanged",
+      "passed": true,
+      "detail": "128840 rows, max|diff| = 0"
+    },
+    {
+      "group": "future perturbation",
+      "check": "SA1 calibration radius unchanged by TEST perturbation",
+      "passed": true,
+      "detail": "static width 868.4158 vs 868.4158 MW"
+    },
+    {
+      "group": "future perturbation",
+      "check": "SA1 lag-1 review score unchanged up to and including 2022-01-01 00:30:00, first changes one step later",
+      "passed": true,
+      "detail": "4 configurations"
+    },
+    {
+      "group": "adaptation",
+      "check": "SA1 each retrain trains on data up to its retrain time, and the refitted model is first used after it",
+      "passed": true,
+      "detail": "56 retrain events, 0 violations"
+    },
+    {
+      "group": "future perturbation",
+      "check": "NSW1 alarms before 2022-01-01 00:30:00 unchanged",
+      "passed": true,
+      "detail": "27 rows, max|diff| = 0"
+    },
+    {
+      "group": "future perturbation",
+      "check": "NSW1 alarms after the cutoff do change (sanity)",
+      "passed": true,
+      "detail": "19 vs 43 alarms"
+    },
+    {
+      "group": "future perturbation",
+      "check": "NSW1 forecasts up to and including 2022-01-01 00:30:00 unchanged (all arms)",
+      "passed": true,
+      "detail": "128840 rows, max|diff| = 0"
+    },
+    {
+      "group": "future perturbation",
+      "check": "NSW1 forecasts after the cutoff do change (sanity)",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "future perturbation",
+      "check": "NSW1 static/ACI/AgACI intervals up to and including 2022-01-01 00:30:00 unchanged",
+      "passed": true,
+      "detail": "128840 rows, max|diff| = 0"
+    },
+    {
+      "group": "future perturbation",
+      "check": "NSW1 calibration radius unchanged by TEST perturbation",
+      "passed": true,
+      "detail": "static width 2765.0036 vs 2765.0036 MW"
+    },
+    {
+      "group": "future perturbation",
+      "check": "NSW1 lag-1 review score unchanged up to and including 2022-01-01 00:30:00, first changes one step later",
+      "passed": true,
+      "detail": "4 configurations"
+    },
+    {
+      "group": "adaptation",
+      "check": "NSW1 each retrain trains on data up to its retrain time, and the refitted model is first used after it",
+      "passed": true,
+      "detail": "56 retrain events, 0 violations"
+    },
+    {
+      "group": "single-step y_t",
+      "check": "ACI interval at t unchanged when only y_t changes",
+      "passed": true,
+      "detail": "and every earlier interval"
+    },
+    {
+      "group": "single-step y_t",
+      "check": "ACI interval at t+1 reacts (sanity)",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "single-step y_t",
+      "check": "AgACI-BOA interval at t unchanged when only y_t changes",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "group": "single-step y_t",
+      "check": "lag-1 score at t unchanged, changes at t+1 only",
+      "passed": true,
+      "detail": ""
+    }
+  ]
+}
