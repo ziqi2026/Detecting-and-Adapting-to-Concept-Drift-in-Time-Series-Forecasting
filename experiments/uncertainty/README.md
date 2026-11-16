@@ -9,7 +9,7 @@ This directory turns the saved point forecasts from the four-arm adaptation expe
 1. **Uncertainty (T5, F4).** How well do static conformal, adaptive conformal inference (ACI) and AgACI-BOA intervals hold their coverage before, during and after documented drift events, and how wide are they?
 2. **Escalation (T6, F5).** If a causal score flags some forecasts for human review, what coverage do the *unflagged* (retained) forecasts reach, and how much review does it take?
 
-Every script here reads stored forecasts or stored interval streams. **None of them refits a forecaster or re-runs a drift detector.** Forecast generation is upstream in [`experiments/adaptation/`](../adaptation/); detector alarms are upstream in [`experiments/detection/`](../detection/).
+The downstream T5, F4, T6 and F5 generators consume stored forecast or interval streams without rerunning the four-arm adaptation experiment or drift detection. The historical static baseline, `run_aemo_uncertainty.py`, is a separate end-to-end experiment that fits the frozen Gradient Boosting forecaster before conformal calibration. Forecast generation for the multi-seed comparison is upstream in [`experiments/adaptation/`](../adaptation/); detector alarms are upstream in [`experiments/detection/`](../detection/).
 
 The escalation analysis is an offline review-allocation study. It does not model what a human reviewer would change, so "retained coverage" is the coverage of the forecasts the system keeps, not the coverage of a human-corrected system.
 
@@ -136,9 +136,11 @@ The two scores answer different questions. Width says how uncertain the method i
 
 ### What the stored results show
 
-- **Static conformal cannot be escalated by width.** Its width is constant, so the width sweep only produces review rates of 0 or 1. Static rows are kept in every output for completeness.
-- **Width-based escalation works against ACI.** ACI widens the interval when it has recently missed, so the widest ACI intervals are often the best covered. Escalating them lowers retained coverage. This finding motivated the lagged-error score.
+- **Static conformal cannot achieve selective width-based escalation at intermediate review budgets.** Its fixed interval width means that a strict width threshold either flags all observations or none, producing review rates of 100% or 0%. Static rows remain in the outputs for comparison.
+- **In the stored AEMO experiments, width-based escalation often reduced retained coverage for ACI.** Wider ACI intervals may already cover difficult observations, so removing them can leave a less well-covered retained subset. This is an empirical observation under the documented experimental setup, not a general property of ACI.
 - **The lagged-error score gives usable operating points.** For example, NSW1 / Arm A / ACI over the whole stream retains 96.05% ± 0.12 pp coverage at a 10% review budget, and reaches 95% retained coverage at 8.04% ± 0.24 pp review ([T6, lagged error](../../results/tables/uncertainty/t6_nonconformity_30min/T6_operating_points.md)). With interval width, the same configuration stays at about 90.0% at every budget ([T6, width](../../results/tables/uncertainty/t6_interval_width/T6_operating_points.md)).
+
+**Operating-point interpretation:** The T6 budget tables select the highest retained coverage among tested thresholds that satisfy the review budget. The escalation sweep summaries instead select the grid point whose review rate is closest to the requested target. These different selection rules can produce slightly different numerical summaries for the same underlying experiment.
 
 ### T6 selection rules
 
@@ -252,6 +254,29 @@ python experiments/uncertainty/generate_f5_escalation_curve.py \
 | **F5, lagged error** | [`results/figures/uncertainty/f5_nonconformity/`](../../results/figures/uncertainty/f5_nonconformity/) |
 
 Bold rows are the final results used in the report, presentation and dashboard.
+
+## Shared experiment log and provenance
+
+The shared metric ledger is `results/runs.csv`. An independently audited export dated 16 November 2026 contained **12,240 metric records across 14 columns**:
+
+| Group | Records | Scope |
+| --- | ---: | --- |
+| `t5_uncertainty` | 4,080 | Static and adaptive conformal coverage, width and worst-24h metrics |
+| `escalation_sweep` | 8,160 | Review-budget coverage, retained/escalated MAE and coverage-target metrics |
+
+The inspected export covers 17 adaptation configurations, SA1 and NSW1, and seeds 1–5. Its 34 distinct `method` strings combine adaptation-arm labels with either `static_conformal` or `adaptive_conformal`.
+
+The audit found no complete-row duplicates or duplicate logical keys under `(group, method, region, seed, regime, metric_name)`. All expected metric combinations within those two groups are present.
+
+However, **1,168 `metric_value` entries are blank**. These are missing or undefined values, **not zeros**, and must not be silently converted to zero or excluded without explanation.
+
+All recorded `wall_clock_s` values in the inspected export are `0.0`; consequently, this field cannot support runtime comparisons.
+
+The shared export does not independently identify AgACI-BOA or the lagged-nonconformity extension through its `group` and `method` labels. These experiments must instead be traced through their dedicated runners, saved result directories, protocol identifiers and manifests.
+
+Configuration hashes differ between the `t5_uncertainty` and `escalation_sweep` groups, even for matching method, region and seed labels. Complete provenance checks therefore require experiment-group and configuration metadata.
+
+This audit describes the inspected export and does not independently establish that its contents match every subsequent repository revision.
 
 ## Tests
 
