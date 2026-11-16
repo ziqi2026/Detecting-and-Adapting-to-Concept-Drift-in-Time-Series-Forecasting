@@ -155,6 +155,18 @@ flowchart TB
 
 **Diagram interpretation:** Cross-phase arrows summarise research dependencies and handoffs, rather than indicating that all computations execute sequentially. **Important boundaries:** Detector selection is calibrated upstream of the adaptation experiments. The adaptation runner consumes *frozen accepted alarm timestamps* instead of re-tuning detectors. Uncertainty experiments read saved forecasts, and evaluation-only table/figure generators do not retrain the model. Those boundaries help distinguish model fitting from retrospective analysis.
 
+
+**Architecture and Stage-Level Documentation**
+
+For a detailed explanation of each research stage, including its methodology, implementation, experimental procedures, results, and reproducibility instructions, refer to the corresponding documentation:
+
+- **[Data Preparation & Forecast Degradation](experiments/degradation/README.md)** : Data processing, forecasting baselines, and F1 degradation analysis.
+- **[Concept Drift Detection](experiments/detection/README.md)** : Synthetic benchmarking, detector calibration, T1/T2 evaluation, and F2 visualisation.
+- **[Forecast Adaptation](experiments/adaptation/README.md)** : Four-arm retraining strategies, T3/T4 evaluation, and F3 comparisons.
+- **[Uncertainty Quantification & Escalation](experiments/uncertainty/README.md)** : Conformal prediction, T5/T6 evaluation, and F4/F5 visualisations.
+- **[Integrated Research Dashboard](dashboard/README.md)** : Dashboard architecture, interactive research stages, historical replay, and deployment.
+
+
 ### Main software components
 
 | Layer | Source | Responsibility |
